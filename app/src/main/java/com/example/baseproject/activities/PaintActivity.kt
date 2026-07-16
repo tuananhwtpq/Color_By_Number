@@ -19,6 +19,7 @@ import com.example.baseproject.adapters.PaletteAdapter
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.data.PaletteItem
 import com.example.baseproject.data.RegionData
+import com.example.baseproject.utils.AssetImageResolver
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -177,17 +178,17 @@ class PaintActivity : AppCompatActivity() {
 
                 // Load Bitmaps
                 val lineBitmap = withContext(Dispatchers.IO) {
-                    BitmapFactory.decodeStream(assets.open("$category/$levelId/line.png"))
+                    AssetImageResolver.openResolvedAsset(assets, "$category/$levelId/line").use {
+                        BitmapFactory.decodeStream(it)
+                    }
                 }
                 val maskBitmap = withContext(Dispatchers.IO) {
                     val opts = BitmapFactory.Options().apply {
                         inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
                     }
-                    BitmapFactory.decodeStream(
-                        assets.open("$category/$levelId/mask.png"),
-                        null,
-                        opts
-                    )
+                    AssetImageResolver.openResolvedAsset(assets, "$category/$levelId/mask").use {
+                        BitmapFactory.decodeStream(it, null, opts)
+                    }
                 }
 
                 // Ưu tiên metadata vùng đã sinh sẵn từ config.json, fallback về level cũ.
@@ -323,7 +324,7 @@ class PaintActivity : AppCompatActivity() {
     }
 
     private fun saveThumbnail() {
-        // Nếu chưa tô gì thì không cần lưu thumbnail (sẽ load mặc định line.png)
+        // Nếu chưa tô gì thì không cần lưu thumbnail (sẽ load mặc định line.webp/png)
         if (completedMaskColors.isEmpty()) return
 
         val bitmap = paintCanvas.generateThumbnail(400) ?: return

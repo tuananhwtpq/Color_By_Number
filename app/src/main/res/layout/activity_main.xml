@@ -1,12 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F0F0F0"
+    android:background="@drawable/bg_background_main"
     android:layoutDirection="ltr"
     tools:context=".activities.MainActivity">
 
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="-20dp"
+        android:elevation="4dp"
+        app:layout_constraintBottom_toTopOf="@id/llBottom"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <ImageView
+        android:id="@+id/ivColorRealm"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:elevation="8dp"
+        android:src="@drawable/ic_color_ream_selector"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/llBottom" />
+
+    <LinearLayout
+        android:id="@+id/llBottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_bottom_nav"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/btnLib"
+            style="@style/ButtonS"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="4dp"
+            android:textColor="@color/bottom_nav_color"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:drawableTop="@drawable/ic_lib_selector"
+            android:drawablePadding="8dp"
+            android:gravity="center"
+            android:text="Library" />
+
+        <TextView
+            android:id="@+id/btnDaily"
+            style="@style/ButtonS"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/bottom_nav_color"
+            android:paddingHorizontal="4dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:drawableTop="@drawable/ic_daily_selector"
+            android:drawablePadding="8dp"
+            android:gravity="center"
+            android:text="Daily" />
+
+        <TextView
+            android:id="@+id/tvColorRealm"
+            style="@style/ButtonS"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/bottom_nav_color"
+            android:paddingHorizontal="4dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:drawableTop="@drawable/ic_none_item"
+            android:drawablePadding="8dp"
+            android:gravity="center"
+            android:singleLine="true"
+            android:text="Color Realm" />
+
+        <TextView
+            android:id="@+id/btnAlbum"
+            style="@style/ButtonS"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/bottom_nav_color"
+            android:paddingHorizontal="4dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:drawableTop="@drawable/ic_album_selector"
+            android:drawablePadding="8dp"
+            android:gravity="center"
+            android:text="Album" />
+
+        <TextView
+            android:id="@+id/btnMyWork"
+            style="@style/ButtonS"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/bottom_nav_color"
+            android:paddingHorizontal="4dp"
+            android:layout_marginTop="10dp"
+            android:layout_weight="1"
+            android:drawableTop="@drawable/ic_my_work_selector"
+            android:drawablePadding="8dp"
+            android:gravity="center"
+            android:text="My Work" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

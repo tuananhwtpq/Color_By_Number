@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.baseproject.R
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.utils.AssetImageResolver
 import java.io.File
 
 class LevelAdapter(
@@ -53,8 +54,11 @@ class LevelAdapter(
                 .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                 .into(holder.ivThumbnail)
         } else {
-            // Chưa tô gì cả, Load file line.png mặc định từ Assets
-            val path = "file:///android_asset/${level.category}/${level.id}/line.png"
+            // Chưa tô gì cả, load line.webp trước rồi fallback sang định dạng cũ
+            val path = AssetImageResolver.toAndroidAssetUri(
+                context.assets,
+                "${level.category}/${level.id}/line"
+            )
             Glide.with(context)
                 .load(path)
                 .into(holder.ivThumbnail)
