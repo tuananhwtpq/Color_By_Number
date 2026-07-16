@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_no_internet_dialog"
+    android:gravity="center_horizontal"
+    android:layoutDirection="ltr"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".dialog.NoInternetDialog">
+
+    <ImageView
+        android:layout_width="136dp"
+        android:layout_height="136dp"
+        android:background="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tv1"
+        style="@style/Heading2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="26dp"
+        android:text="@string/no_internet_connection"
+        android:textColor="@color/black" />
+
+    <TextView
+        android:id="@+id/tv2"
+        style="@style/BodyL"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/please_check_your_wi_fi_setting_and_try_again"
+        android:textColor="@color/black" />
+
+    <LinearLayout
+        android:id="@+id/llButtonBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="26dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/btnGoToSetting"
+            style="@style/ButtonL"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_no_internet_dialog"
+            android:clickable="true"
+            android:ellipsize="marquee"
+            android:focusable="true"
+            android:gravity="center"
+            android:marqueeRepeatLimit="marquee_forever"
+            android:minHeight="50dp"
+            android:paddingHorizontal="16dp"
+            android:singleLine="true"
+            android:text="@string/go_to_setting"
+            android:textAllCaps="false"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
+
+</LinearLayout>
