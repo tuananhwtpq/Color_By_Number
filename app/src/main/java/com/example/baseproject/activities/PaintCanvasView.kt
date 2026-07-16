@@ -18,6 +18,9 @@ import android.view.ScaleGestureDetector
 import android.view.View
 import com.example.baseproject.data.AnimatedFiller
 import com.example.baseproject.data.RegionData
+import com.example.baseproject.highlight.HighlightRenderer
+import com.example.baseproject.highlight.HighlightTheme
+import com.example.baseproject.highlight.HighlightThemes
 
 class PaintCanvasView @JvmOverloads constructor(
     context: Context,
@@ -57,9 +60,6 @@ class PaintCanvasView @JvmOverloads constructor(
 
     private val effectPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val particlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val checkerLight = Color.parseColor("#F5F2F8")
-    private val checkerDark = Color.parseColor("#CFC7D8")
-    private val checkerCellSizePx = 18
 
     private lateinit var scaleDetector: ScaleGestureDetector
     private lateinit var gestureDetector: GestureDetector
@@ -74,6 +74,9 @@ class PaintCanvasView @JvmOverloads constructor(
     private var completedMaskColors: Set<Int> = emptySet()
 
     private var currentValidMaskColors: Map<Int, Int> = emptyMap()
+    private var highlightTheme: HighlightTheme = HighlightThemes.defaultChecker()
+    private var highlightEnabled: Boolean = true
+    private var currentHighlightTargets: IntArray = IntArray(0)
 
     data class TapEffect(val x: Float, val y: Float, val color: Int) {
         var progress: Float = 0f
@@ -338,6 +341,20 @@ class PaintCanvasView @JvmOverloads constructor(
         currentValidMaskColors = maskToTargetColors
     }
 
+    fun setHighlightTheme(theme: HighlightTheme) {
+        highlightTheme = theme
+        rerenderHighlight()
+    }
+
+    fun setHighlightEnabled(enabled: Boolean) {
+        highlightEnabled = enabled
+        if (!enabled) {
+            clearHighlightImmediately()
+        } else {
+            rerenderHighlight()
+        }
+    }
+
     fun setCompletedRegions(completed: Set<Int>) {
         this.completedMaskColors = completed
         invalidate()
@@ -373,42 +390,53 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     fun highlightNumber(targetMaskColors: List<Int>) {
-        val hl = highlightBitmap ?: return
-        val width = maskWidth;
-        val height = maskHeight
-        if (width == 0 || height == 0) return
-        val maskPixels = maskPixelsArray ?: return
-        val hlPixels = hlPixelsArray ?: return
+        if (!highlightEnabled) {
+            currentHighlightTargets = IntArray(0)
+            clearHighlightImmediately()
+            return
+        }
 
-        // Tính toán đồng bộ (Synchronous) siêu tốc trên Main Thread (~2-4ms)
-        // Loại bỏ hoàn toàn Coroutines để ngăn chặn lỗi nhấp nháy (Blinking) và độ trễ (Delay) do Race Condition
-        java.util.Arrays.fill(hlPixels, 0) // Clear array siêu tốc
-
-        // Bỏ qua các mảng màu đã hoàn thành hoặc đang được animation
         val animatingColors = activeFillers.map { it.maskColor }.toSet()
         val activeTargets = targetMaskColors.filter {
             !completedMaskColors.contains(it) && !animatingColors.contains(it)
         }.toIntArray()
+        currentHighlightTargets = activeTargets
 
-        if (activeTargets.isNotEmpty()) {
-            activeTargets.sort()
-            val len = width * height
+        if (activeTargets.isEmpty()) {
+            clearHighlightImmediately()
+            return
+        }
 
-            // Duyệt 1.1 triệu pixel với Binary Search nguyên thủy (Zero Object Allocation)
-            for (i in 0 until len) {
-                val c = maskPixels[i]
-                if (c != 0 && java.util.Arrays.binarySearch(activeTargets, c) >= 0) {
-                    val x = i % width
-                    val y = i / width
-                    val checkerX = x / checkerCellSizePx
-                    val checkerY = y / checkerCellSizePx
-                    hlPixels[i] = if ((checkerX + checkerY) % 2 == 0) {
-                        checkerLight
-                    } else {
-                        checkerDark
-                    }
-                }
-            }
+        rerenderHighlight()
+    }
+
+    private fun clearHighlightImmediately() {
+        val hl = highlightBitmap ?: return
+        val hlPixels = hlPixelsArray ?: return
+        java.util.Arrays.fill(hlPixels, 0)
+        hl.setPixels(hlPixels, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+        invalidate()
+    }
+
+    private fun rerenderHighlight() {
+        val hl = highlightBitmap ?: return
+        val hlPixels = hlPixelsArray ?: return
+        val width = maskWidth
+        val height = maskHeight
+        if (width == 0 || height == 0) return
+        val maskPixels = maskPixelsArray ?: return
+
+        if (!highlightEnabled || currentHighlightTargets.isEmpty()) {
+            java.util.Arrays.fill(hlPixels, 0)
+        } else {
+            HighlightRenderer.render(
+                maskPixels = maskPixels,
+                outputPixels = hlPixels,
+                width = width,
+                activeTargets = currentHighlightTargets.copyOf(),
+                theme = highlightTheme,
+                alphaFraction = 1f
+            )
         }
 
         hl.setPixels(hlPixels, 0, width, 0, 0, width, height)
@@ -552,6 +580,8 @@ class PaintCanvasView @JvmOverloads constructor(
         if (hl != null && hlPx != null) {
             filler.clearHighlight(hlPx)
             hl.setPixels(hlPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+            currentHighlightTargets =
+                currentHighlightTargets.filter { it != clickedColor }.toIntArray()
         }
 
         if (region != null) {
