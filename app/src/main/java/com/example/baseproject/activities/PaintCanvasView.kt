@@ -18,9 +18,6 @@ import android.view.ScaleGestureDetector
 import android.view.View
 import com.example.baseproject.data.AnimatedFiller
 import com.example.baseproject.data.RegionData
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.isActive
 
 class PaintCanvasView @JvmOverloads constructor(
     context: Context,
@@ -60,6 +57,9 @@ class PaintCanvasView @JvmOverloads constructor(
 
     private val effectPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val particlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val checkerLight = Color.parseColor("#F5F2F8")
+    private val checkerDark = Color.parseColor("#CFC7D8")
+    private val checkerCellSizePx = 18
 
     private lateinit var scaleDetector: ScaleGestureDetector
     private lateinit var gestureDetector: GestureDetector
@@ -392,14 +392,21 @@ class PaintCanvasView @JvmOverloads constructor(
 
         if (activeTargets.isNotEmpty()) {
             activeTargets.sort()
-            val highlightColor = Color.parseColor("#80000000")
             val len = width * height
 
             // Duyệt 1.1 triệu pixel với Binary Search nguyên thủy (Zero Object Allocation)
             for (i in 0 until len) {
                 val c = maskPixels[i]
                 if (c != 0 && java.util.Arrays.binarySearch(activeTargets, c) >= 0) {
-                    hlPixels[i] = highlightColor
+                    val x = i % width
+                    val y = i / width
+                    val checkerX = x / checkerCellSizePx
+                    val checkerY = y / checkerCellSizePx
+                    hlPixels[i] = if ((checkerX + checkerY) % 2 == 0) {
+                        checkerLight
+                    } else {
+                        checkerDark
+                    }
                 }
             }
         }
@@ -438,7 +445,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     fun focusOnRegionByMaskColor(maskColor: Int) {
         val region = regions.find { it.maskColorInt == maskColor } ?: return
-        focusOnRegion(region.centerX, region.centerY)
+        focusOnRegion(region.labelX, region.labelY)
     }
 
     fun focusOnRegion(cx: Float, cy: Float) {
@@ -698,15 +705,15 @@ class PaintCanvasView @JvmOverloads constructor(
         canvas.save()
         canvas.concat(drawMatrix)
         for (region in regions) {
-            if (!completedMaskColors.contains(region.maskColorInt)) {
+            if (!completedMaskColors.contains(region.maskColorInt) && !region.hideNumber) {
                 val screenRadius = region.radius * scaleFactor
                 if (screenRadius >= 25f) {
                     textPaint.textSize = Math.max(8f, Math.min(region.radius * 0.7f, 60f))
                     val textOffset = (textPaint.descent() + textPaint.ascent()) / 2
                     canvas.drawText(
                         region.number.toString(),
-                        region.centerX,
-                        region.centerY - textOffset,
+                        region.labelX,
+                        region.labelY - textOffset,
                         textPaint
                     )
                 }

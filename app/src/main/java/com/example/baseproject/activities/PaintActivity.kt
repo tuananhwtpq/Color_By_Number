@@ -1,6 +1,7 @@
 package com.example.baseproject.activities
 
-import android.graphics.Bitmap
+import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.View
@@ -8,24 +9,21 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.baseproject.R
+import com.example.baseproject.adapters.PaletteAdapter
+import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.PaletteItem
+import com.example.baseproject.data.RegionData
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.InputStreamReader
-import android.content.Context
-import android.content.SharedPreferences
-import androidx.appcompat.app.AlertDialog
-import com.example.baseproject.R
-import com.example.baseproject.adapters.PaletteAdapter
-import com.example.baseproject.data.LevelConfig
-import com.example.baseproject.data.PaletteItem
-import java.io.File
-import java.io.FileOutputStream
 
 class PaintActivity : AppCompatActivity() {
 
@@ -38,6 +36,7 @@ class PaintActivity : AppCompatActivity() {
     private lateinit var levelConfig: LevelConfig
     private lateinit var allRegions: List<PaletteItem>
     private lateinit var uniqueColors: List<PaletteItem>
+    private var regionMetadata: List<RegionData> = emptyList()
     private lateinit var adapter: PaletteAdapter
 
     private val completedMaskColors = mutableSetOf<Int>()
@@ -131,12 +130,22 @@ class PaintActivity : AppCompatActivity() {
         val selectedUniqueColor = uniqueColors[selectedIndex]
         val validRegions = allRegions.filter { it.number == selectedUniqueColor.number }
 
-        // Tìm 1 vùng chưa tô
-        val uncompletedRegion =
-            validRegions.find { !completedMaskColors.contains(it.getMaskColorInt()) }
+        val preferredMaskColor = regionMetadata
+            .filter {
+                it.number == selectedUniqueColor.number &&
+                        !completedMaskColors.contains(it.maskColorInt)
+            }
+            .sortedWith(
+                compareByDescending<RegionData> { !it.hideNumber }
+                    .thenByDescending { it.area }
+            )
+            .firstOrNull()
+            ?.maskColorInt
+            ?: validRegions.find { !completedMaskColors.contains(it.getMaskColorInt()) }
+                ?.getMaskColorInt()
 
-        if (uncompletedRegion != null) {
-            paintCanvas.focusOnRegionByMaskColor(uncompletedRegion.getMaskColorInt())
+        if (preferredMaskColor != null) {
+            paintCanvas.focusOnRegionByMaskColor(preferredMaskColor)
         } else {
             Toast.makeText(this, "Bạn đã tô xong màu này rồi!", Toast.LENGTH_SHORT).show()
         }
@@ -157,6 +166,7 @@ class PaintActivity : AppCompatActivity() {
                 }
                 levelConfig = Gson().fromJson(configStr, LevelConfig::class.java)
                 allRegions = levelConfig.palette
+                regionMetadata = levelConfig.toRegionDataList()
 
                 // Group to unique colors for palette UI
                 uniqueColors = allRegions.groupBy { it.number }
@@ -180,13 +190,18 @@ class PaintActivity : AppCompatActivity() {
                     )
                 }
 
-                // Tính toán tọa độ tâm để vẽ số
-                val regionsData = withContext(Dispatchers.Default) {
-                    com.example.baseproject.data.CentroidCalculator.calculateCentroids(
-                        maskBitmap!!,
-                        allRegions
-                    )
+                // Ưu tiên metadata vùng đã sinh sẵn từ config.json, fallback về level cũ.
+                val regionsData = if (regionMetadata.isNotEmpty()) {
+                    regionMetadata
+                } else {
+                    withContext(Dispatchers.Default) {
+                        com.example.baseproject.data.CentroidCalculator.calculateCentroids(
+                            maskBitmap!!,
+                            allRegions
+                        )
+                    }
                 }
+                regionMetadata = regionsData
 
                 // Khởi tạo adapter
                 adapter = PaletteAdapter(uniqueColors) { selectedColor ->

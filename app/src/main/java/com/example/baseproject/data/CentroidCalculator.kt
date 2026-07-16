@@ -8,7 +8,10 @@ data class RegionData(
     val centerY: Float,
     val number: Int, // Số hiển thị
     val area: Int,
-    val radius: Float
+    val radius: Float,
+    val labelX: Float = centerX,
+    val labelY: Float = centerY,
+    val hideNumber: Boolean = false
 )
 
 object CentroidCalculator {
