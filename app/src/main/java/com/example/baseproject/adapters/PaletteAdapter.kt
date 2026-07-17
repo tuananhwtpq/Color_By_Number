@@ -13,7 +13,7 @@ import com.example.baseproject.data.PaletteItem
 
 class PaletteAdapter(
     private val items: List<PaletteItem>,
-    private val onColorSelected: (PaletteItem) -> Unit
+    private val onColorSelected: (position: Int, item: PaletteItem) -> Unit
 ) : RecyclerView.Adapter<PaletteAdapter.ViewHolder>() {
 
     var selectedIndex = 0
@@ -29,12 +29,10 @@ class PaletteAdapter(
 
         init {
             view.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION && !completedIndexes.contains(
-                        adapterPosition
-                    )
-                ) {
-                    setSelection(adapterPosition)
-                    onColorSelected(items[adapterPosition])
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION && !completedIndexes.contains(position)) {
+                    setSelection(position)
+                    onColorSelected(position, items[position])
                 }
             }
         }
@@ -85,5 +83,11 @@ class PaletteAdapter(
     fun markCompleted(position: Int) {
         completedIndexes.add(position)
         notifyItemChanged(position)
+    }
+
+    fun setCompletedIndexes(indexes: Set<Int>) {
+        completedIndexes.clear()
+        completedIndexes.addAll(indexes)
+        notifyDataSetChanged()
     }
 }

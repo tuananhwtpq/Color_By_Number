@@ -1,19 +1,25 @@
 package com.example.baseproject.activities
 
 import android.content.Intent
-import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.viewModels
 import androidx.viewpager2.widget.ViewPager2
+import com.example.baseproject.MyApplication
 import com.example.baseproject.adapters.IntroViewPagerAdapter
+import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivityIntroBinding
-import com.example.baseproject.utils.SharedPrefManager
+import com.example.baseproject.ui.intro.IntroViewModel
 import com.example.baseproject.utils.gone
-import com.snake.squad.adslib.AdmobLib
-import com.snake.squad.adslib.utils.AdsHelper
-import com.snake.squad.adslib.utils.GoogleENative
 
 class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::inflate) {
+
+    private val viewModel: IntroViewModel by viewModels {
+        val appContainer = (application as MyApplication).appContainer
+        SimpleViewModelFactory {
+            IntroViewModel(appContainer.settingsRepository)
+        }
+    }
 
     private val mAdapter: IntroViewPagerAdapter by lazy {
         IntroViewPagerAdapter(
@@ -46,8 +52,7 @@ class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::i
     }
 
     override fun initData() {
-        SharedPrefManager.putBoolean("wantShowRate", false)
-
+        viewModel.onIntroOpened()
     }
 
     override fun initView() {
@@ -87,7 +92,7 @@ class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::i
         if (binding.vpIntro.currentItem < mAdapter.itemCount - 1) {
             binding.vpIntro.currentItem++
         } else {
-            SharedPrefManager.putBoolean("isIntroShown", true)
+            viewModel.onIntroCompleted()
 //            showInterIntro {
             goToHome()
 //            }

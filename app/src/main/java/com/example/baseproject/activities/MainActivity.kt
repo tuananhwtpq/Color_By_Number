@@ -1,26 +1,40 @@
 package com.example.baseproject.activities
 
+import androidx.activity.viewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.example.baseproject.adapters.MainVPAdapter
+import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivityMainBinding
+import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.utils.animateBottomNavLabel
 import com.example.baseproject.utils.animateBottomNavPress
 import com.example.baseproject.utils.animateBottomNavSelection
+import com.example.baseproject.utils.applyBottomNavRipple
 import com.example.baseproject.utils.enableMarquee
 import com.example.baseproject.utils.setOnUnDoubleClick
+import kotlinx.coroutines.flow.collectLatest
 
 class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::inflate) {
+
+    private val viewModel: MainViewModel by viewModels {
+        SimpleViewModelFactory { MainViewModel() }
+    }
 
     private val mAdapter by lazy {
         MainVPAdapter(this)
     }
 
     override fun initData() {
-        updateByPosition(0)
+        viewModel.onTabSelected(0)
     }
 
     override fun initView() {
+        binding.btnLib.applyBottomNavRipple()
+        binding.btnDaily.applyBottomNavRipple()
+        binding.btnAlbum.applyBottomNavRipple()
+        binding.btnMyWork.applyBottomNavRipple()
+        binding.ivColorRealm.applyBottomNavRipple(center = true)
         binding.btnLib.enableMarquee()
         binding.btnDaily.enableMarquee()
         binding.tvColorRealm.enableMarquee()
@@ -35,34 +49,41 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         binding.viewPager2.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
-                updateByPosition(position)
+                viewModel.onTabSelected(position)
             }
         })
 
-
+        collectWithLifecycle {
+            viewModel.uiState.collectLatest { state ->
+                if (binding.viewPager2.currentItem != state.selectedTab) {
+                    binding.viewPager2.currentItem = state.selectedTab
+                }
+                updateByPosition(state.selectedTab)
+            }
+        }
     }
 
     override fun initActionView() {
 
         binding.btnLib.setOnUnDoubleClick {
             binding.btnLib.animateBottomNavPress()
-            binding.viewPager2.currentItem = 0
+            viewModel.onTabSelected(0)
         }
         binding.btnDaily.setOnUnDoubleClick {
             binding.btnDaily.animateBottomNavPress()
-            binding.viewPager2.currentItem = 1
+            viewModel.onTabSelected(1)
         }
         binding.ivColorRealm.setOnUnDoubleClick {
             binding.ivColorRealm.animateBottomNavPress()
-            binding.viewPager2.currentItem = 2
+            viewModel.onTabSelected(2)
         }
         binding.btnAlbum.setOnUnDoubleClick {
             binding.btnAlbum.animateBottomNavPress()
-            binding.viewPager2.currentItem = 3
+            viewModel.onTabSelected(3)
         }
         binding.btnMyWork.setOnUnDoubleClick {
             binding.btnMyWork.animateBottomNavPress()
-            binding.viewPager2.currentItem = 4
+            viewModel.onTabSelected(4)
         }
     }
 

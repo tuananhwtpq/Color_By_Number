@@ -14,10 +14,8 @@ class AssetRepository(private val context: Context) {
         val assetManager = context.assets
 
         try {
-            // Danh mục (Cartoons, Mandala, etc.)
             val categories = assetManager.list("") ?: return@withContext emptyList()
             for (category in categories) {
-                // Bỏ qua các thư mục hệ thống hoặc file rác
                 if (category == "images" || category == "webkit" || category.contains(".")) continue
 
                 val levelIds = assetManager.list(category) ?: continue
@@ -30,14 +28,13 @@ class AssetRepository(private val context: Context) {
                         levels.add(config)
                         reader.close()
                     } catch (e: Exception) {
-                        // File không tồn tại hoặc lỗi parse, bỏ qua
                     }
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        
+
         return@withContext levels
     }
 }

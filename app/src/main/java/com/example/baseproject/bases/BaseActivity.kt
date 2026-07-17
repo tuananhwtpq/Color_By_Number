@@ -11,12 +11,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewbinding.ViewBinding
 import com.example.baseproject.dialog.LoadingDialog
 import com.example.baseproject.dialog.NoInternetDialog
 import com.example.baseproject.utils.Common
 import com.example.baseproject.utils.isNetworkAvailable
 import com.snake.squad.adslib.AdmobLib
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInflater) -> viewBinding) :
@@ -75,6 +79,17 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
     abstract fun initView()
 
     abstract fun initActionView()
+
+    protected fun collectWithLifecycle(
+        minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
+        collector: suspend () -> Unit
+    ) {
+        lifecycleScope.launch {
+            repeatOnLifecycle(minActiveState) {
+                collector()
+            }
+        }
+    }
 
     override fun onResume() {
         super.onResume()

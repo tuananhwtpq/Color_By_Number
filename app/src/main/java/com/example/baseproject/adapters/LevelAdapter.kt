@@ -24,8 +24,9 @@ class LevelAdapter(
 
         init {
             view.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    onClick(levels[adapterPosition])
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onClick(levels[position])
                 }
             }
         }

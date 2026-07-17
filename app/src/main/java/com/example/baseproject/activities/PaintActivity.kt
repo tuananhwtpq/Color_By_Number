@@ -1,352 +1,164 @@
 package com.example.baseproject.activities
 
-import android.content.Context
-import android.content.SharedPreferences
-import android.graphics.BitmapFactory
-import android.os.Bundle
-import android.view.View
-import android.widget.ImageButton
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.example.baseproject.R
+import com.example.baseproject.MyApplication
 import com.example.baseproject.adapters.PaletteAdapter
-import com.example.baseproject.data.LevelConfig
-import com.example.baseproject.data.PaletteItem
-import com.example.baseproject.data.RegionData
-import com.example.baseproject.utils.AssetImageResolver
-import com.google.gson.Gson
-import kotlinx.coroutines.Dispatchers
+import com.example.baseproject.app.SimpleViewModelFactory
+import com.example.baseproject.bases.BaseActivity
+import com.example.baseproject.databinding.ActivityPaintBinding
+import com.example.baseproject.ui.paint.PaintUiEvent
+import com.example.baseproject.ui.paint.PaintUiState
+import com.example.baseproject.ui.paint.PaintViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.InputStreamReader
 
-class PaintActivity : AppCompatActivity() {
+class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::inflate) {
 
-    private lateinit var paintCanvas: PaintCanvasView
-    private lateinit var rvPalette: RecyclerView
-    private lateinit var progressBar: ProgressBar
-    private lateinit var tvTitle: TextView
-    private lateinit var btnBack: ImageButton
+    private val viewModel: PaintViewModel by viewModels {
+        val appContainer = (application as MyApplication).appContainer
+        SimpleViewModelFactory {
+            PaintViewModel(
+                appContainer.assetLevelRepository,
+                appContainer.paintingProgressRepository,
+                appContainer.thumbnailRepository
+            )
+        }
+    }
 
-    private lateinit var levelConfig: LevelConfig
-    private lateinit var allRegions: List<PaletteItem>
-    private lateinit var uniqueColors: List<PaletteItem>
-    private var regionMetadata: List<RegionData> = emptyList()
     private lateinit var adapter: PaletteAdapter
+    private var currentRenderKey: String? = null
+    private var lastSelectedIndex: Int = -1
+    private var lastCompletedMaskColors: Set<Int> = emptySet()
+    private var category: String? = null
+    private var levelId: String? = null
 
-    private val completedMaskColors = mutableSetOf<Int>()
-    private val completedMaskColorsStr = mutableSetOf<String>()
-    private lateinit var prefs: SharedPreferences
-    private lateinit var prefKey: String
+    override fun initData() {
+        category = intent.getStringExtra("CATEGORY")
+        levelId = intent.getStringExtra("LEVEL_ID")
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_paint)
+        if (category == null || levelId == null) {
+            finish()
+            return
+        }
+    }
 
-        val category = intent.getStringExtra("CATEGORY") ?: return finish()
-        val levelId = intent.getStringExtra("LEVEL_ID") ?: return finish()
-
-        prefKey = "PROGRESS_${category}_${levelId}"
-        prefs = getSharedPreferences("PaintingProgress", Context.MODE_PRIVATE)
-
+    override fun initView() {
         initViews()
+        collectUi()
+    }
 
-        btnBack.setOnClickListener { finish() }
+    override fun initActionView() {
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnHint.setOnClickListener { viewModel.onHintRequested() }
+        binding.btnReset.setOnClickListener { viewModel.requestResetConfirmation() }
 
-        loadLevelData(category, levelId)
+        viewModel.loadLevel(
+            category = category ?: return,
+            levelId = levelId ?: return
+        )
     }
 
     private fun initViews() {
-        paintCanvas = findViewById(R.id.paintCanvas)
-        rvPalette = findViewById(R.id.rvPalette)
-        progressBar = findViewById(R.id.progressBar)
-        tvTitle = findViewById(R.id.tvTitle)
-        btnBack = findViewById(R.id.btnBack)
-
-        rvPalette.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        // Lắng nghe sự kiện đổ màu hoàn thành thay vì click
-        setupRegionFilledListener()
-
-        // Cài đặt nút Hint
-        findViewById<View>(R.id.btnHint).setOnClickListener {
-            handleHintClick()
-        }
-
-        // Cài đặt nút Reset
-        findViewById<View>(R.id.btnReset).setOnClickListener {
-            resetProgress()
+        binding.rvPalette.layoutManager =
+            LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding.paintCanvas.onRegionFilledListener = { maskInt ->
+            viewModel.onRegionFilled(maskInt)
         }
     }
 
-    private fun resetProgress() {
-        val category = intent.getStringExtra("CATEGORY") ?: return
-        val levelId = intent.getStringExtra("LEVEL_ID") ?: return
+    private fun collectUi() {
+        collectWithLifecycle {
+            viewModel.uiState.collectLatest(::renderState)
+        }
+        collectWithLifecycle {
+            viewModel.events.collectLatest(::handleEvent)
+        }
+    }
 
+    private fun renderState(state: PaintUiState) {
+        binding.progressBar.visibility =
+            if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
+        binding.tvTitle.text = state.title
+
+        if (state.palette.isNotEmpty() && (!this::adapter.isInitialized || adapter.itemCount != state.palette.size)) {
+            adapter = PaletteAdapter(state.palette) { position, _ ->
+                viewModel.onPaletteSelected(position)
+            }
+            binding.rvPalette.adapter = adapter
+        }
+
+        if (this::adapter.isInitialized) {
+            adapter.setCompletedIndexes(state.completedIndexes)
+            if (state.selectedPaletteIndex in 0 until adapter.itemCount && adapter.selectedIndex != state.selectedPaletteIndex) {
+                adapter.setSelection(state.selectedPaletteIndex)
+            }
+
+            if (lastSelectedIndex != state.selectedPaletteIndex && state.selectedPaletteIndex in 0 until adapter.itemCount) {
+                binding.rvPalette.smoothScrollToPosition(state.selectedPaletteIndex)
+            }
+        }
+
+        val renderData = state.renderData
+        if (renderData != null) {
+            val newRenderKey = "${renderData.category}/${renderData.levelId}"
+            if (currentRenderKey != newRenderKey) {
+                currentRenderKey = newRenderKey
+                lifecycleScope.launch {
+                    binding.paintCanvas.setBitmapsSuspend(
+                        renderData.lineBitmap,
+                        renderData.maskBitmap,
+                        renderData.regions
+                    )
+                    if (state.completedColorMap.isNotEmpty()) {
+                        binding.paintCanvas.restoreProgressSuspend(state.completedColorMap)
+                    }
+                    binding.paintCanvas.setCompletedRegions(state.completedMaskColors)
+                    binding.paintCanvas.highlightNumber(state.highlightMaskColors)
+                    binding.paintCanvas.setActiveColors(state.activeColors)
+                }
+            } else {
+                if (lastCompletedMaskColors.isNotEmpty() && state.completedMaskColors.isEmpty()) {
+                    binding.paintCanvas.setCompletedRegions(emptySet())
+                    binding.paintCanvas.resetProgress()
+                } else {
+                    binding.paintCanvas.setCompletedRegions(state.completedMaskColors)
+                }
+                binding.paintCanvas.highlightNumber(state.highlightMaskColors)
+                binding.paintCanvas.setActiveColors(state.activeColors)
+            }
+        }
+
+        lastSelectedIndex = state.selectedPaletteIndex
+        lastCompletedMaskColors = state.completedMaskColors
+    }
+
+    private fun handleEvent(event: PaintUiEvent) {
+        when (event) {
+            PaintUiEvent.FinishScreen -> finish()
+            is PaintUiEvent.FocusOnMaskColor -> binding.paintCanvas.focusOnRegionByMaskColor(event.maskColor)
+            PaintUiEvent.RequestResetConfirmation -> showResetConfirmationDialog()
+            is PaintUiEvent.ShowToast -> Toast.makeText(this, event.message, Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
+
+    private fun showResetConfirmationDialog() {
         AlertDialog.Builder(this)
             .setTitle("Reset")
             .setMessage("Bạn có chắc chắn muốn xóa toàn bộ tiến trình của bức tranh này và tô lại từ đầu?")
             .setPositiveButton("Có") { _, _ ->
-                prefs.edit().remove(prefKey).apply()
-                completedMaskColors.clear()
-                completedMaskColorsStr.clear()
-
-                // Xóa file Thumbnail
-                val dir = java.io.File(filesDir, "thumbnails")
-                val thumbFile = java.io.File(dir, "${category}_${levelId}.webp")
-                if (thumbFile.exists()) {
-                    thumbFile.delete()
-                }
-
-                paintCanvas.setCompletedRegions(completedMaskColors)
-                paintCanvas.resetProgress()
-
-                // Reset UI Palette
-                if (this::adapter.isInitialized) {
-                    adapter.completedIndexes.clear()
-                    adapter.notifyDataSetChanged()
-
-                    // Select màu đầu tiên
-                    if (uniqueColors.isNotEmpty()) {
-                        adapter.setSelection(0)
-                        rvPalette.scrollToPosition(0)
-                        updateHighlight(uniqueColors[0])
-                    }
-                }
+                viewModel.onResetConfirmed()
             }
             .setNegativeButton("Không", null)
             .show()
     }
 
-    private fun handleHintClick() {
-        if (!this::adapter.isInitialized) return
-        if (uniqueColors.isEmpty()) return
-
-        val selectedIndex = adapter.selectedIndex
-        val selectedUniqueColor = uniqueColors[selectedIndex]
-        val validRegions = allRegions.filter { it.number == selectedUniqueColor.number }
-
-        val preferredMaskColor = regionMetadata
-            .filter {
-                it.number == selectedUniqueColor.number &&
-                        !completedMaskColors.contains(it.maskColorInt)
-            }
-            .sortedWith(
-                compareByDescending<RegionData> { !it.hideNumber }
-                    .thenByDescending { it.area }
-            )
-            .firstOrNull()
-            ?.maskColorInt
-            ?: validRegions.find { !completedMaskColors.contains(it.getMaskColorInt()) }
-                ?.getMaskColorInt()
-
-        if (preferredMaskColor != null) {
-            paintCanvas.focusOnRegionByMaskColor(preferredMaskColor)
-        } else {
-            Toast.makeText(this, "Bạn đã tô xong màu này rồi!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun loadLevelData(category: String, levelId: String) {
-        progressBar.visibility = View.VISIBLE
-
-        lifecycleScope.launch {
-            try {
-                // Read config.json
-                val configStr = withContext(Dispatchers.IO) {
-                    val stream = assets.open("$category/$levelId/config.json")
-                    val reader = InputStreamReader(stream)
-                    val json = reader.readText()
-                    reader.close()
-                    json
-                }
-                levelConfig = Gson().fromJson(configStr, LevelConfig::class.java)
-                allRegions = levelConfig.palette
-                regionMetadata = levelConfig.toRegionDataList()
-
-                // Group to unique colors for palette UI
-                uniqueColors = allRegions.groupBy { it.number }
-                    .map { it.value.first() }
-                    .sortedBy { it.number }
-
-                tvTitle.text = levelConfig.name
-
-                // Load Bitmaps
-                val lineBitmap = withContext(Dispatchers.IO) {
-                    AssetImageResolver.openResolvedAsset(assets, "$category/$levelId/line").use {
-                        BitmapFactory.decodeStream(it)
-                    }
-                }
-                val maskBitmap = withContext(Dispatchers.IO) {
-                    val opts = BitmapFactory.Options().apply {
-                        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
-                    }
-                    AssetImageResolver.openResolvedAsset(assets, "$category/$levelId/mask").use {
-                        BitmapFactory.decodeStream(it, null, opts)
-                    }
-                }
-
-                // Ưu tiên metadata vùng đã sinh sẵn từ config.json, fallback về level cũ.
-                val regionsData = if (regionMetadata.isNotEmpty()) {
-                    regionMetadata
-                } else {
-                    withContext(Dispatchers.Default) {
-                        com.example.baseproject.data.CentroidCalculator.calculateCentroids(
-                            maskBitmap!!,
-                            allRegions
-                        )
-                    }
-                }
-                regionMetadata = regionsData
-
-                // Khởi tạo adapter
-                adapter = PaletteAdapter(uniqueColors) { selectedColor ->
-                    updateHighlight(selectedColor)
-                }
-                rvPalette.adapter = adapter
-
-                paintCanvas.setBitmapsSuspend(lineBitmap!!, maskBitmap!!, regionsData)
-                loadProgressSuspend()
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Toast.makeText(this@PaintActivity, "Failed to load level", Toast.LENGTH_SHORT)
-                    .show()
-                finish()
-            } finally {
-                progressBar.visibility = View.GONE
-            }
-        }
-    }
-
-    private suspend fun loadProgressSuspend() {
-        val savedStrings = prefs.getStringSet(prefKey, emptySet()) ?: emptySet()
-        if (savedStrings.isNotEmpty()) {
-            val savedColors = savedStrings.mapNotNull { it.toIntOrNull() }.toSet()
-            completedMaskColors.addAll(savedColors)
-            completedMaskColorsStr.addAll(savedStrings)
-            paintCanvas.setCompletedRegions(completedMaskColors)
-
-            // Xây dựng map phục hồi cho Canvas
-            val completedMap = mutableMapOf<Int, Int>()
-            for (color in savedColors) {
-                val item = allRegions.find { it.getMaskColorInt() == color }
-                if (item != null) {
-                    completedMap[color] = item.getTargetColorInt()
-                }
-            }
-            paintCanvas.restoreProgressSuspend(completedMap)
-
-            // Cập nhật Palette UI
-            for ((index, uniqueColor) in uniqueColors.withIndex()) {
-                val validRegions = allRegions.filter { it.number == uniqueColor.number }
-                checkColorCompletion(uniqueColor, index, validRegions)
-            }
-        }
-
-        // Highlight màu đầu tiên chưa hoàn thành (hoặc màu 0)
-        if (uniqueColors.isNotEmpty()) {
-            val firstIncompleteIndex =
-                uniqueColors.indices.firstOrNull { !adapter.completedIndexes.contains(it) } ?: 0
-            adapter.setSelection(firstIncompleteIndex)
-            rvPalette.scrollToPosition(firstIncompleteIndex)
-            updateHighlight(uniqueColors[firstIncompleteIndex])
-        }
-    }
-
-    private fun updateHighlight(selectedColor: PaletteItem) {
-        val validRegions = allRegions.filter { it.number == selectedColor.number }
-        val targetMaskColors = validRegions.map { it.getMaskColorInt() }
-
-        paintCanvas.highlightNumber(targetMaskColors)
-
-        // Cập nhật Active Color Map cho PaintCanvasView
-        if (validRegions.isNotEmpty()) {
-            val colorMap = validRegions.associate { it.getMaskColorInt() to it.getTargetColorInt() }
-            paintCanvas.setActiveColors(colorMap)
-        }
-    }
-
-    private fun setupRegionFilledListener() {
-        paintCanvas.onRegionFilledListener = { maskInt ->
-            completedMaskColors.add(maskInt)
-            completedMaskColorsStr.add(maskInt.toString())
-            paintCanvas.setCompletedRegions(completedMaskColors)
-
-            // Lưu tiến trình (Sử dụng Set trực tiếp để tối ưu Memory Allocations)
-            prefs.edit().putStringSet(prefKey, completedMaskColorsStr).apply()
-
-            if (this::adapter.isInitialized) {
-                val selectedIndex = adapter.selectedIndex
-                val selectedUniqueColor = uniqueColors[selectedIndex]
-                val validRegions = allRegions.filter { it.number == selectedUniqueColor.number }
-
-                // Cập nhật lại lớp highlight để xóa vùng vừa tô khỏi highlight
-                updateHighlight(selectedUniqueColor)
-
-                checkColorCompletion(selectedUniqueColor, selectedIndex, validRegions)
-            }
-        }
-    }
-
-    private fun checkColorCompletion(
-        color: PaletteItem,
-        index: Int,
-        validRegions: List<PaletteItem>
-    ) {
-        val allCompleted = validRegions.all { completedMaskColors.contains(it.getMaskColorInt()) }
-        if (allCompleted) {
-            adapter.markCompleted(index)
-
-            // Auto scroll tới màu chưa hoàn thành tiếp theo
-            val nextIndex =
-                uniqueColors.indices.firstOrNull { !adapter.completedIndexes.contains(it) }
-            if (nextIndex != null) {
-                adapter.setSelection(nextIndex)
-                rvPalette.smoothScrollToPosition(nextIndex)
-                updateHighlight(uniqueColors[nextIndex])
-            } else {
-                // Hoàn thành tất cả!
-                Toast.makeText(this, "Level Completed! 🎉", Toast.LENGTH_LONG).show()
-                paintCanvas.highlightNumber(emptyList()) // Xóa highlight
-            }
-        }
-    }
-
     override fun onPause() {
         super.onPause()
-        saveThumbnail()
-    }
-
-    private fun saveThumbnail() {
-        // Nếu chưa tô gì thì không cần lưu thumbnail (sẽ load mặc định line.webp/png)
-        if (completedMaskColors.isEmpty()) return
-
-        val bitmap = paintCanvas.generateThumbnail(400) ?: return
-        val category = intent.getStringExtra("CATEGORY") ?: return
-        val levelId = intent.getStringExtra("LEVEL_ID") ?: return
-
-        // Lưu ĐỒNG BỘ (Synchronous) để đảm bảo file được ghi xong 100% 
-        // TRƯỚC KHI MainActivity gọi onResume() và dùng Glide đọc file này lên.
-        // Quá trình này chỉ tốn ~10-15ms, rất an toàn để chạy trên Main Thread khi chuyển màn hình.
-        try {
-            val dir = java.io.File(filesDir, "thumbnails")
-            if (!dir.exists()) dir.mkdirs()
-
-            val file = java.io.File(dir, "${category}_${levelId}.webp")
-            java.io.FileOutputStream(file).use { out ->
-                // Nén ảnh dưới định dạng WEBP chất lượng 80 (cực nhẹ và nhanh)
-                bitmap.compress(android.graphics.Bitmap.CompressFormat.WEBP, 80, out)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            bitmap.recycle()
-        }
+        viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(400))
     }
 }

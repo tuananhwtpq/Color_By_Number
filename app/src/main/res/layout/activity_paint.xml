@@ -22,8 +22,8 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_revert" 
-            android:contentDescription="Back" />
+            android:contentDescription="Back"
+            android:src="@android:drawable/ic_menu_revert" />
 
         <TextView
             android:id="@+id/tvTitle"
@@ -41,8 +41,8 @@
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_delete" 
-            android:contentDescription="Reset" />
+            android:contentDescription="Reset"
+            android:src="@android:drawable/ic_menu_delete" />
 
         <ImageButton
             android:id="@+id/btnHint"
@@ -50,8 +50,8 @@
             android:layout_height="48dp"
             android:layout_marginEnd="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_search" 
-            android:contentDescription="Hint" />
+            android:contentDescription="Hint"
+            android:src="@android:drawable/ic_menu_search" />
     </LinearLayout>
 
     <!-- Canvas -->
@@ -59,20 +59,20 @@
         android:id="@+id/paintCanvas"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/topBar"
         app:layout_constraintBottom_toTopOf="@id/paletteContainer"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/topBar" />
 
     <!-- Loading overlay -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Palette -->
     <FrameLayout
@@ -81,7 +81,8 @@
         android:layout_height="80dp"
         android:background="#FFFFFF"
         android:elevation="8dp"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:visibility="gone">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvPalette"
@@ -90,5 +91,99 @@
             android:clipToPadding="false"
             android:paddingHorizontal="8dp" />
     </FrameLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/llGuide"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_guide_01"
+        android:elevation="4dp"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tvGuide01"
+            style="@style/BodyL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="130dp"
+            android:background="@drawable/bg_text_guide"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="8dp"
+            android:text="@string/pick_a_color_to_start_coloring"
+            android:textColor="@color/grey_800"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <ImageView
+            android:id="@+id/iv01"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-10dp"
+            android:src="@drawable/img_poligon_02"
+            app:layout_constraintEnd_toEndOf="@id/tvGuide01"
+            app:layout_constraintStart_toStartOf="@id/tvGuide01"
+            app:layout_constraintTop_toBottomOf="@id/tvGuide01" />
+
+        <TextView
+            android:id="@+id/tvGuide02"
+            style="@style/BodyL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="130dp"
+            android:background="@drawable/bg_text_guide"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="8dp"
+            android:text="@string/tap_the_matching_numbered_area_to_color"
+            android:textColor="@color/grey_800"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/iv02"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-10dp"
+            android:src="@drawable/img_poligon_02"
+            app:layout_constraintEnd_toEndOf="@id/tvGuide02"
+            app:layout_constraintStart_toStartOf="@id/tvGuide02"
+            app:layout_constraintTop_toBottomOf="@id/tvGuide02" />
+
+        <TextView
+            android:id="@+id/tvGuide03"
+            style="@style/BodyL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="130dp"
+            android:layout_marginBottom="130dp"
+            android:background="@drawable/bg_text_guide"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="8dp"
+            android:text="@string/tap_here_if_you_can_t_find_the_color_area"
+            android:textColor="@color/grey_800"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/iv03"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="-10dp"
+            android:rotation="180"
+            android:src="@drawable/img_poligon_02"
+            app:layout_constraintBottom_toTopOf="@id/tvGuide03"
+            app:layout_constraintEnd_toEndOf="@id/tvGuide03" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,24 +1,27 @@
 package com.example.baseproject.activities
 
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.viewModels
+import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivitySplashBinding
+import com.example.baseproject.ui.splash.SplashUiEvent
+import com.example.baseproject.ui.splash.SplashViewModel
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.invisible
 import com.example.baseproject.utils.visible
 import com.snake.squad.adslib.AdmobLib
 import com.snake.squad.adslib.cmp.GoogleMobileAdsConsentManager
 import com.snake.squad.adslib.utils.AdsHelper
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.system.exitProcess
 
 class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding::inflate) {
 
-    private var isMobileAdsInitializeCalled = AtomicBoolean(false)
-    private var isInitAds = AtomicBoolean(false)
+    private val viewModel: SplashViewModel by viewModels {
+        SimpleViewModelFactory { SplashViewModel() }
+    }
 
     override fun initData() {
         if (!isTaskRoot
@@ -32,20 +35,23 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
     }
 
     override fun initView() {
-//        if (AdsHelper.isNetworkConnected(this)) {
-//            binding.tvLoadingAds.visible()
-//            setupCMP()
-////            initRemoteConfig()
-//        } else {
-//            binding.tvLoadingAds.invisible()
-//            Handler(Looper.getMainLooper()).postDelayed({
-//                replaceActivity()
-//            }, 3000)
-//        }
+        collectWithLifecycle {
+            viewModel.uiState.collectLatest { state ->
+                if (state.showAdsLoading) binding.tvLoadingAds.visible()
+                else binding.tvLoadingAds.invisible()
+            }
+        }
+        collectWithLifecycle {
+            viewModel.events.collectLatest { event ->
+                when (event) {
+                    SplashUiEvent.RequestConsent -> setupCMP()
+                    SplashUiEvent.InitializeAds -> initializeMobileAdsSdk()
+                    SplashUiEvent.NavigateToMain -> replaceActivity()
+                }
+            }
+        }
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            replaceActivity()
-        }, 3000L)
+        viewModel.startSplash(hasNetwork = AdsHelper.isNetworkConnected(this))
     }
 
     override fun initActionView() {
@@ -55,22 +61,18 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
     private fun setupCMP() {
         val googleMobileAdsConsentManager = GoogleMobileAdsConsentManager(this)
         googleMobileAdsConsentManager.gatherConsent { error ->
-            error?.let {
-                initializeMobileAdsSdk()
+            if (error != null) {
+                viewModel.onConsentResolved(canRequestAds = true)
+                return@gatherConsent
             }
 
-            if (googleMobileAdsConsentManager.canRequestAds) {
-                initializeMobileAdsSdk()
-            }
+            viewModel.onConsentResolved(
+                canRequestAds = googleMobileAdsConsentManager.canRequestAds
+            )
         }
     }
 
     private fun initializeMobileAdsSdk() {
-        if (isMobileAdsInitializeCalled.get()) {
-            //start action
-            return
-        }
-        isMobileAdsInitializeCalled.set(true)
         initAds()
     }
 
@@ -95,16 +97,9 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
     private fun initAds() {
         AdmobLib.initialize(this, isDebug = true, isShowAds = false, onInitializedAds = {
             if (it) {
-                // todo: fix here
-                binding.tvLoadingAds.invisible()
-                Handler(Looper.getMainLooper()).postDelayed({
-                    replaceActivity()
-                }, 5000)
+                viewModel.onAdsInitialized()
             } else {
-                binding.tvLoadingAds.invisible()
-                Handler(Looper.getMainLooper()).postDelayed({
-                    replaceActivity()
-                }, 5000)
+                viewModel.onAdsInitializationFailed()
             }
         })
     }

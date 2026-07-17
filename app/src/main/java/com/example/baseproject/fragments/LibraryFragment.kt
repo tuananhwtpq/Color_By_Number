@@ -2,63 +2,57 @@ package com.example.baseproject.fragments
 
 import android.content.Intent
 import android.view.LayoutInflater
-import android.view.View
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import com.example.baseproject.MyApplication
 import com.example.baseproject.R
 import com.example.baseproject.activities.PaintActivity
 import com.example.baseproject.adapters.LevelAdapter
+import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseFragment
-import com.example.baseproject.data.AssetRepository
-import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.databinding.FragmentLibraryBinding
 import com.example.baseproject.databinding.ItemLibraryCategoryTabBinding
-import kotlinx.coroutines.launch
+import com.example.baseproject.ui.library.LibraryViewModel
+import kotlinx.coroutines.flow.collectLatest
 
 class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBinding::inflate) {
 
-    private lateinit var repository: AssetRepository
-    private var allLevels = listOf<LevelConfig>()
-    private var categories = listOf<String>()
-    private var selectedCategory: String? = null
+    private val viewModel: LibraryViewModel by viewModels {
+        val appContainer = (requireActivity().application as MyApplication).appContainer
+        SimpleViewModelFactory {
+            LibraryViewModel(appContainer.assetLevelRepository)
+        }
+    }
 
     override fun initData() {
 
     }
 
     override fun initView() {
-
-        repository = AssetRepository(requireActivity())
-
         binding.rvLevels.layoutManager = GridLayoutManager(requireActivity(), 2)
-
-        loadData()
+        collectWithLifecycle {
+            viewModel.uiState.collectLatest { state ->
+                binding.progressBar.visibility =
+                    if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
+                renderCategoryTabs(state.categories, state.selectedCategory)
+                binding.rvLevels.adapter =
+                    LevelAdapter(state.visibleLevels, lifecycleScope) { level ->
+                        val intent = Intent(requireActivity(), PaintActivity::class.java)
+                        intent.putExtra("CATEGORY", level.category)
+                        intent.putExtra("LEVEL_ID", level.id)
+                        startActivity(intent)
+                    }
+            }
+        }
     }
 
     override fun initActionView() {
     }
 
-    private fun loadData() {
-        binding.progressBar.visibility = View.VISIBLE
-        lifecycleScope.launch {
-            allLevels = repository.loadAllLevels()
-            categories = allLevels.map { it.category }.distinct()
-
-            renderCategoryTabs()
-            if (categories.isNotEmpty()) {
-                selectCategory(selectedCategory?.takeIf { it in categories } ?: categories.first())
-            } else {
-                selectedCategory = null
-                binding.rvLevels.adapter = null
-            }
-
-            binding.progressBar.visibility = View.GONE
-        }
-    }
-
-    private fun renderCategoryTabs() {
+    private fun renderCategoryTabs(categories: List<String>, selectedCategory: String?) {
         binding.layoutCategories.removeAllViews()
         val inflater = LayoutInflater.from(requireContext())
 
@@ -67,7 +61,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                 ItemLibraryCategoryTabBinding.inflate(inflater, binding.layoutCategories, false)
             tabBinding.tvCategoryTab.text = category
             tabBinding.tvCategoryTab.setOnClickListener {
-                selectCategory(category)
+                viewModel.selectCategory(category)
             }
 
             if (index == categories.lastIndex) {
@@ -78,16 +72,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
 
             binding.layoutCategories.addView(tabBinding.root)
         }
-        updateTabSelection()
+        updateTabSelection(selectedCategory)
     }
 
-    private fun selectCategory(category: String) {
-        selectedCategory = category
-        updateTabSelection()
-        filterLevels(category)
-    }
-
-    private fun updateTabSelection() {
+    private fun updateTabSelection(selectedCategory: String?) {
         repeat(binding.layoutCategories.childCount) { index ->
             val tabView = binding.layoutCategories.getChildAt(index) as? TextView ?: return@repeat
             val isSelected = tabView.text.toString() == selectedCategory
@@ -103,17 +91,6 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
             )
             tabView.isSelected = isSelected
         }
-    }
-
-    private fun filterLevels(category: String) {
-        val filteredList = allLevels.filter { it.category == category }
-        val adapter = LevelAdapter(filteredList, lifecycleScope) { level ->
-            val intent = Intent(requireActivity(), PaintActivity::class.java)
-            intent.putExtra("CATEGORY", level.category)
-            intent.putExtra("LEVEL_ID", level.id)
-            startActivity(intent)
-        }
-        binding.rvLevels.adapter = adapter
     }
 
     override fun onResume() {
