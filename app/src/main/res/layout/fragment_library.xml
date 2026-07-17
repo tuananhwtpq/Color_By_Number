@@ -1,36 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:background="@drawable/bg_background_main"
     android:layoutDirection="ltr"
+    tools:background="@drawable/bg_background_main"
     tools:context=".fragments.LibraryFragment">
 
-    <TextView
-        android:id="@+id/tvAppTitle"
+    <ImageView
+        android:id="@+id/btnSetting"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Color By Number"
-        android:textColor="#333333"
-        android:textSize="24sp"
-        android:textStyle="bold"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="20dp"
+        android:src="@drawable/ic_setting"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- TabLayout for Categories -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/tvAppName1"
+        style="@style/Display2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:text="Pixlory"
+        android:textColor="@color/white"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btnSetting" />
+
+    <TextView
+        android:id="@+id/tvAppName2"
+        style="@style/sub1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Color by Number"
+        android:textColor="@color/grey_50"
+        app:layout_constraintStart_toStartOf="@id/tvAppName1"
+        app:layout_constraintTop_toBottomOf="@id/tvAppName1" />
+
+    <HorizontalScrollView
+        android:id="@+id/hsvCategories"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/tvAppTitle"
-        app:tabMode="scrollable" />
+        android:clipToPadding="false"
+        android:fillViewport="false"
+        android:minHeight="40dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAppName2"
+        tools:ignore="RtlSymmetry">
 
-    <!-- RecyclerView for Levels -->
+        <LinearLayout
+            android:id="@+id/layoutCategories"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvLevels"
         android:layout_width="match_parent"
@@ -38,7 +71,7 @@
         android:clipToPadding="false"
         android:padding="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tabLayout" />
+        app:layout_constraintTop_toBottomOf="@id/hsvCategories" />
 
     <ProgressBar
         android:id="@+id/progressBar"

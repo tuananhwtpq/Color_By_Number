@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="20dp"
     app:cardElevation="4dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -16,25 +16,27 @@
             android:id="@+id/ivThumbnail"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            app:layout_constraintDimensionRatio="1:1"
-            android:scaleType="centerCrop"
             android:background="#E0E0E0"
-            app:layout_constraintTop_toTopOf="parent"
+            android:scaleType="centerCrop"
+            app:layout_constraintDimensionRatio="1:1"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/tvLevelName"
-            android:layout_width="0dp"
+            android:id="@+id/tvCurrentPercent"
+            style="@style/BodyM"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginEnd="6dp"
+            android:layout_marginBottom="6dp"
+            android:background="@drawable/bg_percent"
             android:gravity="center"
-            android:textColor="#333333"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            app:layout_constraintTop_toBottomOf="@id/ivThumbnail"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:padding="8dp"
+            android:text="30%"
+            android:textColor="@color/orange400"
+            app:layout_constraintBottom_toBottomOf="@id/ivThumbnail"
+            app:layout_constraintEnd_toEndOf="@id/ivThumbnail" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

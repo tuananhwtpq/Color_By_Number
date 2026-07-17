@@ -20,7 +20,7 @@ class LevelAdapter(
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val ivThumbnail: ImageView = view.findViewById(R.id.ivThumbnail)
-        val tvLevelName: TextView = view.findViewById(R.id.tvLevelName)
+        val tvLevelName: TextView = view.findViewById(R.id.tvCurrentPercent)
 
         init {
             view.setOnClickListener {

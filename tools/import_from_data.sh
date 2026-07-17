@@ -10,16 +10,42 @@ GENERATOR="$PROJECT_ROOT/tools/generate_level.py"
 if [[ $# -lt 2 ]]; then
   echo "Cách dùng:"
   echo "  bash tools/import_from_data.sh <Category> <ArtworkFolder> [Display Name] [generator options...]"
+  echo "  bash tools/import_from_data.sh from-existing <SourceCategory/ArtworkFolder> <TargetCategory> [Display Name] [generator options...]"
   echo
   echo "Ví dụ:"
   echo "  bash tools/import_from_data.sh Cartoons Sonic"
   echo "  bash tools/import_from_data.sh Cartoons Sonic \"Sonic Vietnam\" --line-close-radius 1 --small-region-attach-distance 12"
+  # copy from source to another folder -> source: Cartoons/Sonic -> new goal: Animals folder
+  echo "  bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals"
+  echo "  bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals \"Sonic Blue\" --line-close-radius 1"
   exit 1
 fi
 
-CATEGORY="$1"
-ARTWORK_FOLDER="$2"
-shift 2
+if [[ "$1" == "from-existing" ]]; then
+  if [[ $# -lt 3 ]]; then
+    echo "Cách dùng:"
+    echo "  bash tools/import_from_data.sh from-existing <SourceCategory/ArtworkFolder> <TargetCategory> [Display Name] [generator options...]"
+    exit 1
+  fi
+
+  SOURCE_PATH="$2"
+  TARGET_CATEGORY="$3"
+  shift 3
+
+  if [[ "$SOURCE_PATH" != */* ]]; then
+    echo "Source path phải có dạng <SourceCategory/ArtworkFolder>, ví dụ: Cartoons/Sonic"
+    exit 1
+  fi
+
+  CATEGORY="$TARGET_CATEGORY"
+  ARTWORK_FOLDER="${SOURCE_PATH##*/}"
+  LEVEL_DIR="$DATA_ROOT/$SOURCE_PATH"
+else
+  CATEGORY="$1"
+  ARTWORK_FOLDER="$2"
+  shift 2
+  LEVEL_DIR="$DATA_ROOT/$CATEGORY/$ARTWORK_FOLDER"
+fi
 
 DISPLAY_NAME="$ARTWORK_FOLDER"
 if [[ $# -gt 0 && "$1" != --* ]]; then
@@ -27,7 +53,6 @@ if [[ $# -gt 0 && "$1" != --* ]]; then
   shift 1
 fi
 
-LEVEL_DIR="$DATA_ROOT/$CATEGORY/$ARTWORK_FOLDER"
 if [[ ! -d "$LEVEL_DIR" ]]; then
   echo "Không tìm thấy thư mục: $LEVEL_DIR"
   exit 1

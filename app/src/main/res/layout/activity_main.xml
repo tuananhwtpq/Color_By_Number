@@ -47,71 +47,71 @@
             style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="4dp"
-            android:textColor="@color/bottom_nav_color"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
             android:drawableTop="@drawable/ic_lib_selector"
             android:drawablePadding="8dp"
             android:gravity="center"
-            android:text="Library" />
+            android:paddingHorizontal="4dp"
+            android:text="Library"
+            android:textColor="@color/bottom_nav_color" />
 
         <TextView
             android:id="@+id/btnDaily"
             style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="@color/bottom_nav_color"
-            android:paddingHorizontal="4dp"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
             android:drawableTop="@drawable/ic_daily_selector"
             android:drawablePadding="8dp"
             android:gravity="center"
-            android:text="Daily" />
+            android:paddingHorizontal="4dp"
+            android:text="Daily"
+            android:textColor="@color/bottom_nav_color" />
 
         <TextView
             android:id="@+id/tvColorRealm"
             style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="@color/bottom_nav_color"
-            android:paddingHorizontal="4dp"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
             android:drawableTop="@drawable/ic_none_item"
             android:drawablePadding="8dp"
             android:gravity="center"
+            android:paddingHorizontal="4dp"
             android:singleLine="true"
-            android:text="Color Realm" />
+            android:text="Color Realm"
+            android:textColor="@color/bottom_nav_color" />
 
         <TextView
             android:id="@+id/btnAlbum"
             style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="@color/bottom_nav_color"
-            android:paddingHorizontal="4dp"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
             android:drawableTop="@drawable/ic_album_selector"
             android:drawablePadding="8dp"
             android:gravity="center"
-            android:text="Album" />
+            android:paddingHorizontal="4dp"
+            android:text="Album"
+            android:textColor="@color/bottom_nav_color" />
 
         <TextView
             android:id="@+id/btnMyWork"
             style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="@color/bottom_nav_color"
-            android:paddingHorizontal="4dp"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
             android:drawableTop="@drawable/ic_my_work_selector"
             android:drawablePadding="8dp"
             android:gravity="center"
-            android:text="My Work" />
+            android:paddingHorizontal="4dp"
+            android:text="My Work"
+            android:textColor="@color/bottom_nav_color" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

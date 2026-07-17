@@ -189,7 +189,7 @@ fun TextView.animateBottomNavLabel(selected: Boolean) {
     refreshDrawableState()
 
     val selectedColor = "#FFFFFF".toColorInt()
-    val normalColor = "#D9C8FF".toColorInt()
+    val normalColor = "#E7E4E7".toColorInt()
 
     animateBottomNavSelection(selected)
     setTextColor(if (selected) selectedColor else normalColor)
