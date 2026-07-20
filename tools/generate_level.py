@@ -11,6 +11,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_ASSETS_ROOT = os.path.abspath(
     os.path.join(SCRIPT_DIR, "..", "app", "src", "main", "assets")
 )
+DEFAULT_PROFILE_TARGETS = {
+    "mandala": 80,
+    "standard": 64,
+    "easy": 48,
+}
+QUANTIZE_METHODS = {
+    "mediancut": Image.Quantize.MEDIANCUT,
+    "maxcoverage": Image.Quantize.MAXCOVERAGE,
+    "fastoctree": Image.Quantize.FASTOCTREE,
+}
 
 
 def rgb_to_hex(rgb):
@@ -18,11 +28,61 @@ def rgb_to_hex(rgb):
 
 
 def color_distance(c1, c2):
-    return ((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2) ** 0.5
+    dr = c1[0] - c2[0]
+    dg = c1[1] - c2[1]
+    db = c1[2] - c2[2]
+    # Weighted RGB distance. Green contributes more strongly to perceived difference.
+    return math.sqrt(2.0 * dr * dr + 4.0 * dg * dg + 3.0 * db * db)
 
 
 def quantize_rgb(rgb, step=16):
     return tuple(min(255, int(round(channel / step) * step)) for channel in rgb)
+
+
+def infer_category_profile(category_name, requested_profile=None):
+    if requested_profile:
+        return requested_profile
+    if category_name and "mandala" in category_name.lower():
+        return "mandala"
+    return "standard"
+
+
+def resolve_target_unique_colors(category_name, requested_profile=None, explicit_target=None):
+    profile = infer_category_profile(category_name, requested_profile)
+    if explicit_target is not None:
+        return profile, max(2, explicit_target)
+    return profile, DEFAULT_PROFILE_TARGETS[profile]
+
+
+def get_quantize_method(method_name):
+    if method_name not in QUANTIZE_METHODS:
+        raise ValueError(
+            f"Quantize method '{method_name}' không hợp lệ. "
+            f"Hãy dùng một trong: {', '.join(sorted(QUANTIZE_METHODS))}."
+        )
+    return QUANTIZE_METHODS[method_name]
+
+
+def unique_color_count(image):
+    max_colors = image.width * image.height
+    colors = image.getcolors(maxcolors=max_colors)
+    if colors is None:
+        return max_colors
+    return len(colors)
+
+
+def build_quantized_reference_image(ref_img, target_unique_colors, method_name):
+    palette_budget = max(
+        target_unique_colors + 16,
+        int(round(target_unique_colors * 2.5)),
+    )
+    palette_budget = max(8, min(256, palette_budget))
+    quantized = ref_img.quantize(
+        colors=palette_budget,
+        method=get_quantize_method(method_name),
+        dither=Image.Dither.NONE,
+    )
+    return quantized.convert("RGB"), palette_budget, unique_color_count(quantized)
 
 
 def find_next_available_id(output_root, start_id=100001):
@@ -156,32 +216,206 @@ def bbox_min_side(box):
 
 
 def get_dominant_color(ref_pixels, region, quantize_step=16):
-    colors = [quantize_rgb(ref_pixels[x, y][:3], quantize_step) for x, y in region]
+    if quantize_step and quantize_step > 0:
+        colors = [quantize_rgb(ref_pixels[x, y][:3], quantize_step) for x, y in region]
+    else:
+        colors = [tuple(ref_pixels[x, y][:3]) for x, y in region]
     return Counter(colors).most_common(1)[0][0]
 
 
-def cluster_colors(colors, merge_threshold):
-    clusters = []
-    for color in colors:
-        best_idx = None
-        best_distance = None
-        for idx, cluster in enumerate(clusters):
-            distance = color_distance(color, cluster["center"])
-            if best_distance is None or distance < best_distance:
-                best_idx = idx
-                best_distance = distance
-        if best_idx is not None and best_distance is not None and best_distance < merge_threshold:
-            cluster = clusters[best_idx]
-            cluster["colors"].append(color)
-            total = len(cluster["colors"])
-            cluster["center"] = tuple(
-                int(round(sum(component[i] for component in cluster["colors"]) / total))
-                for i in range(3)
-            )
-        else:
-            clusters.append({"center": color, "colors": [color]})
+def sort_palette_colors(colors):
+    return sorted(
+        colors,
+        key=lambda color: (
+            0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2],
+            color[0],
+            color[1],
+            color[2],
+        ),
+    )
 
-    return [tuple(cluster["center"]) for cluster in clusters]
+
+def make_cluster_from_info(info):
+    return {
+        "center": info["target_color"],
+        "weight": info["area"],
+        "members": {info["target_color"]},
+        "region_count": 1,
+        "small_weight": info["area"] if info["is_small_region"] else 0,
+        "tiny_weight": info["area"] if info["is_tiny_display_region"] else 0,
+    }
+
+
+def merge_cluster_pair(cluster_a, cluster_b):
+    total_weight = cluster_a["weight"] + cluster_b["weight"]
+    merged_center = tuple(
+        int(
+            round(
+                (
+                    cluster_a["center"][index] * cluster_a["weight"]
+                    + cluster_b["center"][index] * cluster_b["weight"]
+                )
+                / max(1, total_weight)
+            )
+        )
+        for index in range(3)
+    )
+    return {
+        "center": merged_center,
+        "weight": total_weight,
+        "members": cluster_a["members"] | cluster_b["members"],
+        "region_count": cluster_a["region_count"] + cluster_b["region_count"],
+        "small_weight": cluster_a["small_weight"] + cluster_b["small_weight"],
+        "tiny_weight": cluster_a["tiny_weight"] + cluster_b["tiny_weight"],
+    }
+
+
+def cluster_merge_score(cluster_a, cluster_b):
+    smaller_weight = min(cluster_a["weight"], cluster_b["weight"])
+    larger_weight = max(cluster_a["weight"], cluster_b["weight"])
+    weight_ratio = smaller_weight / max(1.0, larger_weight)
+    tiny_bonus = min(cluster_a["tiny_weight"], cluster_b["tiny_weight"]) / max(
+        1.0, smaller_weight
+    )
+    return color_distance(cluster_a["center"], cluster_b["center"]) + weight_ratio * 8.0 + tiny_bonus * 3.0
+
+
+def merge_clusters_under_threshold(clusters, threshold):
+    merged_any = False
+    changed = True
+    while changed and len(clusters) > 1:
+        changed = False
+        best_pair = None
+        best_score = None
+        for left_idx in range(len(clusters)):
+            for right_idx in range(left_idx + 1, len(clusters)):
+                score = cluster_merge_score(clusters[left_idx], clusters[right_idx])
+                if score > threshold:
+                    continue
+                if best_score is None or score < best_score:
+                    best_score = score
+                    best_pair = (left_idx, right_idx)
+        if best_pair is None:
+            break
+        left_idx, right_idx = best_pair
+        merged_cluster = merge_cluster_pair(clusters[left_idx], clusters[right_idx])
+        for idx in sorted(best_pair, reverse=True):
+            clusters.pop(idx)
+        clusters.append(merged_cluster)
+        changed = True
+        merged_any = True
+    return clusters, merged_any
+
+
+def force_reduce_clusters(clusters, target_unique_colors):
+    passes = 0
+    while len(clusters) > target_unique_colors and len(clusters) > 1:
+        best_pair = None
+        best_score = None
+        for left_idx in range(len(clusters)):
+            for right_idx in range(left_idx + 1, len(clusters)):
+                score = cluster_merge_score(clusters[left_idx], clusters[right_idx])
+                if best_score is None or score < best_score:
+                    best_score = score
+                    best_pair = (left_idx, right_idx)
+        if best_pair is None:
+            break
+        left_idx, right_idx = best_pair
+        merged_cluster = merge_cluster_pair(clusters[left_idx], clusters[right_idx])
+        for idx in sorted(best_pair, reverse=True):
+            clusters.pop(idx)
+        clusters.append(merged_cluster)
+        passes += 1
+    return clusters, passes
+
+
+def build_palette_with_adaptive_merge(
+    region_infos,
+    merge_threshold,
+    target_unique_colors,
+    category_profile,
+    adaptive_enabled,
+):
+    color_clusters = {}
+    for info in region_infos:
+        color_key = tuple(info["target_color"])
+        if color_key not in color_clusters:
+            color_clusters[color_key] = make_cluster_from_info(info)
+            continue
+
+        cluster = color_clusters[color_key]
+        cluster["weight"] += info["area"]
+        cluster["region_count"] += 1
+        if info["is_small_region"]:
+            cluster["small_weight"] += info["area"]
+        if info["is_tiny_display_region"]:
+            cluster["tiny_weight"] += info["area"]
+
+    clusters = list(color_clusters.values())
+    initial_unique_numbers = len(clusters)
+    if not adaptive_enabled or initial_unique_numbers <= target_unique_colors:
+        palette_colors = sort_palette_colors([tuple(cluster["center"]) for cluster in clusters])
+        return {
+            "palette_colors": palette_colors,
+            "color_mapping": {color: color for color in color_clusters},
+            "initial_unique_numbers": initial_unique_numbers,
+            "final_unique_numbers": len(palette_colors),
+            "final_merge_threshold": merge_threshold,
+            "palette_reduction_passes": 0,
+            "palette_reduction_reason": "within_limit",
+        }
+
+    profile_multiplier = {
+        "easy": 1.15,
+        "standard": 1.0,
+        "mandala": 0.92,
+    }[category_profile]
+    threshold_steps = [
+        merge_threshold,
+        merge_threshold * 1.35,
+        merge_threshold * 1.75,
+        merge_threshold * 2.1,
+        merge_threshold * 2.6,
+        merge_threshold * 3.2,
+        merge_threshold * 4.0,
+        merge_threshold * 5.0,
+    ]
+    threshold_steps = [max(4.0, step * profile_multiplier) for step in threshold_steps]
+
+    applied_threshold = merge_threshold
+    adaptive_passes = 0
+    working_clusters = clusters
+    for threshold in threshold_steps:
+        working_clusters, merged_any = merge_clusters_under_threshold(working_clusters, threshold)
+        applied_threshold = threshold
+        if merged_any:
+            adaptive_passes += 1
+        if len(working_clusters) <= target_unique_colors:
+            break
+
+    forced_passes = 0
+    reduction_reason = "within_limit"
+    if len(working_clusters) > target_unique_colors:
+        working_clusters, forced_passes = force_reduce_clusters(
+            working_clusters, target_unique_colors
+        )
+        reduction_reason = "clamped_to_target"
+
+    palette_colors = sort_palette_colors([tuple(cluster["center"]) for cluster in working_clusters])
+    color_mapping = {}
+    for cluster in working_clusters:
+        for member_color in cluster["members"]:
+            color_mapping[member_color] = tuple(cluster["center"])
+
+    return {
+        "palette_colors": palette_colors,
+        "color_mapping": color_mapping,
+        "initial_unique_numbers": initial_unique_numbers,
+        "final_unique_numbers": len(palette_colors),
+        "final_merge_threshold": applied_threshold,
+        "palette_reduction_passes": adaptive_passes + forced_passes,
+        "palette_reduction_reason": reduction_reason,
+    }
 
 
 def choose_palette_color(target_color, palette_colors):
@@ -248,6 +482,46 @@ def estimate_difficulty(total_regions, unique_numbers, small_regions_count):
 
 def is_tiny_display_region(info, tiny_area_threshold, tiny_side_threshold):
     return info["area"] < tiny_area_threshold or bbox_min_side(info["bbox"]) < tiny_side_threshold
+
+
+def absorb_small_region_colors(
+    region_infos,
+    attach_distance,
+    color_threshold,
+    tiny_area_threshold,
+    tiny_side_threshold,
+):
+    absorbed_count = 0
+    sorted_indices = sorted(range(len(region_infos)), key=lambda idx: region_infos[idx]["area"])
+    for small_idx in sorted_indices:
+        info = region_infos[small_idx]
+        if not is_tiny_display_region(info, tiny_area_threshold, tiny_side_threshold):
+            continue
+
+        best_candidate = None
+        best_score = None
+        candidate_attach_distance = max(attach_distance * 2, tiny_side_threshold * 2)
+        for large_idx, candidate in enumerate(region_infos):
+            if large_idx == small_idx or candidate["area"] <= info["area"]:
+                continue
+            gap_x, gap_y = bbox_gap(info["bbox"], candidate["bbox"])
+            if max(gap_x, gap_y) > candidate_attach_distance:
+                continue
+            color_gap = color_distance(info["target_color"], candidate["target_color"])
+            if color_gap > color_threshold:
+                continue
+            score = gap_x + gap_y * 2 + color_gap + (
+                info["area"] / max(1.0, candidate["area"])
+            ) * 10.0
+            if best_score is None or score < best_score:
+                best_score = score
+                best_candidate = candidate
+
+        if best_candidate is not None and info["target_color"] != best_candidate["target_color"]:
+            info["target_color"] = best_candidate["target_color"]
+            absorbed_count += 1
+
+    return absorbed_count
 
 
 def merge_small_attached_regions(
@@ -378,6 +652,10 @@ def generate_level_assets(
     hide_small_label_threshold=48,
     small_region_attach_distance=8,
     tiny_region_side_threshold=10,
+    target_unique_colors=None,
+    category_profile=None,
+    quantize_method="mediancut",
+    adaptive_palette=True,
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
     line_img, binary_img = load_binary_fill_map(
@@ -393,7 +671,17 @@ def generate_level_assets(
         raise ValueError("Kích thước của ảnh nét vẽ và ảnh tham chiếu phải trùng khớp.")
 
     width, height = line_img.size
-    ref_pixels = ref_img.load()
+    resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
+        category_name=category_name,
+        requested_profile=category_profile,
+        explicit_target=target_unique_colors,
+    )
+    quantized_ref_img, quantized_palette_budget, quantized_palette_count = build_quantized_reference_image(
+        ref_img,
+        target_unique_colors=resolved_target_unique_colors,
+        method_name=quantize_method,
+    )
+    ref_pixels = quantized_ref_img.load()
 
     mask_img = Image.new("RGB", (width, height), (0, 0, 0))
     mask_pixels = mask_img.load()
@@ -405,7 +693,6 @@ def generate_level_assets(
 
     print("Đang lấy màu tham chiếu và metadata cho từng vùng...")
     region_infos = []
-    target_colors = []
     skipped_noise_regions = 0
 
     for region in regions:
@@ -414,7 +701,7 @@ def generate_level_assets(
             skipped_noise_regions += 1
             continue
 
-        dominant_color = get_dominant_color(ref_pixels, region)
+        dominant_color = get_dominant_color(ref_pixels, region, quantize_step=0)
         bbox = get_region_bbox(region)
         centroid = get_region_centroid(region)
         label_anchor = find_label_anchor(region, bbox, centroid)
@@ -430,10 +717,10 @@ def generate_level_assets(
                 "target_color": dominant_color,
                 "hide_number": hide_number,
                 "is_small_region": area < min_region_area,
-                "is_tiny_display_region": area < hide_small_label_threshold or bbox_min_side(bbox) < tiny_region_side_threshold,
+                "is_tiny_display_region": area < hide_small_label_threshold
+                or bbox_min_side(bbox) < tiny_region_side_threshold,
             }
         )
-        target_colors.append(dominant_color)
 
     region_infos, merged_small_region_count = merge_small_attached_regions(
         region_infos=region_infos,
@@ -443,10 +730,22 @@ def generate_level_assets(
         tiny_area_threshold=hide_small_label_threshold,
         tiny_side_threshold=tiny_region_side_threshold,
     )
-    target_colors = [info["target_color"] for info in region_infos]
+    absorbed_small_color_count = absorb_small_region_colors(
+        region_infos=region_infos,
+        attach_distance=small_region_attach_distance,
+        color_threshold=max(10.0, color_merge_threshold * 1.5),
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+    )
 
-    palette_colors = cluster_colors(target_colors, color_merge_threshold)
-    palette_colors.sort(key=lambda color: 0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2])
+    palette_result = build_palette_with_adaptive_merge(
+        region_infos=region_infos,
+        merge_threshold=color_merge_threshold,
+        target_unique_colors=resolved_target_unique_colors,
+        category_profile=resolved_profile,
+        adaptive_enabled=adaptive_palette,
+    )
+    palette_colors = palette_result["palette_colors"]
     color_to_number = {color: index + 1 for index, color in enumerate(palette_colors)}
 
     os.makedirs(output_dir, exist_ok=True)
@@ -457,8 +756,10 @@ def generate_level_assets(
     print("Đang vẽ ảnh Mask và tạo cấu hình Palette...")
     for region_id, info in enumerate(region_infos, start=1):
         region = info["region"]
-        target_color = info["target_color"]
-        best_palette_color = choose_palette_color(target_color, palette_colors)
+        target_color = tuple(info["target_color"])
+        best_palette_color = palette_result["color_mapping"].get(target_color)
+        if best_palette_color is None:
+            best_palette_color = choose_palette_color(target_color, palette_colors)
         palette_number = color_to_number[best_palette_color]
 
         mask_r = (region_id >> 16) & 0xFF
@@ -492,10 +793,21 @@ def generate_level_assets(
         )
 
     small_regions_count = sum(1 for info in region_infos if info["is_small_region"])
+    unique_numbers = len({item["number"] for item in palette_config})
     difficulty = estimate_difficulty(
         total_regions=len(region_configs),
-        unique_numbers=len({item["number"] for item in palette_config}),
+        unique_numbers=unique_numbers,
         small_regions_count=small_regions_count,
+    )
+
+    print(
+        "Palette stats: "
+        f"profile={resolved_profile}, "
+        f"target={resolved_target_unique_colors}, "
+        f"quantized_ref_colors={quantized_palette_count}/{quantized_palette_budget}, "
+        f"initial_unique={palette_result['initial_unique_numbers']}, "
+        f"final_unique={palette_result['final_unique_numbers']}, "
+        f"final_merge_threshold={palette_result['final_merge_threshold']:.2f}"
     )
 
     mask_out_path = os.path.join(output_dir, "mask.png")
@@ -516,10 +828,30 @@ def generate_level_assets(
         "regions": region_configs,
         "estimated_difficulty": difficulty,
         "total_regions": len(region_configs),
-        "unique_numbers": len({item["number"] for item in palette_config}),
+        "unique_numbers": unique_numbers,
         "small_regions_count": small_regions_count,
         "skipped_noise_regions": skipped_noise_regions,
         "merged_small_regions_count": merged_small_region_count,
+        "generation_params": {
+            "brightness_threshold": brightness_threshold,
+            "merge_threshold": color_merge_threshold,
+            "line_close_radius": line_close_radius,
+            "min_region_area": min_region_area,
+            "hide_small_label_threshold": hide_small_label_threshold,
+            "small_region_attach_distance": small_region_attach_distance,
+            "tiny_region_side_threshold": tiny_region_side_threshold,
+            "adaptive_palette": adaptive_palette,
+        },
+        "category_profile": resolved_profile,
+        "target_unique_colors": resolved_target_unique_colors,
+        "initial_unique_numbers": palette_result["initial_unique_numbers"],
+        "final_unique_numbers": palette_result["final_unique_numbers"],
+        "quantization_method": quantize_method,
+        "quantized_reference_color_count": quantized_palette_count,
+        "final_merge_threshold": palette_result["final_merge_threshold"],
+        "palette_reduction_passes": palette_result["palette_reduction_passes"],
+        "palette_reduction_reason": palette_result["palette_reduction_reason"],
+        "absorbed_small_color_count": absorbed_small_color_count,
     }
 
     config_out_path = os.path.join(output_dir, "config.json")
@@ -579,6 +911,27 @@ def create_parser():
         type=int,
         default=10,
         help="Ngưỡng cạnh nhỏ nhất của bbox để xem vùng là quá nhỏ cho việc hiển thị số.",
+    )
+    parser.add_argument(
+        "--target-unique-colors",
+        type=int,
+        help="Số lượng màu mục tiêu tối đa cho palette cuối.",
+    )
+    parser.add_argument(
+        "--category-profile",
+        choices=sorted(DEFAULT_PROFILE_TARGETS.keys()),
+        help="Profile palette theo loại tranh: mandala, standard hoặc easy.",
+    )
+    parser.add_argument(
+        "--quantize-method",
+        choices=sorted(QUANTIZE_METHODS.keys()),
+        default="mediancut",
+        help="Thuật toán quantize ảnh tham chiếu trước khi gom màu.",
+    )
+    parser.add_argument(
+        "--disable-adaptive-palette",
+        action="store_true",
+        help="Tắt adaptive palette để debug/fallback theo pipeline cũ.",
     )
 
     subparsers = parser.add_subparsers(dest="mode", required=True)
@@ -761,6 +1114,10 @@ def run_batch(args):
             hide_small_label_threshold=args.hide_small_label_threshold,
             small_region_attach_distance=args.small_region_attach_distance,
             tiny_region_side_threshold=args.tiny_region_side_threshold,
+            target_unique_colors=args.target_unique_colors,
+            category_profile=args.category_profile,
+            quantize_method=args.quantize_method,
+            adaptive_palette=not args.disable_adaptive_palette,
         )
         processed_count += 1
 
@@ -806,6 +1163,10 @@ def run_batch_single_category(args):
             hide_small_label_threshold=args.hide_small_label_threshold,
             small_region_attach_distance=args.small_region_attach_distance,
             tiny_region_side_threshold=args.tiny_region_side_threshold,
+            target_unique_colors=args.target_unique_colors,
+            category_profile=args.category_profile,
+            quantize_method=args.quantize_method,
+            adaptive_palette=not args.disable_adaptive_palette,
         )
         processed_count += 1
 
@@ -858,6 +1219,10 @@ def run_batch_source_category(args):
             hide_small_label_threshold=args.hide_small_label_threshold,
             small_region_attach_distance=args.small_region_attach_distance,
             tiny_region_side_threshold=args.tiny_region_side_threshold,
+            target_unique_colors=args.target_unique_colors,
+            category_profile=args.category_profile,
+            quantize_method=args.quantize_method,
+            adaptive_palette=not args.disable_adaptive_palette,
         )
         processed_count += 1
 
@@ -887,6 +1252,10 @@ def run_single(args):
         hide_small_label_threshold=args.hide_small_label_threshold,
         small_region_attach_distance=args.small_region_attach_distance,
         tiny_region_side_threshold=args.tiny_region_side_threshold,
+        target_unique_colors=args.target_unique_colors,
+        category_profile=args.category_profile,
+        quantize_method=args.quantize_method,
+        adaptive_palette=not args.disable_adaptive_palette,
     )
 
 
