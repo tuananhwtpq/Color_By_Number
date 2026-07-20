@@ -1,5 +1,6 @@
 package com.example.baseproject.activities
 
+import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -13,10 +14,17 @@ import com.example.baseproject.databinding.ActivityPaintBinding
 import com.example.baseproject.ui.paint.PaintUiEvent
 import com.example.baseproject.ui.paint.PaintUiState
 import com.example.baseproject.ui.paint.PaintViewModel
+import com.example.baseproject.utils.SharedPrefManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::inflate) {
+
+    companion object {
+        private const val GUIDE_STEP_01 = 0
+        private const val GUIDE_STEP_02 = 1
+        private const val GUIDE_STEP_03 = 2
+    }
 
     private val viewModel: PaintViewModel by viewModels {
         val appContainer = (application as MyApplication).appContainer
@@ -35,6 +43,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var lastCompletedMaskColors: Set<Int> = emptySet()
     private var category: String? = null
     private var levelId: String? = null
+    private var guideStep: Int = GUIDE_STEP_01
+    private var isGuideVisible: Boolean = false
+    private var isLoadingVisible: Boolean = false
 
     override fun initData() {
         category = intent.getStringExtra("CATEGORY")
@@ -48,13 +59,14 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     override fun initView() {
         initViews()
+        setupGuideIfNeeded()
         collectUi()
     }
 
     override fun initActionView() {
         binding.btnBack.setOnClickListener { finish() }
         binding.btnHint.setOnClickListener { viewModel.onHintRequested() }
-        binding.btnReset.setOnClickListener { viewModel.requestResetConfirmation() }
+//        binding.btnReset.setOnClickListener { viewModel.requestResetConfirmation() }
 
         viewModel.loadLevel(
             category = category ?: return,
@@ -68,6 +80,13 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
             viewModel.onRegionFilled(maskInt)
         }
+        binding.llGuide.setOnClickListener {
+            when (guideStep) {
+                GUIDE_STEP_01 -> showGuideStep(GUIDE_STEP_02)
+                GUIDE_STEP_02 -> showGuideStep(GUIDE_STEP_03)
+                else -> finishGuide()
+            }
+        }
     }
 
     private fun collectUi() {
@@ -80,9 +99,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun renderState(state: PaintUiState) {
+        isLoadingVisible = state.isLoading
         binding.progressBar.visibility =
-            if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
-        binding.tvTitle.text = state.title
+            if (state.isLoading && !isGuideVisible) View.VISIBLE else View.GONE
+//        binding.tvTitle.text = state.title
 
         if (state.palette.isNotEmpty() && (!this::adapter.isInitialized || adapter.itemCount != state.palette.size)) {
             adapter = PaletteAdapter(state.palette) { position, _ ->
@@ -92,10 +112,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         }
 
         if (this::adapter.isInitialized) {
-            adapter.setCompletedIndexes(state.completedIndexes)
-            if (state.selectedPaletteIndex in 0 until adapter.itemCount && adapter.selectedIndex != state.selectedPaletteIndex) {
-                adapter.setSelection(state.selectedPaletteIndex)
-            }
+            adapter.setPaletteState(
+                selectedIndex = state.selectedPaletteIndex,
+                completedIndexes = state.completedIndexes,
+                paletteProgress = state.paletteProgress
+            )
 
             if (lastSelectedIndex != state.selectedPaletteIndex && state.selectedPaletteIndex in 0 until adapter.itemCount) {
                 binding.rvPalette.smoothScrollToPosition(state.selectedPaletteIndex)
@@ -134,6 +155,54 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
         lastSelectedIndex = state.selectedPaletteIndex
         lastCompletedMaskColors = state.completedMaskColors
+    }
+
+    private fun setupGuideIfNeeded() {
+        if (SharedPrefManager.isShowGuide) {
+            isGuideVisible = true
+            setMainContentVisible(false)
+            showGuideStep(GUIDE_STEP_01)
+        } else {
+            isGuideVisible = false
+            binding.llGuide.visibility = View.GONE
+            setMainContentVisible(true)
+        }
+    }
+
+    private fun showGuideStep(step: Int) {
+        guideStep = step
+        isGuideVisible = true
+        binding.llGuide.visibility = View.VISIBLE
+
+        binding.tvGuide01.visibility = if (step == GUIDE_STEP_01) View.VISIBLE else View.GONE
+        binding.iv01.visibility = if (step == GUIDE_STEP_01) View.VISIBLE else View.GONE
+        binding.tvGuide02.visibility = if (step == GUIDE_STEP_02) View.VISIBLE else View.GONE
+        binding.iv02.visibility = if (step == GUIDE_STEP_02) View.VISIBLE else View.GONE
+        binding.tvGuide03.visibility = if (step == GUIDE_STEP_03) View.VISIBLE else View.GONE
+        binding.iv03.visibility = if (step == GUIDE_STEP_03) View.VISIBLE else View.GONE
+
+        val backgroundRes = when (step) {
+            GUIDE_STEP_02 -> com.example.baseproject.R.drawable.bg_guide_02
+            GUIDE_STEP_03 -> com.example.baseproject.R.drawable.bg_guide_03
+            else -> com.example.baseproject.R.drawable.bg_guide_01
+        }
+        binding.llGuide.setBackgroundResource(backgroundRes)
+    }
+
+    private fun setMainContentVisible(isVisible: Boolean) {
+        val visibility = if (isVisible) View.VISIBLE else View.GONE
+//        binding.topBar.visibility = visibility
+        binding.paintCanvas.visibility = visibility
+        binding.paletteContainer.visibility = visibility
+        binding.progressBar.visibility =
+            if (isVisible && isLoadingVisible && !isGuideVisible) View.VISIBLE else View.GONE
+    }
+
+    private fun finishGuide() {
+        SharedPrefManager.isShowGuide = false
+        isGuideVisible = false
+        binding.llGuide.visibility = View.GONE
+        setMainContentVisible(true)
     }
 
     private fun handleEvent(event: PaintUiEvent) {

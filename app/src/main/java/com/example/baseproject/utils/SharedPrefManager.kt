@@ -2,14 +2,23 @@ package com.example.baseproject.utils
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.example.baseproject.models.LanguageModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import androidx.core.content.edit
 
 object SharedPrefManager {
     private const val PREF_NAME = "MyPreferences"
+    private const val IS_SHOW_GUIDE = "is_show_guide"
     private lateinit var preferences: SharedPreferences
+
+    var isShowGuide: Boolean
+        get() {
+            return preferences.getBoolean(IS_SHOW_GUIDE, true)
+        }
+        set(value) {
+            preferences.edit { putBoolean(IS_SHOW_GUIDE, value) }
+        }
 
     fun init(context: Context) {
         preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

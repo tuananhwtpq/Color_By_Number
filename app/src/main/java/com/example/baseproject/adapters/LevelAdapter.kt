@@ -9,18 +9,21 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.baseproject.R
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.repository.PaintingProgressRepository
 import com.example.baseproject.utils.AssetImageResolver
 import java.io.File
+import kotlin.math.roundToInt
 
 class LevelAdapter(
     private val levels: List<LevelConfig>,
+    private val paintingProgressRepository: PaintingProgressRepository,
     private val scope: kotlinx.coroutines.CoroutineScope,
     private val onClick: (LevelConfig) -> Unit
 ) : RecyclerView.Adapter<LevelAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val ivThumbnail: ImageView = view.findViewById(R.id.ivThumbnail)
-        val tvLevelName: TextView = view.findViewById(R.id.tvCurrentPercent)
+        val tvCurrentPercent: TextView = view.findViewById(R.id.tvCurrentPercent)
 
         init {
             view.setOnClickListener {
@@ -39,9 +42,23 @@ class LevelAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val level = levels[position]
-        holder.tvLevelName.text = level.name
-        
         val context = holder.itemView.context
+        val completedMaskColors =
+            paintingProgressRepository.loadProgress(level.category, level.id)
+        val totalRegions = level.regions?.size ?: level.totalRegions ?: level.palette.size
+        val progressFraction = if (totalRegions > 0) {
+            completedMaskColors.size.toFloat() / totalRegions.toFloat()
+        } else {
+            0f
+        }
+        val progressPercent = (progressFraction * 100f).roundToInt()
+
+        if (progressPercent in 1..99) {
+            holder.tvCurrentPercent.visibility = View.VISIBLE
+            holder.tvCurrentPercent.text = "$progressPercent%"
+        } else {
+            holder.tvCurrentPercent.visibility = View.GONE
+        }
         
         // Kiểm tra xem đã có file Thumbnail (tiến trình đang tô dở) chưa
         val dir = File(context.filesDir, "thumbnails")

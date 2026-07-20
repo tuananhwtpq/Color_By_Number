@@ -28,6 +28,10 @@ class PaintCanvasView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    companion object {
+        private const val CANVAS_BACKGROUND_COLOR = 0xFFF3F1F3.toInt()
+    }
+
     private var lineBitmap: Bitmap? = null
     private var maskWidth: Int = 0
     private var maskHeight: Int = 0
@@ -89,13 +93,19 @@ class PaintCanvasView @JvmOverloads constructor(
         setupGestureDetectors()
     }
 
+    //region SETUPSCALE
     private fun setupGestureDetectors() {
         scaleDetector = ScaleGestureDetector(
             context,
             object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    val fitScale = Math.min(
+                        width.toFloat() / (lineBitmap?.width ?: 1),
+                        height.toFloat() / (lineBitmap?.height ?: 1)
+                    )
+                    val minScale = fitScale * 0.8f
                     val newScale =
-                        Math.max(0.1f, Math.min(scaleFactor * detector.scaleFactor, 20.0f))
+                        Math.max(minScale, Math.min(scaleFactor * detector.scaleFactor, 20.0f))
                     val scaleRatio = newScale / scaleFactor
                     translateX = detector.focusX - (detector.focusX - translateX) * scaleRatio
                     translateY = detector.focusY - (detector.focusY - translateY) * scaleRatio
@@ -374,7 +384,7 @@ class PaintCanvasView @JvmOverloads constructor(
         try {
             val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(result)
-            canvas.drawColor(Color.WHITE)
+            canvas.drawColor(CANVAS_BACKGROUND_COLOR)
             canvas.drawBitmap(colored, 0f, 0f, null)
             canvas.drawBitmap(line, 0f, 0f, multiplyPaint)
 
@@ -681,7 +691,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas.drawColor(Color.WHITE)
+        canvas.drawColor(CANVAS_BACKGROUND_COLOR)
 
         val colored = coloredBitmap ?: return
         val hl = highlightBitmap ?: return

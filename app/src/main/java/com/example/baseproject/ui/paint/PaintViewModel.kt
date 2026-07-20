@@ -56,6 +56,7 @@ class PaintViewModel(
                 regionMetadata = bundle.regions
 
                 val completedMaskColors = paintingProgressRepository.loadProgress(category, levelId)
+                val paletteProgress = calculatePaletteProgress(completedMaskColors)
                 val completedIndexes = calculateCompletedIndexes(completedMaskColors)
                 val selectedIndex =
                     uniqueColors.indices.firstOrNull { it !in completedIndexes } ?: 0
@@ -65,6 +66,7 @@ class PaintViewModel(
                         isLoading = false,
                         title = bundle.config.name,
                         palette = uniqueColors,
+                        paletteProgress = paletteProgress,
                         selectedPaletteIndex = selectedIndex,
                         completedMaskColors = completedMaskColors,
                         completedColorMap = completedColorMap(completedMaskColors),
@@ -144,6 +146,7 @@ class PaintViewModel(
         val selectedIndex = if (uniqueColors.isNotEmpty()) 0 else 0
         _uiState.update {
             it.copy(
+                paletteProgress = List(uniqueColors.size) { 0f },
                 selectedPaletteIndex = selectedIndex,
                 completedMaskColors = emptySet(),
                 completedColorMap = emptyMap(),
@@ -166,6 +169,7 @@ class PaintViewModel(
         val newCompleted = _uiState.value.completedMaskColors + maskInt
         paintingProgressRepository.saveProgress(category, levelId, newCompleted)
 
+        val paletteProgress = calculatePaletteProgress(newCompleted)
         val completedIndexes = calculateCompletedIndexes(newCompleted)
         var selectedIndex = _uiState.value.selectedPaletteIndex
         val selectedColor = uniqueColors.getOrNull(selectedIndex)
@@ -181,6 +185,7 @@ class PaintViewModel(
 
         _uiState.update {
             it.copy(
+                paletteProgress = paletteProgress,
                 completedMaskColors = newCompleted,
                 completedColorMap = completedColorMap(newCompleted),
                 completedIndexes = completedIndexes,
@@ -221,6 +226,19 @@ class PaintViewModel(
             val validRegions = allRegions.filter { it.number == color.number }
             index.takeIf { validRegions.all { item -> completedMaskColors.contains(item.getMaskColorInt()) } }
         }.toSet()
+    }
+
+    private fun calculatePaletteProgress(completedMaskColors: Set<Int>): List<Float> {
+        return uniqueColors.map { color ->
+            val validRegions = allRegions.filter { it.number == color.number }
+            if (validRegions.isEmpty()) {
+                0f
+            } else {
+                val completedCount =
+                    validRegions.count { completedMaskColors.contains(it.getMaskColorInt()) }
+                completedCount.toFloat() / validRegions.size.toFloat()
+            }
+        }
     }
 
     private fun highlightForIndex(index: Int, completedMaskColors: Set<Int>): List<Int> {

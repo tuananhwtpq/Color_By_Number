@@ -603,17 +603,45 @@ def create_parser():
         help="ID bắt đầu khi tạo hàng loạt.",
     )
 
+    batch_single_category = subparsers.add_parser(
+        "batch-single-category",
+        help="Gom toàn bộ level trong Data vào một category đích duy nhất.",
+    )
+    batch_single_category.add_argument(
+        "input_root_directory",
+        help="Thư mục nguồn chứa Category/LevelName.",
+    )
+    batch_single_category.add_argument(
+        "target_category",
+        help="Category đích duy nhất trong assets.",
+    )
+    batch_single_category.add_argument(
+        "--start-id",
+        type=int,
+        default=100001,
+        help="ID bắt đầu khi tạo hàng loạt.",
+    )
+
+    batch_source_category = subparsers.add_parser(
+        "batch-source-category",
+        help="Import toàn bộ item trong một folder category nguồn vào một category trong assets.",
+    )
+    batch_source_category.add_argument(
+        "input_category_directory",
+        help="Thư mục nguồn dạng Data/Animals hoặc Data/Manga.",
+    )
+    batch_source_category.add_argument(
+        "--target-category",
+        help="Tên category đích trong assets. Mặc định dùng tên folder nguồn.",
+    )
+
     return parser
 
 
-def run_batch(args):
-    input_root = args.input_root_directory
-    output_root = args.output_root
-
+def collect_levels_from_data(input_root):
     if not os.path.exists(input_root):
         raise FileNotFoundError(f"Thư mục đầu vào '{input_root}' không tồn tại.")
 
-    print(f"=== BẮT ĐẦU XỬ LÝ HÀNG LOẠT TỪ THƯ MỤC: {input_root} ===")
     levels_to_process = []
 
     for category_name in sorted(os.listdir(input_root)):
@@ -641,7 +669,7 @@ def run_batch(args):
             if line_file and ref_file:
                 levels_to_process.append(
                     {
-                        "category": category_name,
+                        "source_category": category_name,
                         "name": data_name,
                         "line_path": os.path.join(data_path, line_file),
                         "ref_path": os.path.join(data_path, ref_file),
@@ -650,23 +678,80 @@ def run_batch(args):
             else:
                 print(f"Bỏ qua '{category_name}/{data_name}': thiếu file line/color hợp lệ.")
 
+    return levels_to_process
+
+
+def collect_levels_from_single_category(input_category_directory):
+    if not os.path.exists(input_category_directory):
+        raise FileNotFoundError(
+            f"Thư mục category đầu vào '{input_category_directory}' không tồn tại."
+        )
+    if not os.path.isdir(input_category_directory):
+        raise NotADirectoryError(
+            f"Đường dẫn '{input_category_directory}' không phải là thư mục category hợp lệ."
+        )
+
+    source_category = os.path.basename(os.path.normpath(input_category_directory))
+    levels_to_process = []
+
+    for data_name in sorted(os.listdir(input_category_directory)):
+        data_path = os.path.join(input_category_directory, data_name)
+        if not os.path.isdir(data_path) or data_name.startswith("."):
+            continue
+
+        line_file = None
+        ref_file = None
+        for file_name in os.listdir(data_path):
+            lower_name = file_name.lower()
+            if "line" in lower_name and lower_name.endswith((".png", ".webp", ".jpg", ".jpeg")):
+                line_file = file_name
+            elif (
+                ("ref" in lower_name or "color" in lower_name or "paint" in lower_name)
+                and lower_name.endswith((".png", ".webp", ".jpg", ".jpeg"))
+            ):
+                ref_file = file_name
+
+        if line_file and ref_file:
+            levels_to_process.append(
+                {
+                    "source_category": source_category,
+                    "name": data_name,
+                    "line_path": os.path.join(data_path, line_file),
+                    "ref_path": os.path.join(data_path, ref_file),
+                }
+            )
+        else:
+            print(f"Bỏ qua '{source_category}/{data_name}': thiếu file line/color hợp lệ.")
+
+    return levels_to_process
+
+
+def run_batch(args):
+    input_root = args.input_root_directory
+    output_root = args.output_root
+
+    print(f"=== BẮT ĐẦU XỬ LÝ HÀNG LOẠT TỪ THƯ MỤC: {input_root} ===")
+    levels_to_process = collect_levels_from_data(input_root)
     print(f"Tìm thấy tổng cộng {len(levels_to_process)} tác phẩm hợp lệ.")
     processed_count = 0
     next_id = args.start_id
 
     for level in levels_to_process:
-        while os.path.exists(os.path.join(output_root, level["category"], str(next_id))):
+        while os.path.exists(os.path.join(output_root, level["source_category"], str(next_id))):
             next_id += 1
         generated_id = str(next_id)
         next_id += 1
-        level_out_dir = os.path.join(output_root, level["category"], generated_id)
+        level_out_dir = os.path.join(output_root, level["source_category"], generated_id)
 
-        print(f"\n[XỬ LÝ - ID: {generated_id}] Category: {level['category']} | Name: {level['name']}")
+        print(
+            f"\n[XỬ LÝ - ID: {generated_id}] "
+            f"Category: {level['source_category']} | Name: {level['name']}"
+        )
         generate_level_assets(
             level["line_path"],
             level["ref_path"],
             level_out_dir,
-            category_name=level["category"],
+            category_name=level["source_category"],
             data_name=level["name"],
             generated_id=generated_id,
             brightness_threshold=args.brightness_threshold,
@@ -680,6 +765,106 @@ def run_batch(args):
         processed_count += 1
 
     print(f"\n=== HOÀN TẤT XỬ LÝ HÀNG LOẠT! Đã tạo thành công {processed_count} tác phẩm. ===")
+
+
+def run_batch_single_category(args):
+    input_root = args.input_root_directory
+    output_root = args.output_root
+    target_category = args.target_category
+
+    print(
+        f"=== BẮT ĐẦU GOM TOÀN BỘ LEVEL TỪ THƯ MỤC: {input_root} "
+        f"VÀO CATEGORY: {target_category} ==="
+    )
+    levels_to_process = collect_levels_from_data(input_root)
+    print(f"Tìm thấy tổng cộng {len(levels_to_process)} tác phẩm hợp lệ.")
+    processed_count = 0
+    next_id = args.start_id
+
+    for level in levels_to_process:
+        while os.path.exists(os.path.join(output_root, target_category, str(next_id))):
+            next_id += 1
+        generated_id = str(next_id)
+        next_id += 1
+        level_out_dir = os.path.join(output_root, target_category, generated_id)
+
+        print(
+            f"\n[XỬ LÝ - ID: {generated_id}] "
+            f"Source: {level['source_category']}/{level['name']} -> Category: {target_category}"
+        )
+        generate_level_assets(
+            level["line_path"],
+            level["ref_path"],
+            level_out_dir,
+            category_name=target_category,
+            data_name=generated_id,
+            generated_id=generated_id,
+            brightness_threshold=args.brightness_threshold,
+            color_merge_threshold=args.merge_threshold,
+            min_region_area=args.min_region_area,
+            line_close_radius=args.line_close_radius,
+            hide_small_label_threshold=args.hide_small_label_threshold,
+            small_region_attach_distance=args.small_region_attach_distance,
+            tiny_region_side_threshold=args.tiny_region_side_threshold,
+        )
+        processed_count += 1
+
+    print(
+        f"\n=== HOÀN TẤT GOM CATEGORY! Đã tạo thành công {processed_count} tác phẩm vào "
+        f"'{target_category}'. ==="
+    )
+
+
+def run_batch_source_category(args):
+    input_category_directory = args.input_category_directory
+    output_root = args.output_root
+    levels_to_process = collect_levels_from_single_category(input_category_directory)
+    source_category = os.path.basename(os.path.normpath(input_category_directory))
+    target_category = args.target_category or source_category
+
+    print(
+        f"=== BẮT ĐẦU IMPORT CATEGORY NGUỒN: {source_category} "
+        f"-> CATEGORY ĐÍCH: {target_category} ==="
+    )
+    print(f"Tìm thấy tổng cộng {len(levels_to_process)} tác phẩm hợp lệ.")
+
+    processed_count = 0
+
+    for level in levels_to_process:
+        generated_id = level["name"]
+        level_out_dir = os.path.join(output_root, target_category, generated_id)
+
+        if os.path.exists(level_out_dir):
+            raise FileExistsError(
+                f"Thư mục đích đã tồn tại: {level_out_dir}. "
+                "Hãy xóa/sửa folder cũ hoặc dùng --target-category khác."
+            )
+
+        print(
+            f"\n[XỬ LÝ - ID: {generated_id}] "
+            f"Source: {source_category}/{level['name']} -> Category: {target_category}"
+        )
+        generate_level_assets(
+            level["line_path"],
+            level["ref_path"],
+            level_out_dir,
+            category_name=target_category,
+            data_name=generated_id,
+            generated_id=generated_id,
+            brightness_threshold=args.brightness_threshold,
+            color_merge_threshold=args.merge_threshold,
+            min_region_area=args.min_region_area,
+            line_close_radius=args.line_close_radius,
+            hide_small_label_threshold=args.hide_small_label_threshold,
+            small_region_attach_distance=args.small_region_attach_distance,
+            tiny_region_side_threshold=args.tiny_region_side_threshold,
+        )
+        processed_count += 1
+
+    print(
+        f"\n=== HOÀN TẤT IMPORT CATEGORY! Đã tạo thành công {processed_count} tác phẩm vào "
+        f"'{target_category}'. ==="
+    )
 
 
 def run_single(args):
@@ -709,5 +894,9 @@ if __name__ == "__main__":
     parsed_args = create_parser().parse_args()
     if parsed_args.mode == "batch":
         run_batch(parsed_args)
+    elif parsed_args.mode == "batch-single-category":
+        run_batch_single_category(parsed_args)
+    elif parsed_args.mode == "batch-source-category":
+        run_batch_source_category(parsed_args)
     else:
         run_single(parsed_args)

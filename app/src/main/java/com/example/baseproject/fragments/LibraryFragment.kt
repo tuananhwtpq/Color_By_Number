@@ -20,8 +20,11 @@ import kotlinx.coroutines.flow.collectLatest
 
 class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBinding::inflate) {
 
+    private val appContainer by lazy {
+        (requireActivity().application as MyApplication).appContainer
+    }
+
     private val viewModel: LibraryViewModel by viewModels {
-        val appContainer = (requireActivity().application as MyApplication).appContainer
         SimpleViewModelFactory {
             LibraryViewModel(appContainer.assetLevelRepository)
         }
@@ -39,7 +42,11 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                     if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
                 renderCategoryTabs(state.categories, state.selectedCategory)
                 binding.rvLevels.adapter =
-                    LevelAdapter(state.visibleLevels, lifecycleScope) { level ->
+                    LevelAdapter(
+                        state.visibleLevels,
+                        appContainer.paintingProgressRepository,
+                        lifecycleScope
+                    ) { level ->
                         val intent = Intent(requireActivity(), PaintActivity::class.java)
                         intent.putExtra("CATEGORY", level.category)
                         intent.putExtra("LEVEL_ID", level.id)

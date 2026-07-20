@@ -8,6 +8,16 @@ DATA_ROOT="$PROJECT_ROOT/Data"
 GENERATOR="$PROJECT_ROOT/tools/generate_level.py"
 
 if [[ $# -lt 2 ]]; then
+  echo "COMMAND LIST:"
+  echo "  1) Import 1 item tu Data:"
+  echo "     bash tools/import_from_data.sh Cartoons Sonic"
+  echo "  2) Import 1 item va dat ten hien thi:"
+  echo "     bash tools/import_from_data.sh Cartoons Sonic \"Sonic Vietnam\""
+  echo "  3) Copy 1 item da co sang category khac:"
+  echo "     bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals"
+  echo "  4) Import tat ca item trong 1 category Data vao assets:"
+  echo "     bash tools/import_category_from_data.sh Data/Animals"
+  echo
   echo "Cách dùng:"
   echo "  bash tools/import_from_data.sh <Category> <ArtworkFolder> [Display Name] [generator options...]"
   echo "  bash tools/import_from_data.sh from-existing <SourceCategory/ArtworkFolder> <TargetCategory> [Display Name] [generator options...]"
@@ -15,7 +25,8 @@ if [[ $# -lt 2 ]]; then
   echo "Ví dụ:"
   echo "  bash tools/import_from_data.sh Cartoons Sonic"
   echo "  bash tools/import_from_data.sh Cartoons Sonic \"Sonic Vietnam\" --line-close-radius 1 --small-region-attach-distance 12"
-  # copy from source to another folder -> source: Cartoons/Sonic -> new goal: Animals folder
+  echo "  bash tools/import_category_from_data.sh Data/Animals"
+  echo "  bash tools/import_category_from_data.sh Data/Animals --target-category AnimalsNew"
   echo "  bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals"
   echo "  bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals \"Sonic Blue\" --line-close-radius 1"
   exit 1

@@ -10,6 +10,7 @@ import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.baseproject.R
 import com.example.baseproject.data.PaletteItem
+import com.example.baseproject.views.PaletteRingView
 
 class PaletteAdapter(
     private val items: List<PaletteItem>,
@@ -20,12 +21,13 @@ class PaletteAdapter(
         private set
 
     val completedIndexes = mutableSetOf<Int>()
+    private var paletteProgress: List<Float> = List(items.size) { 0f }
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val colorCircle: CardView = view.findViewById(R.id.colorCircle)
         val tvNumber: TextView = view.findViewById(R.id.tvNumber)
         val ivCheck: ImageView = view.findViewById(R.id.ivCheck)
-        val selectionIndicator: View = view.findViewById(R.id.selectionIndicator)
+        val ringView: PaletteRingView = view.findViewById(R.id.ringView)
 
         init {
             view.setOnClickListener {
@@ -58,16 +60,33 @@ class PaletteAdapter(
 
         val isCompleted = completedIndexes.contains(position)
         val isSelected = position == selectedIndex
+        val progressFraction = paletteProgress.getOrElse(position) { 0f }
+        val isInProgress = progressFraction > 0f && progressFraction < 1f
 
-        holder.selectionIndicator.visibility =
-            if (isSelected && !isCompleted) View.VISIBLE else View.GONE
+        when {
+            isCompleted -> {
+                holder.ringView.setRingState(PaletteRingView.MODE_NONE)
+                holder.tvNumber.visibility = View.GONE
+                holder.ivCheck.visibility = View.VISIBLE
+            }
 
-        if (isCompleted) {
-            holder.tvNumber.visibility = View.GONE
-            holder.ivCheck.visibility = View.VISIBLE
-        } else {
-            holder.tvNumber.visibility = View.VISIBLE
-            holder.ivCheck.visibility = View.GONE
+            isInProgress -> {
+                holder.ringView.setRingState(PaletteRingView.MODE_PROGRESS, progressFraction)
+                holder.tvNumber.visibility = View.VISIBLE
+                holder.ivCheck.visibility = View.GONE
+            }
+
+            isSelected -> {
+                holder.ringView.setRingState(PaletteRingView.MODE_SELECTED)
+                holder.tvNumber.visibility = View.VISIBLE
+                holder.ivCheck.visibility = View.GONE
+            }
+
+            else -> {
+                holder.ringView.setRingState(PaletteRingView.MODE_NONE)
+                holder.tvNumber.visibility = View.VISIBLE
+                holder.ivCheck.visibility = View.GONE
+            }
         }
     }
 
@@ -88,6 +107,18 @@ class PaletteAdapter(
     fun setCompletedIndexes(indexes: Set<Int>) {
         completedIndexes.clear()
         completedIndexes.addAll(indexes)
+        notifyDataSetChanged()
+    }
+
+    fun setPaletteState(
+        selectedIndex: Int,
+        completedIndexes: Set<Int>,
+        paletteProgress: List<Float>
+    ) {
+        this.selectedIndex = selectedIndex
+        this.completedIndexes.clear()
+        this.completedIndexes.addAll(completedIndexes)
+        this.paletteProgress = paletteProgress
         notifyDataSetChanged()
     }
 }
