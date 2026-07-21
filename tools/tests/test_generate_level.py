@@ -7,7 +7,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from tools.asset_quality import evaluate_level_dir
+from tools.asset_quality import evaluate_level_dir, measure_preview_mae
+from tools.generate_level import get_representative_color
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -15,6 +16,27 @@ GENERATOR = PROJECT_ROOT / "tools" / "generate_level.py"
 
 
 class GenerateLevelCliTest(unittest.TestCase):
+    def test_representative_color_uses_median_to_ignore_outlier_highlights(self):
+        ref = Image.new("RGB", (5, 1))
+        pixels = ref.load()
+        colors = [
+            (100, 100, 100),
+            (102, 101, 100),
+            (101, 103, 102),
+            (99, 100, 101),
+            (255, 255, 255),
+        ]
+        for x, color in enumerate(colors):
+            pixels[x, 0] = color
+
+        representative = get_representative_color(
+            pixels,
+            [(x, 0) for x in range(5)],
+            method="median",
+        )
+
+        self.assertEqual((101, 101, 101), representative)
+
     def test_single_generation_writes_schema_v2_and_debug_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)
@@ -62,6 +84,7 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertEqual(config["assets"]["line"], "line.png")
             self.assertEqual(config["assets"]["mask"], "mask.png")
             self.assertEqual(config["assets"]["preview"], "preview_colored.png")
+            self.assertEqual(config["assets"]["detail"], "detail.png")
             self.assertEqual(config["stats"]["total_regions"], len(config["regions"]))
             self.assertGreaterEqual(len(config["regions"]), 2)
             self.assertGreaterEqual(len(config["palette"]), 2)
@@ -74,6 +97,7 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertTrue((output_dir / "mask.png").exists())
             self.assertTrue((output_dir / "line.png").exists())
             self.assertTrue((output_dir / "preview_colored.png").exists())
+            self.assertTrue((output_dir / "detail.png").exists())
             self.assertTrue((output_dir / "debug_regions.png").exists())
             self.assertTrue((output_dir / "debug_report.json").exists())
             self.assertTrue((output_dir / "debug_source_line.png").exists())
@@ -85,6 +109,65 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertIn("quality_score", report)
             self.assertIn("fail_reasons", report)
             self.assertIn("metrics", report)
+            self.assertTrue(report["generation_params"]["has_detail"])
+            self.assertEqual("reference_lerp_rgba", report["generation_params"]["detail_mode"])
+            self.assertIn("preview_similarity_score", report["metrics"])
+
+    def test_detail_layer_improves_gradient_preview_without_increasing_regions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            line_path = tmp_dir / "line.png"
+            ref_path = tmp_dir / "ref.png"
+            output_dir = tmp_dir / "assets" / "Test" / "gradient"
+
+            line = Image.new("RGB", (18, 10), "white")
+            draw = ImageDraw.Draw(line)
+            draw.rectangle((0, 0, 17, 9), outline="black")
+            line.save(line_path)
+
+            ref = Image.new("RGB", (18, 10), "white")
+            ref_pixels = ref.load()
+            for y in range(1, 9):
+                for x in range(1, 17):
+                    value = 40 + x * 10
+                    ref_pixels[x, y] = (value, 80, 180)
+            ref.save(ref_path)
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(GENERATOR),
+                    "--target-unique-colors",
+                    "2",
+                    "single",
+                    str(line_path),
+                    str(ref_path),
+                    "--category",
+                    "Test",
+                    "--name",
+                    "Gradient",
+                    "--id",
+                    "gradient",
+                    "--output-directory",
+                    str(output_dir),
+                ],
+                check=True,
+                cwd=PROJECT_ROOT,
+            )
+
+            config = json.loads((output_dir / "config.json").read_text())
+            report = json.loads((output_dir / "debug_report.json").read_text())
+            flat_preview_path = output_dir / "debug_preview_flat.png"
+            final_preview_path = output_dir / "preview_colored.png"
+
+            self.assertEqual(1, config["stats"]["total_regions"])
+            self.assertTrue((output_dir / "detail.png").exists())
+            self.assertTrue(flat_preview_path.exists())
+            self.assertLess(
+                measure_preview_mae(ref_path, final_preview_path),
+                measure_preview_mae(ref_path, flat_preview_path),
+            )
+            self.assertTrue(report["generation_params"]["has_detail"])
 
     def test_auto_preprocessing_reports_candidates_and_does_not_degrade_grid_fixture(self):
         with tempfile.TemporaryDirectory() as tmp:

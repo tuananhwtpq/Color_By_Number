@@ -94,6 +94,36 @@ def measure_preview_mae(reference_path, preview_path):
             return round(sum(stat.mean) / len(stat.mean), 2)
 
 
+def measure_preview_similarity_score(reference_path, preview_path):
+    preview_mae = measure_preview_mae(reference_path, preview_path)
+    if preview_mae is None:
+        return None
+    return round(max(0.0, 100.0 - (preview_mae / 255.0) * 100.0), 2)
+
+
+def rgb_luminance(rgb):
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+
+
+def measure_luminance_preservation_score(reference_path, preview_path):
+    if not reference_path or not os.path.exists(reference_path) or not os.path.exists(preview_path):
+        return None
+
+    with Image.open(reference_path).convert("RGB") as reference_img:
+        with Image.open(preview_path).convert("RGB") as preview_img:
+            if reference_img.size != preview_img.size:
+                preview_img = preview_img.resize(reference_img.size, Image.Resampling.BILINEAR)
+            reference_pixels = list(reference_img.getdata())
+            preview_pixels = list(preview_img.getdata())
+            if not reference_pixels:
+                return None
+            mean_delta = sum(
+                abs(rgb_luminance(reference) - rgb_luminance(preview))
+                for reference, preview in zip(reference_pixels, preview_pixels)
+            ) / len(reference_pixels)
+            return round(max(0.0, 100.0 - (mean_delta / 255.0) * 100.0), 2)
+
+
 def measure_line_ink(line_path):
     if not os.path.exists(line_path):
         return {
@@ -486,6 +516,14 @@ def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     metrics["reference_missing"] = not reference_path or not os.path.exists(reference_path)
     metrics["reference_required"] = require_reference
     metrics["preview_mae"] = measure_preview_mae(reference_path, preview_path)
+    metrics["color_mae"] = metrics["preview_mae"]
+    metrics["preview_similarity_score"] = measure_preview_similarity_score(reference_path, preview_path)
+    metrics["shading_preservation_score"] = measure_luminance_preservation_score(
+        reference_path,
+        preview_path,
+    )
+    detail_path = resolve_asset_path(level_dir, config, "detail", "detail.png")
+    metrics["has_detail"] = os.path.exists(detail_path)
 
     quality = score_quality(metrics)
     report = {

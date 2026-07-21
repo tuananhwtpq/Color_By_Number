@@ -1,6 +1,7 @@
 package com.example.baseproject.data.repository
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.graphics.BitmapFactory
 import com.example.baseproject.data.CentroidCalculator
 import com.example.baseproject.data.LevelConfig
@@ -17,6 +18,41 @@ class AssetLevelRepositoryImpl(
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : AssetLevelRepository {
     private val gson = Gson()
+
+    private fun decodeOptionalConfiguredBitmap(
+        assetManager: AssetManager,
+        levelPath: String,
+        configuredFileName: String?,
+        fallbackBasePath: String
+    ): android.graphics.Bitmap? {
+        fun decodeFallback() =
+            AssetImageResolver.openResolvedAssetOrNull(assetManager, fallbackBasePath)?.use {
+                BitmapFactory.decodeStream(
+                    it,
+                    null,
+                    BitmapFactory.Options().apply {
+                        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                    }
+                )
+            }
+
+        if (!configuredFileName.isNullOrBlank()) {
+            try {
+                assetManager.open("$levelPath/$configuredFileName").use {
+                    return BitmapFactory.decodeStream(
+                        it,
+                        null,
+                        BitmapFactory.Options().apply {
+                            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                        }
+                    )
+                }
+            } catch (_: Exception) {
+                return decodeFallback()
+            }
+        }
+        return decodeFallback()
+    }
 
     override suspend fun loadAllLevels(): List<LevelConfig> = withContext(ioDispatcher) {
         val levels = mutableListOf<LevelConfig>()
@@ -75,18 +111,13 @@ class AssetLevelRepositoryImpl(
                 )
             } ?: error("Failed to decode mask bitmap for $category/$levelId")
 
-            val detailBitmap = AssetImageResolver.openResolvedAssetOrNull(
-                assetManager,
-                "$category/$levelId/detail"
-            )?.use {
-                BitmapFactory.decodeStream(
-                    it,
-                    null,
-                    BitmapFactory.Options().apply {
-                        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
-                    }
-                )
-            }
+            val levelPath = "$category/$levelId"
+            val detailBitmap = decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.detail,
+                fallbackBasePath = "$levelPath/detail"
+            )
 
             val regions = if (config.hasRegionMetadata()) {
                 config.toRegionDataList()

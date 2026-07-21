@@ -5,7 +5,12 @@ import unittest
 
 from PIL import Image
 
-from tools.asset_quality import build_recommendation, evaluate_level_dir
+from tools.asset_quality import (
+    build_recommendation,
+    evaluate_level_dir,
+    measure_luminance_preservation_score,
+    measure_preview_similarity_score,
+)
 
 
 def write_json(path, data):
@@ -258,6 +263,35 @@ class AssetQualityTest(unittest.TestCase):
         )
 
         self.assertEqual("KEEP", recommendation["action"])
+
+    def test_similarity_scores_are_high_for_matching_images(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            reference_path = os.path.join(temp_dir, "reference.png")
+            preview_path = os.path.join(temp_dir, "preview.png")
+            image = Image.new("RGB", (4, 4), (40, 120, 200))
+            image.save(reference_path)
+            image.save(preview_path)
+
+            self.assertEqual(100.0, measure_preview_similarity_score(reference_path, preview_path))
+            self.assertEqual(
+                100.0,
+                measure_luminance_preservation_score(reference_path, preview_path),
+            )
+
+    def test_evaluate_level_reports_similarity_metrics(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mask_colors = [
+                [(0, 0, x + 1) for x in range(8)]
+                for _ in range(8)
+            ]
+            reference_path = save_level_images(temp_dir, mask_colors)
+            write_json(os.path.join(temp_dir, "config.json"), make_base_config())
+
+            report = evaluate_level_dir(temp_dir, reference_path=reference_path)
+
+            self.assertIn("preview_similarity_score", report["metrics"])
+            self.assertIn("shading_preservation_score", report["metrics"])
+            self.assertEqual(100.0, report["metrics"]["preview_similarity_score"])
 
     def test_recommendation_review_visual_for_grade_b_warning(self):
         recommendation = build_recommendation(

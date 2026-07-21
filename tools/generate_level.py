@@ -377,6 +377,46 @@ def get_dominant_color(ref_pixels, region, quantize_step=16):
     return Counter(colors).most_common(1)[0][0]
 
 
+def median_channel(values):
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return ordered[middle]
+    return int(round((ordered[middle - 1] + ordered[middle]) / 2.0))
+
+
+def trimmed_mean_channel(values, trim_fraction=0.1):
+    ordered = sorted(values)
+    trim_count = int(len(ordered) * trim_fraction)
+    if trim_count > 0 and trim_count * 2 < len(ordered):
+        ordered = ordered[trim_count:-trim_count]
+    return int(round(sum(ordered) / max(1, len(ordered))))
+
+
+def get_representative_color(ref_pixels, region, method="median", quantize_step=0):
+    colors = [tuple(ref_pixels[x, y][:3]) for x, y in region]
+    if not colors:
+        return (255, 255, 255)
+
+    if method == "dominant":
+        return get_dominant_color(ref_pixels, region, quantize_step=quantize_step)
+
+    channels = list(zip(*colors))
+    if method == "trimmed-mean":
+        rgb = tuple(trimmed_mean_channel(channel) for channel in channels)
+    elif method == "median":
+        rgb = tuple(median_channel(channel) for channel in channels)
+    else:
+        raise ValueError(
+            f"Region color method '{method}' không hợp lệ. "
+            "Hãy dùng dominant, median hoặc trimmed-mean."
+        )
+
+    if quantize_step and quantize_step > 0:
+        return quantize_rgb(rgb, quantize_step)
+    return rgb
+
+
 def sort_palette_colors(colors):
     return sorted(
         colors,
@@ -634,7 +674,7 @@ def estimate_difficulty(total_regions, unique_numbers, small_regions_count):
     return max(1, min(10, int(round(score / 35.0))))
 
 
-def make_preview_colored_image(width, height, mask_img, line_img, mask_to_target_rgb):
+def make_flat_colored_image(width, height, mask_img, mask_to_target_rgb):
     mask_pixels = mask_img.load()
     preview = Image.new("RGB", (width, height), (255, 255, 255))
     preview_pixels = preview.load()
@@ -645,8 +685,15 @@ def make_preview_colored_image(width, height, mask_img, line_img, mask_to_target
             if target is not None:
                 preview_pixels[x, y] = target
 
+    return preview
+
+
+def apply_line_overlay(preview, line_img):
     line_gray = line_img.convert("L")
     line_pixels = line_gray.load()
+    preview = preview.copy()
+    preview_pixels = preview.load()
+    width, height = preview.size
     for y in range(height):
         for x in range(width):
             line_value = line_pixels[x, y]
@@ -656,6 +703,54 @@ def make_preview_colored_image(width, height, mask_img, line_img, mask_to_target
                 preview_pixels[x, y] = tuple(int(channel * factor) for channel in current)
 
     return preview
+
+
+def make_detail_overlay_image(
+    reference_img,
+    flat_preview_img,
+    line_img,
+    mask_img,
+    mask_to_target_rgb,
+    detail_alpha,
+):
+    width, height = reference_img.size
+    reference_pixels = reference_img.load()
+    flat_pixels = flat_preview_img.load()
+    mask_pixels = mask_img.load()
+    line_pixels = line_img.convert("L").load()
+    detail = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    detail_pixels = detail.load()
+    max_alpha = int(round(max(0.0, min(1.0, detail_alpha)) * 255))
+
+    for y in range(height):
+        for x in range(width):
+            if mask_pixels[x, y] not in mask_to_target_rgb:
+                continue
+            if line_pixels[x, y] < 245:
+                continue
+            reference = reference_pixels[x, y][:3]
+            flat = flat_pixels[x, y][:3]
+            diff = color_distance(reference, flat)
+            if diff < 2.0:
+                continue
+            alpha = int(round(max_alpha * min(1.0, diff / 96.0)))
+            if alpha <= 0:
+                continue
+            detail_pixels[x, y] = (reference[0], reference[1], reference[2], alpha)
+
+    return detail
+
+
+def composite_detail_over_flat(flat_preview_img, detail_img):
+    if detail_img is None:
+        return flat_preview_img.copy()
+    return Image.alpha_composite(flat_preview_img.convert("RGBA"), detail_img).convert("RGB")
+
+
+def make_preview_colored_image(width, height, mask_img, line_img, mask_to_target_rgb, detail_img=None):
+    flat_preview = make_flat_colored_image(width, height, mask_img, mask_to_target_rgb)
+    detailed_preview = composite_detail_over_flat(flat_preview, detail_img)
+    return apply_line_overlay(detailed_preview, line_img)
 
 
 def deterministic_debug_color(region_id):
@@ -1114,6 +1209,8 @@ def generate_level_assets(
     quantize_method="mediancut",
     adaptive_palette=True,
     preprocess_profile="standard",
+    region_color_method="median",
+    detail_alpha=0.65,
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
     source_line_img, binary_img, selected_preprocessing = select_binary_fill_map(
@@ -1148,7 +1245,7 @@ def generate_level_assets(
         target_unique_colors=resolved_target_unique_colors,
         method_name=quantize_method,
     )
-    ref_pixels = quantized_ref_img.load()
+    ref_pixels = ref_img.load()
 
     mask_img = Image.new("RGB", (width, height), (0, 0, 0))
     mask_pixels = mask_img.load()
@@ -1168,7 +1265,12 @@ def generate_level_assets(
             skipped_noise_regions += 1
             continue
 
-        dominant_color = get_dominant_color(ref_pixels, region, quantize_step=0)
+        representative_color = get_representative_color(
+            ref_pixels,
+            region,
+            method=region_color_method,
+            quantize_step=0,
+        )
         bbox = get_region_bbox(region)
         centroid = get_region_centroid(region)
         label_anchor = find_label_anchor(region, bbox, centroid)
@@ -1182,7 +1284,8 @@ def generate_level_assets(
                     "bbox": bbox,
                     "centroid": centroid,
                     "label_anchor": label_anchor,
-                    "target_color": dominant_color,
+                    "target_color": representative_color,
+                    "representative_color": representative_color,
                     "hide_number": hide_number,
                     "merged_region_count": 1,
                 },
@@ -1310,6 +1413,8 @@ def generate_level_assets(
                 "mask_color": mask_hex,
                 "number": palette_number,
                 "target_color": rgb_to_hex(best_palette_color),
+                "fill_color": rgb_to_hex(best_palette_color),
+                "representative_color": rgb_to_hex(tuple(info.get("representative_color", target_color))),
                 "area": info["area"],
                 "bbox": info["bbox"],
                 "centroid": info["centroid"],
@@ -1361,10 +1466,14 @@ def generate_level_assets(
         "tiny_merge_policy": tiny_merge_policy,
         "adaptive_palette": adaptive_palette,
         "quantize_method": quantize_method,
+        "region_color_method": region_color_method,
         "category_profile": resolved_profile,
         "target_unique_colors": resolved_target_unique_colors,
         "preprocess_profile": preprocess_profile,
         "selected_preprocessing": selected_preprocessing,
+        "has_detail": True,
+        "detail_mode": "reference_lerp_rgba",
+        "detail_alpha": detail_alpha,
     }
 
     print(
@@ -1391,12 +1500,35 @@ def generate_level_assets(
     source_line_img.save(source_line_out_path)
     print(f"Đã lưu ảnh Line gốc để debug: {source_line_out_path}")
 
+    flat_preview_img = make_flat_colored_image(
+        width=width,
+        height=height,
+        mask_img=mask_img,
+        mask_to_target_rgb=mask_to_target_rgb,
+    )
+    flat_preview_out_path = os.path.join(output_dir, "debug_preview_flat.png")
+    apply_line_overlay(flat_preview_img, line_img).save(flat_preview_out_path)
+    print(f"Đã lưu ảnh Preview flat để debug: {flat_preview_out_path}")
+
+    detail_img = make_detail_overlay_image(
+        reference_img=ref_img,
+        flat_preview_img=flat_preview_img,
+        line_img=line_img,
+        mask_img=mask_img,
+        mask_to_target_rgb=mask_to_target_rgb,
+        detail_alpha=detail_alpha,
+    )
+    detail_out_path = os.path.join(output_dir, "detail.png")
+    detail_img.save(detail_out_path)
+    print(f"Đã lưu ảnh Detail/Shading: {detail_out_path}")
+
     preview_img = make_preview_colored_image(
         width=width,
         height=height,
         mask_img=mask_img,
         line_img=line_img,
         mask_to_target_rgb=mask_to_target_rgb,
+        detail_img=detail_img,
     )
     preview_out_path = os.path.join(output_dir, "preview_colored.png")
     preview_img.save(preview_out_path)
@@ -1430,9 +1562,11 @@ def generate_level_assets(
             "line": "line.png",
             "mask": "mask.png",
             "preview": "preview_colored.png",
+            "detail": "detail.png",
             "debug_regions": "debug_regions.png",
             "debug_report": "debug_report.json",
             "debug_source_line": "debug_source_line.png",
+            "debug_preview_flat": "debug_preview_flat.png",
         },
         "palette": palette_config,
         "region_palette": region_palette_config,
@@ -1595,6 +1729,21 @@ def create_parser():
             "Profile xử lý line trước flood-fill. Mặc định standard giữ hành vi cũ; "
             "auto thử nhiều threshold/close radius và chọn candidate tốt nhất theo metric vùng."
         ),
+    )
+    parser.add_argument(
+        "--region-color-method",
+        choices=["dominant", "median", "trimmed-mean"],
+        default="median",
+        help=(
+            "Cách chọn màu đại diện cho mỗi region. median giữ màu ổn định hơn khi vùng có "
+            "highlight/shadow nhỏ; dominant là hành vi gần pipeline cũ."
+        ),
+    )
+    parser.add_argument(
+        "--detail-alpha",
+        type=float,
+        default=0.65,
+        help="Độ mạnh tối đa của detail.png khi blend lại với flat fill, trong khoảng 0..1.",
     )
 
     subparsers = parser.add_subparsers(dest="mode", required=True)
@@ -1787,6 +1936,8 @@ def run_batch(args):
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
             preprocess_profile=args.preprocess_profile,
+            region_color_method=args.region_color_method,
+            detail_alpha=args.detail_alpha,
         )
         processed_count += 1
 
@@ -1842,6 +1993,8 @@ def run_batch_single_category(args):
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
             preprocess_profile=args.preprocess_profile,
+            region_color_method=args.region_color_method,
+            detail_alpha=args.detail_alpha,
         )
         processed_count += 1
 
@@ -1904,6 +2057,8 @@ def run_batch_source_category(args):
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
             preprocess_profile=args.preprocess_profile,
+            region_color_method=args.region_color_method,
+            detail_alpha=args.detail_alpha,
         )
         processed_count += 1
 
@@ -1943,6 +2098,8 @@ def run_single(args):
         quantize_method=args.quantize_method,
         adaptive_palette=not args.disable_adaptive_palette,
         preprocess_profile=args.preprocess_profile,
+        region_color_method=args.region_color_method,
+        detail_alpha=args.detail_alpha,
     )
 
 

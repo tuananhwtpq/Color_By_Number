@@ -98,6 +98,7 @@ data class LevelAssets(
     @SerializedName("line") val line: String? = null,
     @SerializedName("mask") val mask: String? = null,
     @SerializedName("preview") val preview: String? = null,
+    @SerializedName("detail") val detail: String? = null,
     @SerializedName("debug_regions") val debugRegions: String? = null,
     @SerializedName("debug_report") val debugReport: String? = null
 )
