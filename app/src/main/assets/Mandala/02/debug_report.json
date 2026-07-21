@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "stats": {
-    "total_regions": 494,
-    "unique_numbers": 34,
+    "total_regions": 646,
+    "unique_numbers": 17,
     "estimated_difficulty": 10,
     "small_regions_count": 0,
-    "giant_regions_count": 1
+    "giant_regions_count": 0
   },
   "generation_params": {
     "brightness_threshold": 120,
@@ -23,15 +23,106 @@
     "adaptive_palette": true,
     "quantize_method": "mediancut",
     "category_profile": "mandala",
-    "target_unique_colors": 80
-  },
-  "warnings": [
-    {
-      "code": "GIANT_REGION",
-      "message": "Một hoặc nhiều vùng chiếm hơn 60% canvas; line art có thể bị hở hoặc nền đang bị coi là vùng tô.",
-      "region_ids": [
-        1
+    "target_unique_colors": 80,
+    "preprocess_profile": "auto",
+    "selected_preprocessing": {
+      "profile": "manga",
+      "brightness_threshold": 170,
+      "line_close_radius": 2,
+      "score": 100,
+      "evaluation_mode": "pre_generation_proxy",
+      "candidate_proxy_score": 100,
+      "candidate_proxy_grade": "A",
+      "quality_score": 100,
+      "quality_grade": "A",
+      "fail_reasons": [],
+      "warnings": [],
+      "total_regions": 765,
+      "largest_region_pct": 40.55,
+      "tiny_region_count_lt_50": 133,
+      "preview_mae": null,
+      "preview_mae_reason": "not_available_before_full_generation",
+      "candidate_count": 13,
+      "candidate_top": [
+        {
+          "profile": "manga",
+          "brightness_threshold": 170,
+          "line_close_radius": 2,
+          "score": 100,
+          "evaluation_mode": "pre_generation_proxy",
+          "candidate_proxy_score": 100,
+          "candidate_proxy_grade": "A",
+          "quality_score": 100,
+          "quality_grade": "A",
+          "fail_reasons": [],
+          "warnings": [],
+          "total_regions": 765,
+          "largest_region_pct": 40.55,
+          "tiny_region_count_lt_50": 133,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation"
+        },
+        {
+          "profile": "thin-line",
+          "brightness_threshold": 150,
+          "line_close_radius": 1,
+          "score": 100,
+          "evaluation_mode": "pre_generation_proxy",
+          "candidate_proxy_score": 100,
+          "candidate_proxy_grade": "A",
+          "quality_score": 100,
+          "quality_grade": "A",
+          "fail_reasons": [],
+          "warnings": [],
+          "total_regions": 867,
+          "largest_region_pct": 40.59,
+          "tiny_region_count_lt_50": 213,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation"
+        },
+        {
+          "profile": "manga",
+          "brightness_threshold": 150,
+          "line_close_radius": 1,
+          "score": 100,
+          "evaluation_mode": "pre_generation_proxy",
+          "candidate_proxy_score": 100,
+          "candidate_proxy_grade": "A",
+          "quality_score": 100,
+          "quality_grade": "A",
+          "fail_reasons": [],
+          "warnings": [],
+          "total_regions": 867,
+          "largest_region_pct": 40.59,
+          "tiny_region_count_lt_50": 213,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation"
+        }
       ]
     }
-  ]
+  },
+  "warnings": [],
+  "quality_grade": "A",
+  "quality_score": 100,
+  "fail_reasons": [],
+  "metrics": {
+    "total_regions": 646,
+    "unique_numbers": 17,
+    "largest_region_pct": 40.55,
+    "tiny_region_count_lt_50": 7,
+    "tiny_region_count_lt_200": 197,
+    "mask_config_mismatch_count": 0,
+    "mask_missing_config_colors": [],
+    "config_missing_mask_colors": [],
+    "unexpected_mask_colors": [],
+    "duplicate_mask_colors": [],
+    "duplicate_region_palette_mask_colors": [],
+    "region_area_mismatch_count": 0,
+    "region_area_mismatches": [],
+    "line_dark_pct": 14.26,
+    "line_ink_pct": 14.26,
+    "reference_missing": false,
+    "reference_required": false,
+    "preview_mae": 13.96
+  }
 }

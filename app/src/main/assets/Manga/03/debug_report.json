@@ -32,6 +32,42 @@
       "region_ids": [
         1
       ]
+    },
+    {
+      "code": "PREVIEW_MAE_HIGH",
+      "message": "Preview sinh ra lệch ảnh màu gốc khá nhiều.",
+      "value": 65.5,
+      "threshold": 50
+    },
+    {
+      "code": "LINE_TOO_LIGHT",
+      "message": "Tỷ lệ pixel line đủ tối dưới 2%; line có thể quá nhẹ để tách vùng ổn định.",
+      "value": 1.89,
+      "threshold": 2
     }
-  ]
+  ],
+  "quality_grade": "D",
+  "quality_score": 33,
+  "fail_reasons": [
+    {
+      "code": "GIANT_REGION",
+      "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
+      "value": 84.84,
+      "threshold": 70
+    }
+  ],
+  "metrics": {
+    "total_regions": 10,
+    "unique_numbers": 9,
+    "largest_region_pct": 84.84,
+    "tiny_region_count_lt_50": 0,
+    "tiny_region_count_lt_200": 1,
+    "mask_config_mismatch_count": 0,
+    "mask_missing_config_colors": [],
+    "config_missing_mask_colors": [],
+    "unexpected_mask_colors": [],
+    "line_dark_pct": 1.89,
+    "line_ink_pct": 6.56,
+    "preview_mae": 65.5
+  }
 }

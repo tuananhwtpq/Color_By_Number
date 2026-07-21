@@ -35,6 +35,29 @@
         561,
         567
       ]
+    },
+    {
+      "code": "TOO_MANY_REGIONS",
+      "message": "Số vùng tô rất cao; level có thể nặng và khó thao tác trên mobile.",
+      "value": 1028,
+      "threshold": 900
     }
-  ]
+  ],
+  "quality_grade": "B",
+  "quality_score": 88,
+  "fail_reasons": [],
+  "metrics": {
+    "total_regions": 1028,
+    "unique_numbers": 76,
+    "largest_region_pct": 5.37,
+    "tiny_region_count_lt_50": 0,
+    "tiny_region_count_lt_200": 79,
+    "mask_config_mismatch_count": 0,
+    "mask_missing_config_colors": [],
+    "config_missing_mask_colors": [],
+    "unexpected_mask_colors": [],
+    "line_dark_pct": 25.32,
+    "line_ink_pct": 31.13,
+    "preview_mae": 12.48
+  }
 }

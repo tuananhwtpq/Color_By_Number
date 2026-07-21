@@ -7,6 +7,11 @@ from collections import Counter, deque
 from PIL import Image, ImageFilter
 from PIL import ImageDraw
 
+try:
+    from asset_quality import evaluate_level_dir, merge_quality_report, score_quality
+except ImportError:
+    from tools.asset_quality import evaluate_level_dir, merge_quality_report, score_quality
+
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_ASSETS_ROOT = os.path.abspath(
@@ -135,6 +140,137 @@ def load_binary_fill_map(line_art_path, brightness_threshold, line_close_radius)
     binary = gray.point(lambda value: 255 if value > brightness_threshold else 0, mode="L")
     binary = close_small_line_gaps(binary, line_close_radius)
     return line_img, binary
+
+
+def build_preprocessing_candidates(
+    preprocess_profile,
+    brightness_threshold,
+    line_close_radius,
+):
+    base_candidate = {
+        "profile": "standard",
+        "brightness_threshold": brightness_threshold,
+        "line_close_radius": line_close_radius,
+    }
+    profiles = {
+        "standard": [base_candidate],
+        "thin-line": [
+            {"profile": "thin-line", "brightness_threshold": 130, "line_close_radius": 1},
+            {"profile": "thin-line", "brightness_threshold": 150, "line_close_radius": 1},
+            {"profile": "thin-line", "brightness_threshold": 150, "line_close_radius": 2},
+        ],
+        "manga": [
+            {"profile": "manga", "brightness_threshold": 130, "line_close_radius": 1},
+            {"profile": "manga", "brightness_threshold": 150, "line_close_radius": 1},
+            {"profile": "manga", "brightness_threshold": 170, "line_close_radius": 2},
+        ],
+        "mandala": [
+            {"profile": "mandala", "brightness_threshold": 100, "line_close_radius": 0},
+            {"profile": "mandala", "brightness_threshold": 110, "line_close_radius": 1},
+            {"profile": "mandala", "brightness_threshold": 130, "line_close_radius": 1},
+        ],
+        "poster": [
+            {"profile": "poster", "brightness_threshold": 90, "line_close_radius": 1},
+            {"profile": "poster", "brightness_threshold": 110, "line_close_radius": 1},
+            {"profile": "poster", "brightness_threshold": 130, "line_close_radius": 2},
+        ],
+    }
+    if preprocess_profile == "auto":
+        candidates = [base_candidate]
+        for name in ["thin-line", "manga", "mandala", "poster"]:
+            candidates.extend(profiles[name])
+        return candidates
+    return profiles.get(preprocess_profile, [base_candidate])
+
+
+def score_preprocessing_candidate(binary_img):
+    regions = extract_regions(binary_img)
+    total_pixels = max(1, binary_img.width * binary_img.height)
+    region_areas = [len(region) for region in regions if len(region) > 1]
+    total_regions = len(region_areas)
+    largest_pct = max(region_areas, default=0) * 100.0 / total_pixels
+    tiny_regions = sum(1 for area in region_areas if area < 50)
+
+    metrics = {
+        "total_regions": total_regions,
+        "unique_numbers": 0,
+        "largest_region_pct": round(largest_pct, 2),
+        "tiny_region_count_lt_50": tiny_regions,
+        "mask_config_mismatch_count": 0,
+    }
+    quality = score_quality(metrics)
+    return {
+        "score": quality["quality_score"],
+        "evaluation_mode": "pre_generation_proxy",
+        "candidate_proxy_score": quality["quality_score"],
+        "candidate_proxy_grade": quality["quality_grade"],
+        "quality_score": quality["quality_score"],
+        "quality_grade": quality["quality_grade"],
+        "fail_reasons": quality["fail_reasons"],
+        "warnings": quality["warnings"],
+        "total_regions": total_regions,
+        "largest_region_pct": round(largest_pct, 2),
+        "tiny_region_count_lt_50": tiny_regions,
+        "preview_mae": None,
+        "preview_mae_reason": "not_available_before_full_generation",
+    }
+
+
+def select_binary_fill_map(
+    line_art_path,
+    brightness_threshold,
+    line_close_radius,
+    preprocess_profile,
+):
+    line_img = Image.open(line_art_path).convert("RGB")
+    gray = line_img.convert("L")
+    candidates = []
+    for candidate in build_preprocessing_candidates(
+        preprocess_profile=preprocess_profile,
+        brightness_threshold=brightness_threshold,
+        line_close_radius=line_close_radius,
+    ):
+        binary = gray.point(
+            lambda value, threshold=candidate["brightness_threshold"]: (
+                255 if value > threshold else 0
+            ),
+            mode="L",
+        )
+        binary = close_small_line_gaps(binary, candidate["line_close_radius"])
+        candidate_report = {
+            **candidate,
+            **score_preprocessing_candidate(binary),
+            "binary": binary,
+        }
+        candidates.append(candidate_report)
+
+    selected = max(
+        candidates,
+        key=lambda item: (
+            item["score"],
+            -abs(item["largest_region_pct"] - 35.0),
+            item["total_regions"],
+        ),
+    )
+    selected_report = {key: value for key, value in selected.items() if key != "binary"}
+    selected_report["candidate_count"] = len(candidates)
+    selected_report["candidate_top"] = [
+        {key: value for key, value in candidate.items() if key != "binary"}
+        for candidate in sorted(
+            candidates,
+            key=lambda item: (
+                item["quality_score"],
+                -abs(item["largest_region_pct"] - 35.0),
+                item["total_regions"],
+            ),
+            reverse=True,
+        )[:3]
+    ]
+    return line_img, selected["binary"], selected_report
+
+
+def make_line_output_image(binary_img):
+    return binary_img.convert("RGB")
 
 
 def extract_regions(binary_img):
@@ -977,21 +1113,31 @@ def generate_level_assets(
     category_profile=None,
     quantize_method="mediancut",
     adaptive_palette=True,
+    preprocess_profile="standard",
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
-    line_img, binary_img = load_binary_fill_map(
+    source_line_img, binary_img, selected_preprocessing = select_binary_fill_map(
         line_art_path,
         brightness_threshold=brightness_threshold,
         line_close_radius=line_close_radius,
+        preprocess_profile=preprocess_profile,
+    )
+    print(
+        "Preprocess được chọn: "
+        f"profile={selected_preprocessing['profile']}, "
+        f"threshold={selected_preprocessing['brightness_threshold']}, "
+        f"close_radius={selected_preprocessing['line_close_radius']}, "
+        f"candidate_score={selected_preprocessing['score']}"
     )
 
     print(f"Đang tải ảnh tham chiếu màu: {reference_path}")
     ref_img = Image.open(reference_path).convert("RGB")
 
-    if line_img.size != ref_img.size:
+    if source_line_img.size != ref_img.size:
         raise ValueError("Kích thước của ảnh nét vẽ và ảnh tham chiếu phải trùng khớp.")
 
-    width, height = line_img.size
+    width, height = source_line_img.size
+    line_img = make_line_output_image(binary_img)
     resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
         category_name=category_name,
         requested_profile=category_profile,
@@ -1217,6 +1363,8 @@ def generate_level_assets(
         "quantize_method": quantize_method,
         "category_profile": resolved_profile,
         "target_unique_colors": resolved_target_unique_colors,
+        "preprocess_profile": preprocess_profile,
+        "selected_preprocessing": selected_preprocessing,
     }
 
     print(
@@ -1239,6 +1387,10 @@ def generate_level_assets(
     line_img.save(line_out_path)
     print(f"Đã lưu ảnh Line: {line_out_path}")
 
+    source_line_out_path = os.path.join(output_dir, "debug_source_line.png")
+    source_line_img.save(source_line_out_path)
+    print(f"Đã lưu ảnh Line gốc để debug: {source_line_out_path}")
+
     preview_img = make_preview_colored_image(
         width=width,
         height=height,
@@ -1260,18 +1412,13 @@ def generate_level_assets(
     debug_regions_img.save(debug_regions_out_path)
     print(f"Đã lưu ảnh Debug Regions: {debug_regions_out_path}")
 
-    quality_report = build_quality_report(
+    legacy_quality_report = build_quality_report(
         width=width,
         height=height,
         region_configs=region_configs,
         stats=stats,
         generation_params=generation_params,
     )
-    debug_report_out_path = os.path.join(output_dir, "debug_report.json")
-    with open(debug_report_out_path, "w", encoding="utf-8") as output_file:
-        json.dump(quality_report, output_file, indent=2, ensure_ascii=False)
-    print(f"Đã lưu báo cáo Debug: {debug_report_out_path}")
-
     config_data = {
         "schema_version": 2,
         "id": generated_id if generated_id else os.path.basename(output_dir),
@@ -1285,6 +1432,7 @@ def generate_level_assets(
             "preview": "preview_colored.png",
             "debug_regions": "debug_regions.png",
             "debug_report": "debug_report.json",
+            "debug_source_line": "debug_source_line.png",
         },
         "palette": palette_config,
         "region_palette": region_palette_config,
@@ -1324,6 +1472,18 @@ def generate_level_assets(
     with open(config_out_path, "w", encoding="utf-8") as output_file:
         json.dump(config_data, output_file, indent=2, ensure_ascii=False)
     print(f"Đã lưu file cấu hình: {config_out_path}")
+
+    quality_report = merge_quality_report(
+        legacy_quality_report,
+        evaluate_level_dir(output_dir, reference_path=reference_path),
+    )
+    debug_report_out_path = os.path.join(output_dir, "debug_report.json")
+    with open(debug_report_out_path, "w", encoding="utf-8") as output_file:
+        json.dump(quality_report, output_file, indent=2, ensure_ascii=False)
+    print(
+        f"Đã lưu báo cáo Debug: {debug_report_out_path} "
+        f"(grade={quality_report['quality_grade']}, score={quality_report['quality_score']})"
+    )
     print("=== Hoàn tất sinh Asset! ===")
 
 
@@ -1426,6 +1586,15 @@ def create_parser():
         "--disable-adaptive-palette",
         action="store_true",
         help="Tắt adaptive palette để debug/fallback theo pipeline cũ.",
+    )
+    parser.add_argument(
+        "--preprocess-profile",
+        choices=["standard", "thin-line", "manga", "mandala", "poster", "auto"],
+        default="standard",
+        help=(
+            "Profile xử lý line trước flood-fill. Mặc định standard giữ hành vi cũ; "
+            "auto thử nhiều threshold/close radius và chọn candidate tốt nhất theo metric vùng."
+        ),
     )
 
     subparsers = parser.add_subparsers(dest="mode", required=True)
@@ -1617,6 +1786,7 @@ def run_batch(args):
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
+            preprocess_profile=args.preprocess_profile,
         )
         processed_count += 1
 
@@ -1671,6 +1841,7 @@ def run_batch_single_category(args):
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
+            preprocess_profile=args.preprocess_profile,
         )
         processed_count += 1
 
@@ -1732,6 +1903,7 @@ def run_batch_source_category(args):
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
+            preprocess_profile=args.preprocess_profile,
         )
         processed_count += 1
 
@@ -1770,6 +1942,7 @@ def run_single(args):
         category_profile=args.category_profile,
         quantize_method=args.quantize_method,
         adaptive_palette=not args.disable_adaptive_palette,
+        preprocess_profile=args.preprocess_profile,
     )
 
 

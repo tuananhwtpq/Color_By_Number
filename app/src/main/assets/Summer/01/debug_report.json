@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "stats": {
-    "total_regions": 92,
-    "unique_numbers": 54,
+    "total_regions": 148,
+    "unique_numbers": 63,
     "estimated_difficulty": 10,
     "small_regions_count": 0,
     "giant_regions_count": 0
@@ -23,7 +23,111 @@
     "adaptive_palette": true,
     "quantize_method": "mediancut",
     "category_profile": "standard",
-    "target_unique_colors": 64
+    "target_unique_colors": 64,
+    "preprocess_profile": "auto",
+    "selected_preprocessing": {
+      "profile": "manga",
+      "brightness_threshold": 170,
+      "line_close_radius": 2,
+      "score": 82,
+      "evaluation_mode": "pre_generation_proxy",
+      "candidate_proxy_score": 82,
+      "candidate_proxy_grade": "B",
+      "quality_score": 82,
+      "quality_grade": "B",
+      "fail_reasons": [],
+      "warnings": [
+        {
+          "code": "GIANT_REGION_WARNING",
+          "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+          "value": 53.1,
+          "threshold": 50
+        }
+      ],
+      "total_regions": 169,
+      "largest_region_pct": 53.1,
+      "tiny_region_count_lt_50": 16,
+      "preview_mae": null,
+      "preview_mae_reason": "not_available_before_full_generation",
+      "candidate_count": 13,
+      "candidate_top": [
+        {
+          "profile": "manga",
+          "brightness_threshold": 170,
+          "line_close_radius": 2,
+          "score": 82,
+          "evaluation_mode": "pre_generation_proxy",
+          "candidate_proxy_score": 82,
+          "candidate_proxy_grade": "B",
+          "quality_score": 82,
+          "quality_grade": "B",
+          "fail_reasons": [],
+          "warnings": [
+            {
+              "code": "GIANT_REGION_WARNING",
+              "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+              "value": 53.1,
+              "threshold": 50
+            }
+          ],
+          "total_regions": 169,
+          "largest_region_pct": 53.1,
+          "tiny_region_count_lt_50": 16,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation"
+        },
+        {
+          "profile": "thin-line",
+          "brightness_threshold": 150,
+          "line_close_radius": 2,
+          "score": 82,
+          "evaluation_mode": "pre_generation_proxy",
+          "candidate_proxy_score": 82,
+          "candidate_proxy_grade": "B",
+          "quality_score": 82,
+          "quality_grade": "B",
+          "fail_reasons": [],
+          "warnings": [
+            {
+              "code": "GIANT_REGION_WARNING",
+              "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+              "value": 53.48,
+              "threshold": 50
+            }
+          ],
+          "total_regions": 172,
+          "largest_region_pct": 53.48,
+          "tiny_region_count_lt_50": 23,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation"
+        },
+        {
+          "profile": "thin-line",
+          "brightness_threshold": 150,
+          "line_close_radius": 1,
+          "score": 82,
+          "evaluation_mode": "pre_generation_proxy",
+          "candidate_proxy_score": 82,
+          "candidate_proxy_grade": "B",
+          "quality_score": 82,
+          "quality_grade": "B",
+          "fail_reasons": [],
+          "warnings": [
+            {
+              "code": "GIANT_REGION_WARNING",
+              "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+              "value": 53.74,
+              "threshold": 50
+            }
+          ],
+          "total_regions": 188,
+          "largest_region_pct": 53.74,
+          "tiny_region_count_lt_50": 43,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation"
+        }
+      ]
+    }
   },
   "warnings": [
     {
@@ -32,11 +136,43 @@
       "region_ids": [
         3,
         25,
-        45,
-        47,
-        89,
-        91
+        34,
+        36,
+        66,
+        145,
+        146,
+        147,
+        148
       ]
+    },
+    {
+      "code": "GIANT_REGION_WARNING",
+      "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+      "value": 53.11,
+      "threshold": 50
     }
-  ]
+  ],
+  "quality_grade": "B",
+  "quality_score": 82,
+  "fail_reasons": [],
+  "metrics": {
+    "total_regions": 148,
+    "unique_numbers": 63,
+    "largest_region_pct": 53.11,
+    "tiny_region_count_lt_50": 2,
+    "tiny_region_count_lt_200": 22,
+    "mask_config_mismatch_count": 0,
+    "mask_missing_config_colors": [],
+    "config_missing_mask_colors": [],
+    "unexpected_mask_colors": [],
+    "duplicate_mask_colors": [],
+    "duplicate_region_palette_mask_colors": [],
+    "region_area_mismatch_count": 0,
+    "region_area_mismatches": [],
+    "line_dark_pct": 10.34,
+    "line_ink_pct": 10.34,
+    "reference_missing": false,
+    "reference_required": false,
+    "preview_mae": 19.27
+  }
 }
