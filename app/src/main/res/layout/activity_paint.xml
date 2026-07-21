@@ -28,6 +28,22 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:id="@+id/btnPreviewFull"
+        style="@style/BodyM"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_gradien_oval"
+        android:gravity="center"
+        android:minWidth="72dp"
+        android:paddingHorizontal="14dp"
+        android:text="Full"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toBottomOf="@id/btnHint"
+        app:layout_constraintEnd_toStartOf="@id/btnHint"
+        app:layout_constraintTop_toTopOf="@id/btnHint" />
+
+    <TextView
         android:id="@+id/tvHintCount"
         style="@style/BodyM"
         android:layout_width="wrap_content"
@@ -53,6 +69,41 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btnHint" />
+
+    <FrameLayout
+        android:id="@+id/fullPreviewOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#CCF3F1F3"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/paletteContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnHint"
+        tools:visibility="visible">
+
+        <ImageView
+            android:id="@+id/ivFullPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:padding="16dp"
+            android:scaleType="fitCenter"
+            tools:src="@drawable/ic_hint_new" />
+
+        <ImageView
+            android:id="@+id/btnCloseFullPreview"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_gradien_oval"
+            android:padding="10dp"
+            android:src="@drawable/ic_close" />
+    </FrameLayout>
 
     <!-- Loading overlay -->
     <ProgressBar

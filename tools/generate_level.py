@@ -16,6 +16,23 @@ DEFAULT_PROFILE_TARGETS = {
     "standard": 64,
     "easy": 48,
 }
+TINY_MERGE_POLICY_DEFAULTS = {
+    "relaxed": {
+        "attach_distance_multiplier": 2.0,
+        "color_threshold_multiplier": 2.2,
+        "allow_fallback": True,
+    },
+    "strict": {
+        "attach_distance_multiplier": 1.35,
+        "color_threshold_multiplier": 1.3,
+        "allow_fallback": False,
+    },
+    "mandala": {
+        "attach_distance_multiplier": 2.6,
+        "color_threshold_multiplier": 2.6,
+        "allow_fallback": True,
+    },
+}
 QUANTIZE_METHODS = {
     "mediancut": Image.Quantize.MEDIANCUT,
     "maxcoverage": Image.Quantize.MAXCOVERAGE,
@@ -484,6 +501,192 @@ def is_tiny_display_region(info, tiny_area_threshold, tiny_side_threshold):
     return info["area"] < tiny_area_threshold or bbox_min_side(info["bbox"]) < tiny_side_threshold
 
 
+def is_micro_region(info, tiny_merge_min_area, tiny_merge_min_side):
+    return info["area"] < tiny_merge_min_area or bbox_min_side(info["bbox"]) < tiny_merge_min_side
+
+
+def update_region_classification(
+    info,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+):
+    min_side = bbox_min_side(info["bbox"])
+    info["min_side"] = min_side
+    info["is_small_region"] = info["area"] < min_region_area
+    info["is_tiny_display_region"] = (
+        info["area"] < tiny_area_threshold or min_side < tiny_side_threshold
+    )
+    info["is_micro_region"] = info["area"] < tiny_merge_min_area or min_side < tiny_merge_min_side
+    return info
+
+
+def classify_region_infos(
+    region_infos,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+):
+    for info in region_infos:
+        update_region_classification(
+            info=info,
+            min_region_area=min_region_area,
+            tiny_area_threshold=tiny_area_threshold,
+            tiny_side_threshold=tiny_side_threshold,
+            tiny_merge_min_area=tiny_merge_min_area,
+            tiny_merge_min_side=tiny_merge_min_side,
+        )
+    return region_infos
+
+
+def region_neighbor_score(small_info, candidate_info, color_gap):
+    gap_x, gap_y = bbox_gap(small_info["bbox"], candidate_info["bbox"])
+    centroid_dx = small_info["centroid"]["x"] - candidate_info["centroid"]["x"]
+    centroid_dy = small_info["centroid"]["y"] - candidate_info["centroid"]["y"]
+    centroid_distance = math.sqrt(centroid_dx * centroid_dx + centroid_dy * centroid_dy)
+    normalized_area_penalty = small_info["area"] / max(1.0, candidate_info["area"])
+    return (
+        gap_x * 1.5
+        + gap_y * 2.0
+        + centroid_distance * 0.05
+        + color_gap
+        + normalized_area_penalty * 8.0
+    )
+
+
+def merge_region_info_into_parent(parent_info, child_info):
+    merged_regions = list(parent_info["region"])
+    merged_regions.extend(child_info["region"])
+    merged_bbox = merge_bboxes([parent_info["bbox"], child_info["bbox"]])
+    merged_centroid = get_region_centroid(merged_regions)
+    merged_label_anchor = find_label_anchor(merged_regions, merged_bbox, merged_centroid)
+    parent_info["region"] = merged_regions
+    parent_info["area"] = len(merged_regions)
+    parent_info["bbox"] = merged_bbox
+    parent_info["centroid"] = merged_centroid
+    parent_info["label_anchor"] = merged_label_anchor
+    parent_info["hide_number"] = parent_info["hide_number"] and child_info["hide_number"]
+    parent_info["merged_region_count"] = parent_info.get("merged_region_count", 1) + child_info.get(
+        "merged_region_count", 1
+    )
+    return parent_info
+
+
+def merge_tiny_regions_into_neighbors(
+    region_infos,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+    attach_distance,
+    color_threshold,
+    tiny_merge_policy,
+):
+    if not region_infos:
+        return region_infos, 0, 0, 0
+
+    policy = TINY_MERGE_POLICY_DEFAULTS[tiny_merge_policy]
+    effective_attach_distance = max(
+        tiny_merge_min_side,
+        int(round(attach_distance * policy["attach_distance_multiplier"])),
+    )
+    effective_color_threshold = max(6.0, color_threshold * policy["color_threshold_multiplier"])
+
+    region_infos = classify_region_infos(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=tiny_area_threshold,
+        tiny_side_threshold=tiny_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+    )
+
+    merged_tiny_regions_count = 0
+    forced_tiny_region_merges_count = 0
+
+    while True:
+        micro_indices = sorted(
+            [idx for idx, info in enumerate(region_infos) if info.get("is_micro_region")],
+            key=lambda idx: region_infos[idx]["area"],
+        )
+        if not micro_indices:
+            break
+
+        merged_any = False
+        for small_idx in micro_indices:
+            if small_idx >= len(region_infos):
+                continue
+            small_info = region_infos[small_idx]
+            if not small_info.get("is_micro_region"):
+                continue
+
+            best_candidate_idx = None
+            best_candidate_score = None
+            fallback_candidate_idx = None
+            fallback_candidate_score = None
+
+            for candidate_idx, candidate_info in enumerate(region_infos):
+                if candidate_idx == small_idx or candidate_info["area"] <= small_info["area"]:
+                    continue
+
+                gap_x, gap_y = bbox_gap(small_info["bbox"], candidate_info["bbox"])
+                if max(gap_x, gap_y) > effective_attach_distance:
+                    continue
+
+                color_gap = color_distance(small_info["target_color"], candidate_info["target_color"])
+                score = region_neighbor_score(small_info, candidate_info, color_gap)
+
+                if color_gap <= effective_color_threshold:
+                    if best_candidate_score is None or score < best_candidate_score:
+                        best_candidate_score = score
+                        best_candidate_idx = candidate_idx
+
+                if fallback_candidate_score is None or score < fallback_candidate_score:
+                    fallback_candidate_score = score
+                    fallback_candidate_idx = candidate_idx
+
+            target_idx = best_candidate_idx
+            forced_merge = False
+            if target_idx is None and policy["allow_fallback"]:
+                target_idx = fallback_candidate_idx
+                forced_merge = target_idx is not None
+
+            if target_idx is None:
+                continue
+
+            merge_region_info_into_parent(region_infos[target_idx], small_info)
+            region_infos.pop(small_idx)
+            classify_region_infos(
+                region_infos=region_infos,
+                min_region_area=min_region_area,
+                tiny_area_threshold=tiny_area_threshold,
+                tiny_side_threshold=tiny_side_threshold,
+                tiny_merge_min_area=tiny_merge_min_area,
+                tiny_merge_min_side=tiny_merge_min_side,
+            )
+            merged_tiny_regions_count += 1
+            if forced_merge and best_candidate_idx is None:
+                forced_tiny_region_merges_count += 1
+            merged_any = True
+            break
+
+        if not merged_any:
+            break
+
+    remaining_tiny_regions_count = sum(1 for info in region_infos if info.get("is_micro_region"))
+    return (
+        region_infos,
+        merged_tiny_regions_count,
+        forced_tiny_region_merges_count,
+        remaining_tiny_regions_count,
+    )
+
+
 def absorb_small_region_colors(
     region_infos,
     attach_distance,
@@ -531,6 +734,8 @@ def merge_small_attached_regions(
     color_threshold,
     tiny_area_threshold,
     tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
 ):
     if not region_infos:
         return region_infos, 0
@@ -610,20 +815,27 @@ def merge_small_attached_regions(
             tiny_area_threshold,
             tiny_side_threshold,
         )
-
+        merged_info = {
+            "region": merged_regions,
+            "area": merged_area,
+            "bbox": merged_bbox,
+            "centroid": merged_centroid,
+            "label_anchor": merged_label_anchor,
+            "target_color": info["target_color"],
+            "hide_number": hide_number and merged_is_tiny,
+            "is_small_region": small_group,
+            "merged_region_count": len(merged_indices),
+            "is_tiny_display_region": merged_is_tiny,
+        }
         grouped_infos.append(
-            {
-                "region": merged_regions,
-                "area": merged_area,
-                "bbox": merged_bbox,
-                "centroid": merged_centroid,
-                "label_anchor": merged_label_anchor,
-                "target_color": info["target_color"],
-                "hide_number": hide_number and merged_is_tiny,
-                "is_small_region": small_group,
-                "merged_region_count": len(merged_indices),
-                "is_tiny_display_region": merged_is_tiny,
-            }
+            update_region_classification(
+                info=merged_info,
+                min_region_area=min_region_area,
+                tiny_area_threshold=tiny_area_threshold,
+                tiny_side_threshold=tiny_side_threshold,
+                tiny_merge_min_area=tiny_merge_min_area,
+                tiny_merge_min_side=tiny_merge_min_side,
+            )
         )
 
     return grouped_infos, merged_count
@@ -652,6 +864,11 @@ def generate_level_assets(
     hide_small_label_threshold=48,
     small_region_attach_distance=8,
     tiny_region_side_threshold=10,
+    tiny_merge_min_area=20,
+    tiny_merge_min_side=6,
+    tiny_merge_attach_distance=None,
+    tiny_merge_color_threshold=None,
+    tiny_merge_policy="relaxed",
     target_unique_colors=None,
     category_profile=None,
     quantize_method="mediancut",
@@ -708,19 +925,52 @@ def generate_level_assets(
         hide_number = area < hide_small_label_threshold or bbox_min_side(bbox) < tiny_region_side_threshold
 
         region_infos.append(
-            {
-                "region": region,
-                "area": area,
-                "bbox": bbox,
-                "centroid": centroid,
-                "label_anchor": label_anchor,
-                "target_color": dominant_color,
-                "hide_number": hide_number,
-                "is_small_region": area < min_region_area,
-                "is_tiny_display_region": area < hide_small_label_threshold
-                or bbox_min_side(bbox) < tiny_region_side_threshold,
-            }
+            update_region_classification(
+                info={
+                    "region": region,
+                    "area": area,
+                    "bbox": bbox,
+                    "centroid": centroid,
+                    "label_anchor": label_anchor,
+                    "target_color": dominant_color,
+                    "hide_number": hide_number,
+                    "merged_region_count": 1,
+                },
+                min_region_area=min_region_area,
+                tiny_area_threshold=hide_small_label_threshold,
+                tiny_side_threshold=tiny_region_side_threshold,
+                tiny_merge_min_area=tiny_merge_min_area,
+                tiny_merge_min_side=tiny_merge_min_side,
+            )
         )
+
+    effective_tiny_merge_attach_distance = (
+        tiny_merge_attach_distance
+        if tiny_merge_attach_distance is not None
+        else max(small_region_attach_distance * 2, tiny_merge_min_side * 2)
+    )
+    effective_tiny_merge_color_threshold = (
+        tiny_merge_color_threshold
+        if tiny_merge_color_threshold is not None
+        else max(10.0, color_merge_threshold * 1.5)
+    )
+
+    (
+        region_infos,
+        merged_tiny_regions_count,
+        forced_tiny_region_merges_count,
+        remaining_tiny_regions_count,
+    ) = merge_tiny_regions_into_neighbors(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        attach_distance=effective_tiny_merge_attach_distance,
+        color_threshold=effective_tiny_merge_color_threshold,
+        tiny_merge_policy=tiny_merge_policy,
+    )
 
     region_infos, merged_small_region_count = merge_small_attached_regions(
         region_infos=region_infos,
@@ -729,6 +979,16 @@ def generate_level_assets(
         color_threshold=max(6.0, color_merge_threshold * 0.65),
         tiny_area_threshold=hide_small_label_threshold,
         tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+    )
+    region_infos = classify_region_infos(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
     )
     absorbed_small_color_count = absorb_small_region_colors(
         region_infos=region_infos,
@@ -807,6 +1067,8 @@ def generate_level_assets(
         f"quantized_ref_colors={quantized_palette_count}/{quantized_palette_budget}, "
         f"initial_unique={palette_result['initial_unique_numbers']}, "
         f"final_unique={palette_result['final_unique_numbers']}, "
+        f"merged_tiny_regions={merged_tiny_regions_count}, "
+        f"remaining_micro_regions={remaining_tiny_regions_count}, "
         f"final_merge_threshold={palette_result['final_merge_threshold']:.2f}"
     )
 
@@ -832,6 +1094,9 @@ def generate_level_assets(
         "small_regions_count": small_regions_count,
         "skipped_noise_regions": skipped_noise_regions,
         "merged_small_regions_count": merged_small_region_count,
+        "merged_tiny_regions_count": merged_tiny_regions_count,
+        "forced_tiny_region_merges_count": forced_tiny_region_merges_count,
+        "remaining_tiny_regions_count": remaining_tiny_regions_count,
         "generation_params": {
             "brightness_threshold": brightness_threshold,
             "merge_threshold": color_merge_threshold,
@@ -840,6 +1105,11 @@ def generate_level_assets(
             "hide_small_label_threshold": hide_small_label_threshold,
             "small_region_attach_distance": small_region_attach_distance,
             "tiny_region_side_threshold": tiny_region_side_threshold,
+            "tiny_merge_min_area": tiny_merge_min_area,
+            "tiny_merge_min_side": tiny_merge_min_side,
+            "tiny_merge_attach_distance": effective_tiny_merge_attach_distance,
+            "tiny_merge_color_threshold": effective_tiny_merge_color_threshold,
+            "tiny_merge_policy": tiny_merge_policy,
             "adaptive_palette": adaptive_palette,
         },
         "category_profile": resolved_profile,
@@ -911,6 +1181,34 @@ def create_parser():
         type=int,
         default=10,
         help="Ngưỡng cạnh nhỏ nhất của bbox để xem vùng là quá nhỏ cho việc hiển thị số.",
+    )
+    parser.add_argument(
+        "--tiny-merge-min-area",
+        type=int,
+        default=20,
+        help="Ngưỡng area tối thiểu; nhỏ hơn ngưỡng này sẽ ưu tiên gộp hình học vào vùng lân cận.",
+    )
+    parser.add_argument(
+        "--tiny-merge-min-side",
+        type=int,
+        default=6,
+        help="Ngưỡng cạnh nhỏ nhất; nhỏ hơn ngưỡng này sẽ ưu tiên gộp hình học vào vùng lân cận.",
+    )
+    parser.add_argument(
+        "--tiny-merge-attach-distance",
+        type=int,
+        help="Khoảng cách tối đa để gộp chấm siêu nhỏ vào vùng lân cận.",
+    )
+    parser.add_argument(
+        "--tiny-merge-color-threshold",
+        type=float,
+        help="Ngưỡng lệch màu tối đa ưu tiên khi gộp chấm siêu nhỏ.",
+    )
+    parser.add_argument(
+        "--tiny-merge-policy",
+        choices=sorted(TINY_MERGE_POLICY_DEFAULTS.keys()),
+        default="relaxed",
+        help="Chính sách gộp chấm siêu nhỏ: relaxed, strict hoặc mandala.",
     )
     parser.add_argument(
         "--target-unique-colors",
@@ -1114,6 +1412,11 @@ def run_batch(args):
             hide_small_label_threshold=args.hide_small_label_threshold,
             small_region_attach_distance=args.small_region_attach_distance,
             tiny_region_side_threshold=args.tiny_region_side_threshold,
+            tiny_merge_min_area=args.tiny_merge_min_area,
+            tiny_merge_min_side=args.tiny_merge_min_side,
+            tiny_merge_attach_distance=args.tiny_merge_attach_distance,
+            tiny_merge_color_threshold=args.tiny_merge_color_threshold,
+            tiny_merge_policy=args.tiny_merge_policy,
             target_unique_colors=args.target_unique_colors,
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
@@ -1163,6 +1466,11 @@ def run_batch_single_category(args):
             hide_small_label_threshold=args.hide_small_label_threshold,
             small_region_attach_distance=args.small_region_attach_distance,
             tiny_region_side_threshold=args.tiny_region_side_threshold,
+            tiny_merge_min_area=args.tiny_merge_min_area,
+            tiny_merge_min_side=args.tiny_merge_min_side,
+            tiny_merge_attach_distance=args.tiny_merge_attach_distance,
+            tiny_merge_color_threshold=args.tiny_merge_color_threshold,
+            tiny_merge_policy=args.tiny_merge_policy,
             target_unique_colors=args.target_unique_colors,
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
@@ -1219,6 +1527,11 @@ def run_batch_source_category(args):
             hide_small_label_threshold=args.hide_small_label_threshold,
             small_region_attach_distance=args.small_region_attach_distance,
             tiny_region_side_threshold=args.tiny_region_side_threshold,
+            tiny_merge_min_area=args.tiny_merge_min_area,
+            tiny_merge_min_side=args.tiny_merge_min_side,
+            tiny_merge_attach_distance=args.tiny_merge_attach_distance,
+            tiny_merge_color_threshold=args.tiny_merge_color_threshold,
+            tiny_merge_policy=args.tiny_merge_policy,
             target_unique_colors=args.target_unique_colors,
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
@@ -1252,6 +1565,11 @@ def run_single(args):
         hide_small_label_threshold=args.hide_small_label_threshold,
         small_region_attach_distance=args.small_region_attach_distance,
         tiny_region_side_threshold=args.tiny_region_side_threshold,
+        tiny_merge_min_area=args.tiny_merge_min_area,
+        tiny_merge_min_side=args.tiny_merge_min_side,
+        tiny_merge_attach_distance=args.tiny_merge_attach_distance,
+        tiny_merge_color_threshold=args.tiny_merge_color_threshold,
+        tiny_merge_policy=args.tiny_merge_policy,
         target_unique_colors=args.target_unique_colors,
         category_profile=args.category_profile,
         quantize_method=args.quantize_method,

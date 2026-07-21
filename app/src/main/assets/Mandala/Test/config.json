@@ -26742,6 +26742,9 @@
   "small_regions_count": 0,
   "skipped_noise_regions": 11,
   "merged_small_regions_count": 4,
+  "merged_tiny_regions_count": 0,
+  "forced_tiny_region_merges_count": 0,
+  "remaining_tiny_regions_count": 0,
   "generation_params": {
     "brightness_threshold": 120,
     "merge_threshold": 15.0,
@@ -26750,6 +26753,11 @@
     "hide_small_label_threshold": 48,
     "small_region_attach_distance": 8,
     "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 20,
+    "tiny_merge_min_side": 6,
+    "tiny_merge_attach_distance": 16,
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
     "adaptive_palette": true
   },
   "category_profile": "mandala",

@@ -78,7 +78,10 @@ class PaintViewModel(
                             levelId = levelId,
                             lineBitmap = bundle.lineBitmap,
                             maskBitmap = bundle.maskBitmap,
-                            regions = bundle.regions
+                            regions = bundle.regions,
+                            allMaskColorsToTargetColors = allRegions.associate {
+                                it.getMaskColorInt() to it.getTargetColorInt()
+                            }
                         ),
                         errorMessage = null
                     )

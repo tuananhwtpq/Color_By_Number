@@ -1,5 +1,10 @@
 package com.example.baseproject.activities
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -46,6 +51,13 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var guideStep: Int = GUIDE_STEP_01
     private var isGuideVisible: Boolean = false
     private var isLoadingVisible: Boolean = false
+    private var isFullColorPreviewVisible: Boolean = false
+    private var fullPreviewBitmap: Bitmap? = null
+    private var fullPreviewRenderKey: String? = null
+
+    private val previewMultiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+    }
 
     override fun initData() {
         category = intent.getStringExtra("CATEGORY")
@@ -66,6 +78,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     override fun initActionView() {
         binding.btnBack.setOnClickListener { finish() }
         binding.btnHint.setOnClickListener { viewModel.onHintRequested() }
+        binding.btnPreviewFull.setOnClickListener { toggleFullColorPreview() }
+        binding.btnCloseFullPreview.setOnClickListener { hideFullColorPreview() }
+        binding.fullPreviewOverlay.setOnClickListener { hideFullColorPreview() }
+        binding.ivFullPreview.setOnClickListener { }
 //        binding.btnReset.setOnClickListener { viewModel.requestResetConfirmation() }
 
         viewModel.loadLevel(
@@ -80,6 +96,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
             viewModel.onRegionFilled(maskInt)
         }
+        binding.fullPreviewOverlay.visibility = View.GONE
         binding.llGuide.setOnClickListener {
             when (guideStep) {
                 GUIDE_STEP_01 -> showGuideStep(GUIDE_STEP_02)
@@ -128,7 +145,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             val newRenderKey = "${renderData.category}/${renderData.levelId}"
             if (currentRenderKey != newRenderKey) {
                 currentRenderKey = newRenderKey
+                resetFullPreviewCache(newRenderKey)
                 lifecycleScope.launch {
+                    ensureFullPreviewBitmap(renderData)
                     binding.paintCanvas.setBitmapsSuspend(
                         renderData.lineBitmap,
                         renderData.maskBitmap,
@@ -153,6 +172,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             }
         }
 
+        updateFullPreviewVisibility()
         lastSelectedIndex = state.selectedPaletteIndex
         lastCompletedMaskColors = state.completedMaskColors
     }
@@ -194,8 +214,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 //        binding.topBar.visibility = visibility
         binding.paintCanvas.visibility = visibility
         binding.paletteContainer.visibility = visibility
+        binding.btnPreviewFull.visibility = visibility
         binding.progressBar.visibility =
             if (isVisible && isLoadingVisible && !isGuideVisible) View.VISIBLE else View.GONE
+        updateFullPreviewVisibility()
     }
 
     private fun finishGuide() {
@@ -203,6 +225,88 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         isGuideVisible = false
         binding.llGuide.visibility = View.GONE
         setMainContentVisible(true)
+    }
+
+    private fun toggleFullColorPreview() {
+        if (fullPreviewBitmap == null) {
+            Toast.makeText(this, "Preview chưa sẵn sàng", Toast.LENGTH_SHORT).show()
+            return
+        }
+        isFullColorPreviewVisible = !isFullColorPreviewVisible
+        updateFullPreviewVisibility()
+    }
+
+    private fun hideFullColorPreview() {
+        if (!isFullColorPreviewVisible) return
+        isFullColorPreviewVisible = false
+        updateFullPreviewVisibility()
+    }
+
+    private fun updateFullPreviewVisibility() {
+        val shouldShow = isFullColorPreviewVisible &&
+                !isGuideVisible &&
+                !isLoadingVisible &&
+                fullPreviewBitmap != null
+
+        binding.fullPreviewOverlay.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        binding.paintCanvas.isEnabled = !shouldShow
+        binding.paintCanvas.isClickable = !shouldShow
+        binding.ivFullPreview.setImageBitmap(if (shouldShow) fullPreviewBitmap else null)
+    }
+
+    private fun resetFullPreviewCache(renderKey: String) {
+        if (fullPreviewRenderKey == renderKey) return
+        fullPreviewBitmap?.recycle()
+        fullPreviewBitmap = null
+        fullPreviewRenderKey = renderKey
+        isFullColorPreviewVisible = false
+        binding.ivFullPreview.setImageBitmap(null)
+        binding.fullPreviewOverlay.visibility = View.GONE
+    }
+
+    private suspend fun ensureFullPreviewBitmap(renderData: com.example.baseproject.ui.paint.PaintRenderData) {
+        if (fullPreviewBitmap != null && fullPreviewRenderKey == "${renderData.category}/${renderData.levelId}") {
+            return
+        }
+
+        val previewBitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            buildFullPreviewBitmap(
+                lineBitmap = renderData.lineBitmap,
+                maskBitmap = renderData.maskBitmap,
+                allMaskColorsToTargetColors = renderData.allMaskColorsToTargetColors
+            )
+        }
+
+        fullPreviewBitmap?.recycle()
+        fullPreviewBitmap = previewBitmap
+        fullPreviewRenderKey = "${renderData.category}/${renderData.levelId}"
+    }
+
+    private fun buildFullPreviewBitmap(
+        lineBitmap: Bitmap,
+        maskBitmap: Bitmap,
+        allMaskColorsToTargetColors: Map<Int, Int>
+    ): Bitmap {
+        val width = maskBitmap.width
+        val height = maskBitmap.height
+        val maskPixels = IntArray(width * height)
+        val coloredPixels = IntArray(width * height)
+        maskBitmap.getPixels(maskPixels, 0, width, 0, 0, width, height)
+
+        for (index in maskPixels.indices) {
+            val maskColor = maskPixels[index]
+            coloredPixels[index] = allMaskColorsToTargetColors[maskColor] ?: 0
+        }
+
+        val coloredBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        coloredBitmap.setPixels(coloredPixels, 0, width, 0, 0, width, height)
+
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        canvas.drawBitmap(coloredBitmap, 0f, 0f, null)
+        canvas.drawBitmap(lineBitmap, 0f, 0f, previewMultiplyPaint)
+        coloredBitmap.recycle()
+        return result
     }
 
     private fun handleEvent(event: PaintUiEvent) {
@@ -229,5 +333,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     override fun onPause() {
         super.onPause()
         viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(400))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        fullPreviewBitmap?.recycle()
+        fullPreviewBitmap = null
     }
 }
