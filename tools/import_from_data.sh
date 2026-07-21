@@ -17,6 +17,8 @@ if [[ $# -lt 2 ]]; then
   echo "     bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals"
   echo "  4) Import tat ca item trong 1 category Data vao assets:"
   echo "     bash tools/import_category_from_data.sh Data/Animals"
+  echo "  5) Import tat ca item trong Data vao assets, giu nguyen category:"
+  echo "     bash tools/import_all_data.sh --output-root app/src/main/assets"
   echo
   echo "Cách dùng:"
   echo "  bash tools/import_from_data.sh <Category> <ArtworkFolder> [Display Name] [generator options...]"
@@ -27,6 +29,7 @@ if [[ $# -lt 2 ]]; then
   echo "  bash tools/import_from_data.sh Cartoons Sonic \"Sonic Vietnam\" --line-close-radius 1 --small-region-attach-distance 12"
   echo "  bash tools/import_category_from_data.sh Data/Animals"
   echo "  bash tools/import_category_from_data.sh Data/Animals --target-category AnimalsNew"
+  echo "  bash tools/import_all_data.sh --output-root app/src/main/assets"
   echo "  bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals"
   echo "  bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals \"Sonic Blue\" --line-close-radius 1"
   exit 1

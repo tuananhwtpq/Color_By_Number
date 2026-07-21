@@ -151,6 +151,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     binding.paintCanvas.setBitmapsSuspend(
                         renderData.lineBitmap,
                         renderData.maskBitmap,
+                        renderData.detailBitmap,
                         renderData.regions
                     )
                     if (state.completedColorMap.isNotEmpty()) {
@@ -273,6 +274,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             buildFullPreviewBitmap(
                 lineBitmap = renderData.lineBitmap,
                 maskBitmap = renderData.maskBitmap,
+                detailBitmap = renderData.detailBitmap,
                 allMaskColorsToTargetColors = renderData.allMaskColorsToTargetColors
             )
         }
@@ -285,6 +287,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun buildFullPreviewBitmap(
         lineBitmap: Bitmap,
         maskBitmap: Bitmap,
+        detailBitmap: Bitmap?,
         allMaskColorsToTargetColors: Map<Int, Int>
     ): Bitmap {
         val width = maskBitmap.width
@@ -304,6 +307,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
         canvas.drawBitmap(coloredBitmap, 0f, 0f, null)
+        if (detailBitmap != null && detailBitmap.width == width && detailBitmap.height == height) {
+            canvas.drawBitmap(detailBitmap, 0f, 0f, null)
+        }
         canvas.drawBitmap(lineBitmap, 0f, 0f, previewMultiplyPaint)
         coloredBitmap.recycle()
         return result

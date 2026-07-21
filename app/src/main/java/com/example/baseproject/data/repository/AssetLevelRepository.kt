@@ -13,5 +13,6 @@ data class LevelBundle(
     val config: LevelConfig,
     val lineBitmap: Bitmap,
     val maskBitmap: Bitmap,
+    val detailBitmap: Bitmap?,
     val regions: List<RegionData>
 )

@@ -23,6 +23,14 @@ object AssetImageResolver {
         return assetManager.open(resolveAssetPath(assetManager, basePath))
     }
 
+    fun openResolvedAssetOrNull(assetManager: AssetManager, basePath: String): InputStream? {
+        return try {
+            openResolvedAsset(assetManager, basePath)
+        } catch (_: FileNotFoundException) {
+            null
+        }
+    }
+
     fun toAndroidAssetUri(assetManager: AssetManager, basePath: String): String {
         return "file:///android_asset/${resolveAssetPath(assetManager, basePath)}"
     }

@@ -37,6 +37,7 @@ class PaintCanvasView @JvmOverloads constructor(
     private var maskHeight: Int = 0
     private var coloredBitmap: Bitmap? = null
     private var highlightBitmap: Bitmap? = null
+    private var revealedDetailBitmap: Bitmap? = null
 
     // Coroutine Scope cho PaintCanvasView
     private val scope =
@@ -47,6 +48,8 @@ class PaintCanvasView @JvmOverloads constructor(
     private var linePixelsArray: IntArray? = null
     private var coloredPixelsArray: IntArray? = null
     private var hlPixelsArray: IntArray? = null
+    private var detailSourcePixelsArray: IntArray? = null
+    private var revealedDetailPixelsArray: IntArray? = null
 
     private val drawMatrix = Matrix()
     private val inverseMatrix = Matrix()
@@ -136,16 +139,30 @@ class PaintCanvasView @JvmOverloads constructor(
             })
     }
 
-    suspend fun setBitmapsSuspend(line: Bitmap, mask: Bitmap, regionsData: List<RegionData>) =
+    suspend fun setBitmapsSuspend(
+        line: Bitmap,
+        mask: Bitmap,
+        detail: Bitmap?,
+        regionsData: List<RegionData>
+    ) =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             val w = line.width
             val h = line.height
 
             val coloredBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val highlightBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val detailRevealBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
 
             val maskPx = IntArray(w * h)
             mask.getPixels(maskPx, 0, w, 0, 0, w, h)
+
+            val detailPx = if (detail != null && detail.width == w && detail.height == h) {
+                IntArray(w * h).also {
+                    detail.getPixels(it, 0, w, 0, 0, w, h)
+                }
+            } else {
+                null
+            }
 
             val blurredLine = fastBlur(line)
             val lp = IntArray(w * h)
@@ -162,11 +179,14 @@ class PaintCanvasView @JvmOverloads constructor(
 
                 coloredBitmap = coloredBmp
                 highlightBitmap = highlightBmp
+                revealedDetailBitmap = detailRevealBmp
 
                 maskPixelsArray = maskPx
                 coloredPixelsArray = IntArray(w * h)
                 linePixelsArray = lp
                 hlPixelsArray = IntArray(w * h)
+                detailSourcePixelsArray = detailPx
+                revealedDetailPixelsArray = if (detailPx != null) IntArray(w * h) else null
 
                 scaleFactor = 1.0f
                 translateX = 0f
@@ -207,8 +227,13 @@ class PaintCanvasView @JvmOverloads constructor(
             val maskPx = maskPixelsArray ?: return@withContext
             val linePx = linePixelsArray ?: return@withContext
             val colPx = coloredPixelsArray ?: return@withContext
+            val detailSrcPx = detailSourcePixelsArray
+            val detailOutPx = revealedDetailPixelsArray
             val w = maskWidth
             val h = maskHeight
+            if (detailOutPx != null) {
+                java.util.Arrays.fill(detailOutPx, 0)
+            }
 
             // Tối ưu hóa cực đại: Linear Probing Hash Map thuần mảng nguyên thủy (O(1) lookup)
             val capacity = 4096 // Đủ lớn và là lũy thừa của 2
@@ -246,6 +271,9 @@ class PaintCanvasView @JvmOverloads constructor(
 
                 if (targetC != 0) {
                     colPx[i] = targetC
+                    if (detailSrcPx != null && detailOutPx != null) {
+                        detailOutPx[i] = detailSrcPx[i]
+                    }
                 } else if (maskC != -1) { // maskC != White
                     // Color Bleeding cho những pixel viền đen
                     val lineC = linePx[i]
@@ -286,6 +314,11 @@ class PaintCanvasView @JvmOverloads constructor(
 
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 coloredBitmap?.setPixels(colPx, 0, w, 0, 0, w, h)
+                revealedDetailBitmap?.let { detailBmp ->
+                    if (detailOutPx != null) {
+                        detailBmp.setPixels(detailOutPx, 0, w, 0, 0, w, h)
+                    }
+                }
                 invalidate()
                 // ĐÃ XÓA vòng lặp onRegionFilledListener để tránh gọi 500 lần trên UI thread
             }
@@ -298,8 +331,14 @@ class PaintCanvasView @JvmOverloads constructor(
         for (i in colArr.indices) {
             colArr[i] = 0 // Transparent
         }
+        revealedDetailPixelsArray?.let { java.util.Arrays.fill(it, 0) }
         val colBmp = coloredBitmap ?: return
         colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
+        val detailBmp = revealedDetailBitmap
+        val detailArr = revealedDetailPixelsArray
+        if (detailBmp != null && detailArr != null) {
+            detailBmp.setPixels(detailArr, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+        }
         invalidate()
     }
 
@@ -370,6 +409,20 @@ class PaintCanvasView @JvmOverloads constructor(
         invalidate()
     }
 
+    private fun revealDetailForMaskColor(maskColor: Int) {
+        val maskPx = maskPixelsArray ?: return
+        val detailSrcPx = detailSourcePixelsArray ?: return
+        val detailOutPx = revealedDetailPixelsArray ?: return
+        val detailBmp = revealedDetailBitmap ?: return
+
+        for (i in maskPx.indices) {
+            if (maskPx[i] == maskColor) {
+                detailOutPx[i] = detailSrcPx[i]
+            }
+        }
+        detailBmp.setPixels(detailOutPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+    }
+
     /**
      * Tạo một ảnh thu nhỏ (Thumbnail) thể hiện tiến trình tô màu hiện tại.
      * Ảnh sẽ được scale xuống thumbSize để tiết kiệm dung lượng.
@@ -386,6 +439,7 @@ class PaintCanvasView @JvmOverloads constructor(
             val canvas = Canvas(result)
             canvas.drawColor(CANVAS_BACKGROUND_COLOR)
             canvas.drawBitmap(colored, 0f, 0f, null)
+            revealedDetailBitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
             canvas.drawBitmap(line, 0f, 0f, multiplyPaint)
 
             val scaled = Bitmap.createScaledBitmap(result, thumbSize, thumbSize, true)
@@ -680,6 +734,7 @@ class PaintCanvasView @JvmOverloads constructor(
                     if (colBmp != null && colArr != null) {
                         colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
                     }
+                    revealDetailForMaskColor(filler.maskColor)
                 }
             }
             invalidate()
@@ -718,6 +773,7 @@ class PaintCanvasView @JvmOverloads constructor(
             canvas.drawBitmap(filler.localBitmap, filler.left.toFloat(), filler.top.toFloat(), null)
             canvas.restore()
         }
+        revealedDetailBitmap?.let { canvas.drawBitmap(it, drawMatrix, normalPaint) }
         canvas.drawBitmap(hl, drawMatrix, normalPaint)
         canvas.save()
         canvas.concat(drawMatrix)

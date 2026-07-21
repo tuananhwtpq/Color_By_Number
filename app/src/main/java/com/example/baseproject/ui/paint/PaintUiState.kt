@@ -24,6 +24,7 @@ data class PaintRenderData(
     val levelId: String,
     val lineBitmap: Bitmap,
     val maskBitmap: Bitmap,
+    val detailBitmap: Bitmap?,
     val regions: List<RegionData>,
     val allMaskColorsToTargetColors: Map<Int, Int>
 )

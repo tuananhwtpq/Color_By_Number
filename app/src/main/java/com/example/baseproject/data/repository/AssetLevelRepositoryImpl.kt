@@ -75,6 +75,19 @@ class AssetLevelRepositoryImpl(
                 )
             } ?: error("Failed to decode mask bitmap for $category/$levelId")
 
+            val detailBitmap = AssetImageResolver.openResolvedAssetOrNull(
+                assetManager,
+                "$category/$levelId/detail"
+            )?.use {
+                BitmapFactory.decodeStream(
+                    it,
+                    null,
+                    BitmapFactory.Options().apply {
+                        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                    }
+                )
+            }
+
             val regions = if (config.hasRegionMetadata()) {
                 config.toRegionDataList()
             } else {
@@ -87,6 +100,7 @@ class AssetLevelRepositoryImpl(
                 config = config,
                 lineBitmap = lineBitmap,
                 maskBitmap = maskBitmap,
+                detailBitmap = detailBitmap,
                 regions = regions
             )
         }
