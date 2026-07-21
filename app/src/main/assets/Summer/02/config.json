@@ -1,0 +1,123 @@
+{
+  "id": "02",
+  "name": "02",
+  "category": "Summer",
+  "width": 1024,
+  "height": 1024,
+  "palette": [
+    {
+      "number": 3,
+      "mask_color": "#000001",
+      "target_color": "#f9edd5"
+    },
+    {
+      "number": 2,
+      "mask_color": "#000002",
+      "target_color": "#8ab124"
+    },
+    {
+      "number": 1,
+      "mask_color": "#000003",
+      "target_color": "#679500"
+    }
+  ],
+  "regions": [
+    {
+      "mask_color": "#000001",
+      "number": 3,
+      "target_color": "#f9edd5",
+      "area": 1017660,
+      "bbox": {
+        "left": 0,
+        "top": 0,
+        "right": 1023,
+        "bottom": 1023
+      },
+      "centroid": {
+        "x": 511.2190761157951,
+        "y": 509.0248806084547
+      },
+      "label_anchor": {
+        "x": 823.0,
+        "y": 100.0
+      },
+      "hide_number": false
+    },
+    {
+      "mask_color": "#000002",
+      "number": 2,
+      "target_color": "#8ab124",
+      "area": 986,
+      "bbox": {
+        "left": 999,
+        "top": 941,
+        "right": 1023,
+        "bottom": 1023
+      },
+      "centroid": {
+        "x": 1014.7271805273833,
+        "y": 992.2058823529412
+      },
+      "label_anchor": {
+        "x": 1022.0,
+        "y": 1000.0
+      },
+      "hide_number": false
+    },
+    {
+      "mask_color": "#000003",
+      "number": 1,
+      "target_color": "#679500",
+      "area": 86,
+      "bbox": {
+        "left": 1011,
+        "top": 1012,
+        "right": 1023,
+        "bottom": 1023
+      },
+      "centroid": {
+        "x": 1018.9302325581396,
+        "y": 1019.3023255813954
+      },
+      "label_anchor": {
+        "x": 1019.0,
+        "y": 1019.0
+      },
+      "hide_number": false
+    }
+  ],
+  "estimated_difficulty": 1,
+  "total_regions": 3,
+  "unique_numbers": 3,
+  "small_regions_count": 0,
+  "skipped_noise_regions": 0,
+  "merged_small_regions_count": 0,
+  "merged_tiny_regions_count": 1,
+  "forced_tiny_region_merges_count": 1,
+  "remaining_tiny_regions_count": 0,
+  "generation_params": {
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 8,
+    "hide_small_label_threshold": 48,
+    "small_region_attach_distance": 8,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 20,
+    "tiny_merge_min_side": 6,
+    "tiny_merge_attach_distance": 16,
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "adaptive_palette": true
+  },
+  "category_profile": "standard",
+  "target_unique_colors": 64,
+  "initial_unique_numbers": 3,
+  "final_unique_numbers": 3,
+  "quantization_method": "mediancut",
+  "quantized_reference_color_count": 160,
+  "final_merge_threshold": 15.0,
+  "palette_reduction_passes": 0,
+  "palette_reduction_reason": "within_limit",
+  "absorbed_small_color_count": 0
+}
