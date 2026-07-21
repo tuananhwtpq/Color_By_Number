@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.validate_assets import write_csv_report, write_markdown_report
+from tools.validate_assets import format_table, write_csv_report, write_markdown_report
 
 
 def make_report_row():
@@ -33,6 +33,41 @@ def make_report_row():
 
 
 class ValidateAssetsReportTest(unittest.TestCase):
+    def test_terminal_table_aligns_text_and_numeric_columns(self):
+        columns = [
+            {"key": "grade", "title": "grade", "align": "left"},
+            {"key": "score", "title": "score", "align": "right"},
+            {"key": "level", "title": "level", "align": "left"},
+            {"key": "detail", "title": "detail", "align": "left"},
+        ]
+        rows = [
+            {"grade": "A", "score": 100, "level": "Animals/01", "detail": True},
+            {"grade": "D", "score": 30, "level": "Summer/02", "detail": None},
+        ]
+
+        output = format_table(rows, columns)
+
+        lines = output.splitlines()
+        self.assertEqual("grade  score  level       detail", lines[0])
+        self.assertEqual("-----  -----  ----------  ------", lines[1])
+        self.assertEqual("A        100  Animals/01  Y     ", lines[2])
+        self.assertEqual("D         30  Summer/02   -     ", lines[3])
+
+    def test_terminal_table_separator_matches_column_count(self):
+        columns = [
+            {"key": "grade", "title": "grade", "align": "left"},
+            {"key": "score", "title": "score", "align": "right"},
+            {"key": "fails", "title": "fails", "align": "left"},
+        ]
+        rows = [{"grade": "B", "score": 82, "fails": None}]
+
+        output = format_table(rows, columns)
+
+        header, separator, row = output.splitlines()
+        self.assertEqual(3, len(header.split("  ")))
+        self.assertEqual(3, len(separator.split("  ")))
+        self.assertEqual("B         82  -    ", row)
+
     def test_csv_report_contains_quality_columns_and_recommendation(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             report_path = Path(temp_dir) / "report.csv"

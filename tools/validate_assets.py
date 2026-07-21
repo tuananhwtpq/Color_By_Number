@@ -62,6 +62,49 @@ def format_pct(value):
     return f"{value:.1f}"
 
 
+def format_terminal_cell(value):
+    if value is None or value == "":
+        return "-"
+    if isinstance(value, bool):
+        return "Y" if value else "N"
+    return str(value)
+
+
+def format_table(rows, columns):
+    formatted_rows = []
+    for row in rows:
+        formatted_row = []
+        for column in columns:
+            value = row.get(column["key"])
+            formatter = column.get("formatter", format_terminal_cell)
+            formatted_row.append(formatter(value))
+        formatted_rows.append(formatted_row)
+
+    widths = []
+    for index, column in enumerate(columns):
+        cell_widths = [len(row[index]) for row in formatted_rows]
+        widths.append(max([len(column["title"])] + cell_widths))
+
+    def format_line(values, fill=None):
+        cells = []
+        for index, value in enumerate(values):
+            align = columns[index].get("align", "left")
+            if fill is not None:
+                cells.append(fill * widths[index])
+            elif align == "right":
+                cells.append(value.rjust(widths[index]))
+            else:
+                cells.append(value.ljust(widths[index]))
+        return "  ".join(cells)
+
+    lines = [
+        format_line([column["title"] for column in columns]),
+        format_line([column["title"] for column in columns], fill="-"),
+    ]
+    lines.extend(format_line(row) for row in formatted_rows)
+    return "\n".join(lines)
+
+
 def selected_profile_from_report(report):
     generation_params = report.get("generation_params") or {}
     selected = generation_params.get("selected_preprocessing") or {}
@@ -193,46 +236,45 @@ def write_markdown_report(rows, output_path):
 
 
 def print_table(rows):
-    headers = [
-        "grade",
-        "score",
-        "level",
-        "regions",
-        "colors",
-        "largest%",
-        "mae",
-        "sim",
-        "shading",
-        "detail",
-        "line_dark%",
-        "fails",
-        "warnings",
-        "recommendation",
+    columns = [
+        {"key": "grade", "title": "grade", "align": "left"},
+        {"key": "score", "title": "score", "align": "right"},
+        {"key": "level", "title": "level", "align": "left"},
+        {"key": "regions", "title": "regions", "align": "right"},
+        {"key": "colors", "title": "colors", "align": "right"},
+        {"key": "largest_region_pct", "title": "largest%", "align": "right"},
+        {"key": "preview_mae", "title": "mae", "align": "right"},
+        {"key": "preview_similarity_score", "title": "sim", "align": "right"},
+        {"key": "shading_preservation_score", "title": "shading", "align": "right"},
+        {"key": "has_detail", "title": "detail", "align": "left"},
+        {"key": "line_dark_pct", "title": "line_dark%", "align": "right"},
+        {"key": "fail_reasons", "title": "fails", "align": "left"},
+        {"key": "warnings", "title": "warnings", "align": "left"},
+        {"key": "recommendation", "title": "recommendation", "align": "left"},
     ]
-    print(" | ".join(headers))
-    print(" | ".join("-" * len(header) for header in headers))
+
+    table_rows = []
     for row in rows:
         metrics = row["metrics"]
-        print(
-            " | ".join(
-                [
-                    row["quality_grade"],
-                    str(row["quality_score"]),
-                    row["name"],
-                    str(metrics.get("total_regions", "-")),
-                    str(metrics.get("unique_numbers", "-")),
-                    format_pct(metrics.get("largest_region_pct")),
-                    format_pct(metrics.get("preview_mae")),
-                    format_pct(metrics.get("preview_similarity_score")),
-                    format_pct(metrics.get("shading_preservation_score")),
-                    str(metrics.get("has_detail", "-")),
-                    format_pct(metrics.get("line_dark_pct")),
-                    summarize_issue_codes(row["fail_reasons"]),
-                    summarize_issue_codes(row["warnings"]),
-                    row.get("recommendation", {}).get("action", "-"),
-                ]
-            )
+        table_rows.append(
+            {
+                "grade": row["quality_grade"],
+                "score": row["quality_score"],
+                "level": row["name"],
+                "regions": metrics.get("total_regions"),
+                "colors": metrics.get("unique_numbers"),
+                "largest_region_pct": format_pct(metrics.get("largest_region_pct")),
+                "preview_mae": format_pct(metrics.get("preview_mae")),
+                "preview_similarity_score": format_pct(metrics.get("preview_similarity_score")),
+                "shading_preservation_score": format_pct(metrics.get("shading_preservation_score")),
+                "has_detail": metrics.get("has_detail"),
+                "line_dark_pct": format_pct(metrics.get("line_dark_pct")),
+                "fail_reasons": summarize_issue_codes(row["fail_reasons"]),
+                "warnings": summarize_issue_codes(row["warnings"]),
+                "recommendation": row.get("recommendation", {}).get("action", "-"),
+            }
         )
+    print(format_table(table_rows, columns))
 
     totals = {}
     for row in rows:

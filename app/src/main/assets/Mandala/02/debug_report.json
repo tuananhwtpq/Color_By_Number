@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "stats": {
+    "total_regions": 523,
+    "unique_numbers": 59,
+    "estimated_difficulty": 10,
+    "small_regions_count": 0,
+    "giant_regions_count": 1
+  },
+  "generation_params": {
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 8,
+    "hide_small_label_threshold": 48,
+    "small_region_attach_distance": 8,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 20,
+    "tiny_merge_min_side": 6,
+    "tiny_merge_attach_distance": 16,
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "region_color_method": "median",
+    "category_profile": "mandala",
+    "target_unique_colors": 80,
+    "preprocess_profile": "standard",
+    "selected_preprocessing": {
+      "profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0,
+      "score": 82,
+      "evaluation_mode": "pre_generation_proxy",
+      "candidate_proxy_score": 82,
+      "candidate_proxy_grade": "B",
+      "quality_score": 82,
+      "quality_grade": "B",
+      "fail_reasons": [],
+      "warnings": [
+        {
+          "code": "GIANT_REGION_WARNING",
+          "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+          "value": 64.93,
+          "threshold": 50
+        }
+      ],
+      "total_regions": 549,
+      "largest_region_pct": 64.93,
+      "tiny_region_count_lt_50": 126,
+      "preview_mae": null,
+      "preview_mae_reason": "not_available_before_full_generation",
+      "candidate_count": 1,
+      "candidate_top": [
+        {
+          "profile": "standard",
+          "brightness_threshold": 120,
+          "line_close_radius": 0,
+          "score": 82,
+          "evaluation_mode": "pre_generation_proxy",
+          "candidate_proxy_score": 82,
+          "candidate_proxy_grade": "B",
+          "quality_score": 82,
+          "quality_grade": "B",
+          "fail_reasons": [],
+          "warnings": [
+            {
+              "code": "GIANT_REGION_WARNING",
+              "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+              "value": 64.93,
+              "threshold": 50
+            }
+          ],
+          "total_regions": 549,
+          "largest_region_pct": 64.93,
+          "tiny_region_count_lt_50": 126,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation"
+        }
+      ]
+    },
+    "has_detail": true,
+    "detail_mode": "reference_lerp_rgba",
+    "detail_alpha": 0.65
+  },
+  "warnings": [
+    {
+      "code": "GIANT_REGION",
+      "message": "Một hoặc nhiều vùng chiếm hơn 60% canvas; line art có thể bị hở hoặc nền đang bị coi là vùng tô.",
+      "region_ids": [
+        1
+      ]
+    },
+    {
+      "code": "GIANT_REGION_WARNING",
+      "message": "Vùng lớn nhất chiếm hơn 50% ảnh; nên kiểm tra line bị hở hoặc nền bị tính là vùng tô.",
+      "value": 64.93,
+      "threshold": 50
+    }
+  ],
+  "quality_grade": "B",
+  "quality_score": 82,
+  "fail_reasons": [],
+  "metrics": {
+    "total_regions": 523,
+    "unique_numbers": 59,
+    "largest_region_pct": 64.93,
+    "tiny_region_count_lt_50": 97,
+    "tiny_region_count_lt_200": 218,
+    "mask_config_mismatch_count": 0,
+    "mask_missing_config_colors": [],
+    "config_missing_mask_colors": [],
+    "unexpected_mask_colors": [],
+    "duplicate_mask_colors": [],
+    "duplicate_region_palette_mask_colors": [],
+    "region_area_mismatch_count": 0,
+    "region_area_mismatches": [],
+    "line_dark_pct": 6.43,
+    "line_ink_pct": 6.43,
+    "reference_missing": false,
+    "reference_required": false,
+    "preview_mae": 14.29,
+    "color_mae": 14.29,
+    "preview_similarity_score": 94.4,
+    "shading_preservation_score": 94.05,
+    "has_detail": true
+  },
+  "recommendation": {
+    "action": "REVIEW_VISUAL",
+    "reasons": [
+      "REGENERATE_AUTO_OR_FIX_LINE"
+    ],
+    "design_focus": [
+      "line"
+    ]
+  }
+}
