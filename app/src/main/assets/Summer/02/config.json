@@ -1,10 +1,38 @@
 {
+  "schema_version": 2,
   "id": "02",
   "name": "02",
   "category": "Summer",
   "width": 1024,
   "height": 1024,
+  "assets": {
+    "line": "line.png",
+    "mask": "mask.png",
+    "preview": "preview_colored.png",
+    "debug_regions": "debug_regions.png",
+    "debug_report": "debug_report.json"
+  },
   "palette": [
+    {
+      "number": 1,
+      "target_color": "#679500",
+      "region_count": 1,
+      "total_area": 86
+    },
+    {
+      "number": 2,
+      "target_color": "#8ab124",
+      "region_count": 1,
+      "total_area": 986
+    },
+    {
+      "number": 3,
+      "target_color": "#f9edd5",
+      "region_count": 1,
+      "total_area": 1017660
+    }
+  ],
+  "region_palette": [
     {
       "number": 3,
       "mask_color": "#000001",
@@ -23,6 +51,7 @@
   ],
   "regions": [
     {
+      "id": 1,
       "mask_color": "#000001",
       "number": 3,
       "target_color": "#f9edd5",
@@ -41,9 +70,16 @@
         "x": 823.0,
         "y": 100.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 2,
       "mask_color": "#000002",
       "number": 2,
       "target_color": "#8ab124",
@@ -62,9 +98,16 @@
         "x": 1022.0,
         "y": 1000.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 3,
       "mask_color": "#000003",
       "number": 1,
       "target_color": "#679500",
@@ -83,9 +126,22 @@
         "x": 1019.0,
         "y": 1019.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     }
   ],
+  "stats": {
+    "total_regions": 3,
+    "unique_numbers": 3,
+    "estimated_difficulty": 1,
+    "small_regions_count": 0,
+    "giant_regions_count": 1
+  },
   "estimated_difficulty": 1,
   "total_regions": 3,
   "unique_numbers": 3,
@@ -95,6 +151,25 @@
   "merged_tiny_regions_count": 1,
   "forced_tiny_region_merges_count": 1,
   "remaining_tiny_regions_count": 0,
+  "generation": {
+    "source_mode": "line_plus_reference",
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 8,
+    "hide_small_label_threshold": 48,
+    "small_region_attach_distance": 8,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 20,
+    "tiny_merge_min_side": 6,
+    "tiny_merge_attach_distance": 16,
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "category_profile": "standard",
+    "target_unique_colors": 64
+  },
   "generation_params": {
     "brightness_threshold": 120,
     "merge_threshold": 15.0,
@@ -108,7 +183,10 @@
     "tiny_merge_attach_distance": 16,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
-    "adaptive_palette": true
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "category_profile": "standard",
+    "target_unique_colors": 64
   },
   "category_profile": "standard",
   "target_unique_colors": 64,
@@ -119,5 +197,9 @@
   "final_merge_threshold": 15.0,
   "palette_reduction_passes": 0,
   "palette_reduction_reason": "within_limit",
-  "absorbed_small_color_count": 0
+  "absorbed_small_color_count": 0,
+  "compat": {
+    "region_palette_entries": true,
+    "android_source_of_truth": "regions"
+  }
 }

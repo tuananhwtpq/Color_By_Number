@@ -1,10 +1,212 @@
 {
+  "schema_version": 2,
   "id": "02",
   "name": "02",
   "category": "Manga",
   "width": 1024,
   "height": 1024,
+  "assets": {
+    "line": "line.png",
+    "mask": "mask.png",
+    "preview": "preview_colored.png",
+    "debug_regions": "debug_regions.png",
+    "debug_report": "debug_report.json"
+  },
   "palette": [
+    {
+      "number": 1,
+      "target_color": "#371b5b",
+      "region_count": 1,
+      "total_area": 579
+    },
+    {
+      "number": 2,
+      "target_color": "#4c2f79",
+      "region_count": 1,
+      "total_area": 24
+    },
+    {
+      "number": 3,
+      "target_color": "#463c79",
+      "region_count": 1,
+      "total_area": 45978
+    },
+    {
+      "number": 4,
+      "target_color": "#76327b",
+      "region_count": 1,
+      "total_area": 83
+    },
+    {
+      "number": 5,
+      "target_color": "#4c3f8b",
+      "region_count": 1,
+      "total_area": 243
+    },
+    {
+      "number": 6,
+      "target_color": "#544399",
+      "region_count": 2,
+      "total_area": 620
+    },
+    {
+      "number": 7,
+      "target_color": "#4f4ba3",
+      "region_count": 2,
+      "total_area": 346
+    },
+    {
+      "number": 8,
+      "target_color": "#575bb6",
+      "region_count": 3,
+      "total_area": 2408
+    },
+    {
+      "number": 9,
+      "target_color": "#7056ab",
+      "region_count": 1,
+      "total_area": 89
+    },
+    {
+      "number": 10,
+      "target_color": "#6360b6",
+      "region_count": 2,
+      "total_area": 1021
+    },
+    {
+      "number": 11,
+      "target_color": "#6b60b8",
+      "region_count": 1,
+      "total_area": 117
+    },
+    {
+      "number": 12,
+      "target_color": "#6562b7",
+      "region_count": 1,
+      "total_area": 2841
+    },
+    {
+      "number": 13,
+      "target_color": "#676dc1",
+      "region_count": 1,
+      "total_area": 531
+    },
+    {
+      "number": 14,
+      "target_color": "#7e67c2",
+      "region_count": 1,
+      "total_area": 73
+    },
+    {
+      "number": 15,
+      "target_color": "#6b6ec9",
+      "region_count": 1,
+      "total_area": 285
+    },
+    {
+      "number": 16,
+      "target_color": "#b767b3",
+      "region_count": 1,
+      "total_area": 130
+    },
+    {
+      "number": 17,
+      "target_color": "#7d79c9",
+      "region_count": 3,
+      "total_area": 724
+    },
+    {
+      "number": 18,
+      "target_color": "#f66c95",
+      "region_count": 2,
+      "total_area": 96
+    },
+    {
+      "number": 19,
+      "target_color": "#c37ac0",
+      "region_count": 1,
+      "total_area": 237
+    },
+    {
+      "number": 20,
+      "target_color": "#e274a6",
+      "region_count": 1,
+      "total_area": 95
+    },
+    {
+      "number": 21,
+      "target_color": "#f983a4",
+      "region_count": 1,
+      "total_area": 194
+    },
+    {
+      "number": 22,
+      "target_color": "#d68bcb",
+      "region_count": 5,
+      "total_area": 6065
+    },
+    {
+      "number": 23,
+      "target_color": "#fb87a6",
+      "region_count": 2,
+      "total_area": 1224
+    },
+    {
+      "number": 24,
+      "target_color": "#fc87a9",
+      "region_count": 2,
+      "total_area": 3096
+    },
+    {
+      "number": 25,
+      "target_color": "#fd88a5",
+      "region_count": 2,
+      "total_area": 1290
+    },
+    {
+      "number": 26,
+      "target_color": "#fd89a7",
+      "region_count": 1,
+      "total_area": 2423
+    },
+    {
+      "number": 27,
+      "target_color": "#fd89a8",
+      "region_count": 2,
+      "total_area": 895106
+    },
+    {
+      "number": 28,
+      "target_color": "#fa8ba5",
+      "region_count": 1,
+      "total_area": 133
+    },
+    {
+      "number": 29,
+      "target_color": "#fd8aa7",
+      "region_count": 1,
+      "total_area": 3638
+    },
+    {
+      "number": 30,
+      "target_color": "#fcb4c5",
+      "region_count": 1,
+      "total_area": 27475
+    },
+    {
+      "number": 31,
+      "target_color": "#fcb9a9",
+      "region_count": 1,
+      "total_area": 5690
+    },
+    {
+      "number": 32,
+      "target_color": "#fafafb",
+      "region_count": 1,
+      "total_area": 24
+    }
+  ],
+  "region_palette": [
     {
       "number": 27,
       "mask_color": "#000001",
@@ -248,6 +450,7 @@
   ],
   "regions": [
     {
+      "id": 1,
       "mask_color": "#000001",
       "number": 27,
       "target_color": "#fd89a8",
@@ -266,9 +469,16 @@
         "x": 990.0,
         "y": 30.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 2,
       "mask_color": "#000002",
       "number": 17,
       "target_color": "#7d79c9",
@@ -287,9 +497,16 @@
         "x": 303.0,
         "y": 141.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 3,
       "mask_color": "#000003",
       "number": 29,
       "target_color": "#fd8aa7",
@@ -308,9 +525,16 @@
         "x": 233.0,
         "y": 208.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 4,
       "mask_color": "#000004",
       "number": 26,
       "target_color": "#fd89a7",
@@ -329,9 +553,16 @@
         "x": 842.0,
         "y": 249.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 5,
       "mask_color": "#000005",
       "number": 4,
       "target_color": "#76327b",
@@ -350,9 +581,16 @@
         "x": 215.0,
         "y": 187.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 6,
       "mask_color": "#000006",
       "number": 17,
       "target_color": "#7d79c9",
@@ -371,9 +609,16 @@
         "x": 178.0,
         "y": 264.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 7,
       "mask_color": "#000007",
       "number": 24,
       "target_color": "#fc87a9",
@@ -392,9 +637,16 @@
         "x": 169.0,
         "y": 347.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 8,
       "mask_color": "#000008",
       "number": 7,
       "target_color": "#4f4ba3",
@@ -413,9 +665,16 @@
         "x": 932.0,
         "y": 385.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 9,
       "mask_color": "#000009",
       "number": 12,
       "target_color": "#6562b7",
@@ -434,9 +693,16 @@
         "x": 134.0,
         "y": 464.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 10,
       "mask_color": "#00000a",
       "number": 18,
       "target_color": "#f66c95",
@@ -455,9 +721,16 @@
         "x": 664.0,
         "y": 474.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 11,
       "mask_color": "#00000b",
       "number": 25,
       "target_color": "#fd88a5",
@@ -476,9 +749,16 @@
         "x": 170.0,
         "y": 520.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 12,
       "mask_color": "#00000c",
       "number": 22,
       "target_color": "#d68bcb",
@@ -497,9 +777,16 @@
         "x": 413.0,
         "y": 561.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 13,
       "mask_color": "#00000d",
       "number": 32,
       "target_color": "#fafafb",
@@ -518,9 +805,16 @@
         "x": 660.0,
         "y": 493.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 14,
       "mask_color": "#00000e",
       "number": 8,
       "target_color": "#575bb6",
@@ -539,9 +833,16 @@
         "x": 902.0,
         "y": 500.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 15,
       "mask_color": "#00000f",
       "number": 8,
       "target_color": "#575bb6",
@@ -560,9 +861,16 @@
         "x": 867.0,
         "y": 534.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 16,
       "mask_color": "#000010",
       "number": 24,
       "target_color": "#fc87a9",
@@ -581,9 +889,16 @@
         "x": 115.0,
         "y": 529.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 17,
       "mask_color": "#000011",
       "number": 8,
       "target_color": "#575bb6",
@@ -602,9 +917,16 @@
         "x": 890.0,
         "y": 516.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 18,
       "mask_color": "#000012",
       "number": 22,
       "target_color": "#d68bcb",
@@ -623,9 +945,16 @@
         "x": 780.0,
         "y": 557.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 19,
       "mask_color": "#000013",
       "number": 17,
       "target_color": "#7d79c9",
@@ -644,9 +973,16 @@
         "x": 861.0,
         "y": 514.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 20,
       "mask_color": "#000014",
       "number": 16,
       "target_color": "#b767b3",
@@ -665,9 +1001,16 @@
         "x": 941.0,
         "y": 528.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 21,
       "mask_color": "#000015",
       "number": 10,
       "target_color": "#6360b6",
@@ -686,9 +1029,16 @@
         "x": 79.0,
         "y": 536.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 22,
       "mask_color": "#000016",
       "number": 23,
       "target_color": "#fb87a6",
@@ -707,9 +1057,16 @@
         "x": 148.0,
         "y": 568.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 23,
       "mask_color": "#000017",
       "number": 25,
       "target_color": "#fd88a5",
@@ -728,9 +1085,16 @@
         "x": 169.0,
         "y": 569.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 24,
       "mask_color": "#000018",
       "number": 19,
       "target_color": "#c37ac0",
@@ -749,9 +1113,16 @@
         "x": 763.0,
         "y": 566.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 25,
       "mask_color": "#000019",
       "number": 11,
       "target_color": "#6b60b8",
@@ -770,9 +1141,16 @@
         "x": 121.0,
         "y": 574.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 26,
       "mask_color": "#00001a",
       "number": 13,
       "target_color": "#676dc1",
@@ -791,9 +1169,16 @@
         "x": 381.0,
         "y": 609.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 27,
       "mask_color": "#00001b",
       "number": 14,
       "target_color": "#7e67c2",
@@ -812,9 +1197,16 @@
         "x": 875.0,
         "y": 584.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 28,
       "mask_color": "#00001c",
       "number": 6,
       "target_color": "#544399",
@@ -833,9 +1225,16 @@
         "x": 86.0,
         "y": 589.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 29,
       "mask_color": "#00001d",
       "number": 9,
       "target_color": "#7056ab",
@@ -854,9 +1253,16 @@
         "x": 165.0,
         "y": 593.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 30,
       "mask_color": "#00001e",
       "number": 23,
       "target_color": "#fb87a6",
@@ -875,9 +1281,16 @@
         "x": 174.0,
         "y": 598.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 31,
       "mask_color": "#00001f",
       "number": 22,
       "target_color": "#d68bcb",
@@ -896,9 +1309,16 @@
         "x": 370.0,
         "y": 626.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 32,
       "mask_color": "#000020",
       "number": 7,
       "target_color": "#4f4ba3",
@@ -917,9 +1337,16 @@
         "x": 809.0,
         "y": 605.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 33,
       "mask_color": "#000021",
       "number": 18,
       "target_color": "#f66c95",
@@ -938,9 +1365,16 @@
         "x": 404.0,
         "y": 628.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 34,
       "mask_color": "#000022",
       "number": 5,
       "target_color": "#4c3f8b",
@@ -959,9 +1393,16 @@
         "x": 309.0,
         "y": 656.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 35,
       "mask_color": "#000023",
       "number": 2,
       "target_color": "#4c2f79",
@@ -980,9 +1421,16 @@
         "x": 425.0,
         "y": 632.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 36,
       "mask_color": "#000024",
       "number": 22,
       "target_color": "#d68bcb",
@@ -1001,9 +1449,16 @@
         "x": 356.0,
         "y": 652.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 2
+      }
     },
     {
+      "id": 37,
       "mask_color": "#000025",
       "number": 20,
       "target_color": "#e274a6",
@@ -1022,9 +1477,16 @@
         "x": 376.0,
         "y": 641.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 2
+      }
     },
     {
+      "id": 38,
       "mask_color": "#000026",
       "number": 15,
       "target_color": "#6b6ec9",
@@ -1043,9 +1505,16 @@
         "x": 399.0,
         "y": 658.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 39,
       "mask_color": "#000027",
       "number": 21,
       "target_color": "#f983a4",
@@ -1064,9 +1533,16 @@
         "x": 383.0,
         "y": 662.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 2
+      }
     },
     {
+      "id": 40,
       "mask_color": "#000028",
       "number": 27,
       "target_color": "#fd89a8",
@@ -1085,9 +1561,16 @@
         "x": 231.0,
         "y": 673.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 41,
       "mask_color": "#000029",
       "number": 30,
       "target_color": "#fcb4c5",
@@ -1106,9 +1589,16 @@
         "x": 702.0,
         "y": 819.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 42,
       "mask_color": "#00002a",
       "number": 22,
       "target_color": "#d68bcb",
@@ -1127,9 +1617,16 @@
         "x": 386.0,
         "y": 692.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 43,
       "mask_color": "#00002b",
       "number": 10,
       "target_color": "#6360b6",
@@ -1148,9 +1645,16 @@
         "x": 315.0,
         "y": 693.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 44,
       "mask_color": "#00002c",
       "number": 28,
       "target_color": "#fa8ba5",
@@ -1169,9 +1673,16 @@
         "x": 256.0,
         "y": 734.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 45,
       "mask_color": "#00002d",
       "number": 6,
       "target_color": "#544399",
@@ -1190,9 +1701,16 @@
         "x": 371.0,
         "y": 759.0
       },
-      "hide_number": true
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 46,
       "mask_color": "#00002e",
       "number": 3,
       "target_color": "#463c79",
@@ -1211,9 +1729,16 @@
         "x": 727.0,
         "y": 930.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 47,
       "mask_color": "#00002f",
       "number": 31,
       "target_color": "#fcb9a9",
@@ -1232,9 +1757,16 @@
         "x": 246.0,
         "y": 962.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     },
     {
+      "id": 48,
       "mask_color": "#000030",
       "number": 1,
       "target_color": "#371b5b",
@@ -1253,9 +1785,22 @@
         "x": 740.0,
         "y": 1021.0
       },
-      "hide_number": false
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
     }
   ],
+  "stats": {
+    "total_regions": 48,
+    "unique_numbers": 32,
+    "estimated_difficulty": 6,
+    "small_regions_count": 0,
+    "giant_regions_count": 1
+  },
   "estimated_difficulty": 6,
   "total_regions": 48,
   "unique_numbers": 32,
@@ -1265,6 +1810,25 @@
   "merged_tiny_regions_count": 16,
   "forced_tiny_region_merges_count": 9,
   "remaining_tiny_regions_count": 0,
+  "generation": {
+    "source_mode": "line_plus_reference",
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 8,
+    "hide_small_label_threshold": 48,
+    "small_region_attach_distance": 8,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 20,
+    "tiny_merge_min_side": 6,
+    "tiny_merge_attach_distance": 16,
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "category_profile": "standard",
+    "target_unique_colors": 64
+  },
   "generation_params": {
     "brightness_threshold": 120,
     "merge_threshold": 15.0,
@@ -1278,7 +1842,10 @@
     "tiny_merge_attach_distance": 16,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
-    "adaptive_palette": true
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "category_profile": "standard",
+    "target_unique_colors": 64
   },
   "category_profile": "standard",
   "target_unique_colors": 64,
@@ -1289,5 +1856,9 @@
   "final_merge_threshold": 15.0,
   "palette_reduction_passes": 0,
   "palette_reduction_reason": "within_limit",
-  "absorbed_small_color_count": 1
+  "absorbed_small_color_count": 1,
+  "compat": {
+    "region_palette_entries": true,
+    "android_source_of_truth": "regions"
+  }
 }

@@ -49,7 +49,7 @@ class PaintViewModel(
                 assetLevelRepository.loadLevelBundle(category, levelId)
             }.onSuccess { bundle ->
                 levelConfig = bundle.config
-                allRegions = bundle.config.palette
+                allRegions = bundle.config.toRegionPaletteItems()
                 uniqueColors = allRegions.groupBy { it.number }
                     .map { it.value.first() }
                     .sortedBy { it.number }

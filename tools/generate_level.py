@@ -5,6 +5,7 @@ import os
 from collections import Counter, deque
 
 from PIL import Image, ImageFilter
+from PIL import ImageDraw
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -495,6 +496,109 @@ def find_label_anchor(region, bbox, centroid):
 def estimate_difficulty(total_regions, unique_numbers, small_regions_count):
     score = total_regions * 2 + unique_numbers * 4 + small_regions_count * 6
     return max(1, min(10, int(round(score / 35.0))))
+
+
+def make_preview_colored_image(width, height, mask_img, line_img, mask_to_target_rgb):
+    mask_pixels = mask_img.load()
+    preview = Image.new("RGB", (width, height), (255, 255, 255))
+    preview_pixels = preview.load()
+
+    for y in range(height):
+        for x in range(width):
+            target = mask_to_target_rgb.get(mask_pixels[x, y])
+            if target is not None:
+                preview_pixels[x, y] = target
+
+    line_gray = line_img.convert("L")
+    line_pixels = line_gray.load()
+    for y in range(height):
+        for x in range(width):
+            line_value = line_pixels[x, y]
+            if line_value < 245:
+                current = preview_pixels[x, y]
+                factor = line_value / 255.0
+                preview_pixels[x, y] = tuple(int(channel * factor) for channel in current)
+
+    return preview
+
+
+def deterministic_debug_color(region_id):
+    return (
+        (region_id * 73) % 206 + 30,
+        (region_id * 151) % 206 + 30,
+        (region_id * 199) % 206 + 30,
+    )
+
+
+def make_debug_regions_image(width, height, region_configs, region_pixel_sets):
+    debug = Image.new("RGB", (width, height), (250, 250, 250))
+    draw = ImageDraw.Draw(debug)
+    pixels = debug.load()
+
+    for region_config, region in zip(region_configs, region_pixel_sets):
+        color = deterministic_debug_color(region_config["id"])
+        for x, y in region:
+            pixels[x, y] = color
+
+    for region_config in region_configs:
+        anchor = region_config["label_anchor"]
+        x = int(round(anchor["x"]))
+        y = int(round(anchor["y"]))
+        draw.text((x, y), str(region_config["number"]), fill=(0, 0, 0), anchor="mm")
+
+    return debug
+
+
+def build_quality_report(width, height, region_configs, stats, generation_params):
+    warnings = []
+    total_area = width * height
+    giant_regions = [
+        region
+        for region in region_configs
+        if region["area"] / max(1, total_area) > 0.6
+    ]
+    tiny_regions = [
+        region
+        for region in region_configs
+        if region["quality"]["is_tiny"]
+    ]
+    edge_label_regions = []
+    for region in region_configs:
+        anchor = region["label_anchor"]
+        if anchor["x"] < 4 or anchor["y"] < 4 or anchor["x"] > width - 5 or anchor["y"] > height - 5:
+            edge_label_regions.append(region)
+
+    if giant_regions:
+        warnings.append(
+            {
+                "code": "GIANT_REGION",
+                "message": "Một hoặc nhiều vùng chiếm hơn 60% canvas; line art có thể bị hở hoặc nền đang bị coi là vùng tô.",
+                "region_ids": [region["id"] for region in giant_regions],
+            }
+        )
+    if len(tiny_regions) > max(8, len(region_configs) * 0.25):
+        warnings.append(
+            {
+                "code": "MANY_TINY_REGIONS",
+                "message": "Số vùng quá nhỏ cao; level có thể khó chạm hoặc khó đọc số.",
+                "region_ids": [region["id"] for region in tiny_regions[:50]],
+            }
+        )
+    if edge_label_regions:
+        warnings.append(
+            {
+                "code": "EDGE_LABEL_ANCHOR",
+                "message": "Một số label anchor nằm sát mép ảnh.",
+                "region_ids": [region["id"] for region in edge_label_regions[:50]],
+            }
+        )
+
+    return {
+        "schema_version": 1,
+        "stats": stats,
+        "generation_params": generation_params,
+        "warnings": warnings,
+    }
 
 
 def is_tiny_display_region(info, tiny_area_threshold, tiny_side_threshold):
@@ -1010,8 +1114,11 @@ def generate_level_assets(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    palette_config = []
+    region_palette_config = []
     region_configs = []
+    region_pixel_sets = []
+    mask_to_target_rgb = {}
+    palette_summary = {}
 
     print("Đang vẽ ảnh Mask và tạo cấu hình Palette...")
     for region_id, info in enumerate(region_infos, start=1):
@@ -1030,8 +1137,20 @@ def generate_level_assets(
 
         for x, y in region:
             mask_pixels[x, y] = mask_rgb
+        mask_to_target_rgb[mask_rgb] = best_palette_color
 
-        palette_config.append(
+        palette_key = (palette_number, best_palette_color)
+        if palette_key not in palette_summary:
+            palette_summary[palette_key] = {
+                "number": palette_number,
+                "target_color": rgb_to_hex(best_palette_color),
+                "region_count": 0,
+                "total_area": 0,
+            }
+        palette_summary[palette_key]["region_count"] += 1
+        palette_summary[palette_key]["total_area"] += info["area"]
+
+        region_palette_config.append(
             {
                 "number": palette_number,
                 "mask_color": mask_hex,
@@ -1041,6 +1160,7 @@ def generate_level_assets(
 
         region_configs.append(
             {
+                "id": region_id,
                 "mask_color": mask_hex,
                 "number": palette_number,
                 "target_color": rgb_to_hex(best_palette_color),
@@ -1049,16 +1169,55 @@ def generate_level_assets(
                 "centroid": info["centroid"],
                 "label_anchor": info["label_anchor"],
                 "hide_number": info["hide_number"],
+                "quality": {
+                    "is_tiny": info["is_tiny_display_region"],
+                    "is_small": info["is_small_region"],
+                    "touchable": not info["hide_number"],
+                    "merged_region_count": info.get("merged_region_count", 1),
+                },
             }
         )
+        region_pixel_sets.append(region)
 
     small_regions_count = sum(1 for info in region_infos if info["is_small_region"])
-    unique_numbers = len({item["number"] for item in palette_config})
+    unique_numbers = len({item["number"] for item in region_palette_config})
     difficulty = estimate_difficulty(
         total_regions=len(region_configs),
         unique_numbers=unique_numbers,
         small_regions_count=small_regions_count,
     )
+    giant_regions_count = sum(
+        1 for item in region_configs if item["area"] / max(1, width * height) > 0.6
+    )
+    palette_config = sorted(
+        palette_summary.values(),
+        key=lambda item: item["number"],
+    )
+    stats = {
+        "total_regions": len(region_configs),
+        "unique_numbers": unique_numbers,
+        "estimated_difficulty": difficulty,
+        "small_regions_count": small_regions_count,
+        "giant_regions_count": giant_regions_count,
+    }
+    generation_params = {
+        "brightness_threshold": brightness_threshold,
+        "merge_threshold": color_merge_threshold,
+        "line_close_radius": line_close_radius,
+        "min_region_area": min_region_area,
+        "hide_small_label_threshold": hide_small_label_threshold,
+        "small_region_attach_distance": small_region_attach_distance,
+        "tiny_region_side_threshold": tiny_region_side_threshold,
+        "tiny_merge_min_area": tiny_merge_min_area,
+        "tiny_merge_min_side": tiny_merge_min_side,
+        "tiny_merge_attach_distance": effective_tiny_merge_attach_distance,
+        "tiny_merge_color_threshold": effective_tiny_merge_color_threshold,
+        "tiny_merge_policy": tiny_merge_policy,
+        "adaptive_palette": adaptive_palette,
+        "quantize_method": quantize_method,
+        "category_profile": resolved_profile,
+        "target_unique_colors": resolved_target_unique_colors,
+    }
 
     print(
         "Palette stats: "
@@ -1080,14 +1239,57 @@ def generate_level_assets(
     line_img.save(line_out_path)
     print(f"Đã lưu ảnh Line: {line_out_path}")
 
+    preview_img = make_preview_colored_image(
+        width=width,
+        height=height,
+        mask_img=mask_img,
+        line_img=line_img,
+        mask_to_target_rgb=mask_to_target_rgb,
+    )
+    preview_out_path = os.path.join(output_dir, "preview_colored.png")
+    preview_img.save(preview_out_path)
+    print(f"Đã lưu ảnh Preview: {preview_out_path}")
+
+    debug_regions_img = make_debug_regions_image(
+        width=width,
+        height=height,
+        region_configs=region_configs,
+        region_pixel_sets=region_pixel_sets,
+    )
+    debug_regions_out_path = os.path.join(output_dir, "debug_regions.png")
+    debug_regions_img.save(debug_regions_out_path)
+    print(f"Đã lưu ảnh Debug Regions: {debug_regions_out_path}")
+
+    quality_report = build_quality_report(
+        width=width,
+        height=height,
+        region_configs=region_configs,
+        stats=stats,
+        generation_params=generation_params,
+    )
+    debug_report_out_path = os.path.join(output_dir, "debug_report.json")
+    with open(debug_report_out_path, "w", encoding="utf-8") as output_file:
+        json.dump(quality_report, output_file, indent=2, ensure_ascii=False)
+    print(f"Đã lưu báo cáo Debug: {debug_report_out_path}")
+
     config_data = {
+        "schema_version": 2,
         "id": generated_id if generated_id else os.path.basename(output_dir),
         "name": data_name if data_name else os.path.basename(output_dir),
         "category": category_name if category_name else "Uncategorized",
         "width": width,
         "height": height,
+        "assets": {
+            "line": "line.png",
+            "mask": "mask.png",
+            "preview": "preview_colored.png",
+            "debug_regions": "debug_regions.png",
+            "debug_report": "debug_report.json",
+        },
         "palette": palette_config,
+        "region_palette": region_palette_config,
         "regions": region_configs,
+        "stats": stats,
         "estimated_difficulty": difficulty,
         "total_regions": len(region_configs),
         "unique_numbers": unique_numbers,
@@ -1097,21 +1299,11 @@ def generate_level_assets(
         "merged_tiny_regions_count": merged_tiny_regions_count,
         "forced_tiny_region_merges_count": forced_tiny_region_merges_count,
         "remaining_tiny_regions_count": remaining_tiny_regions_count,
-        "generation_params": {
-            "brightness_threshold": brightness_threshold,
-            "merge_threshold": color_merge_threshold,
-            "line_close_radius": line_close_radius,
-            "min_region_area": min_region_area,
-            "hide_small_label_threshold": hide_small_label_threshold,
-            "small_region_attach_distance": small_region_attach_distance,
-            "tiny_region_side_threshold": tiny_region_side_threshold,
-            "tiny_merge_min_area": tiny_merge_min_area,
-            "tiny_merge_min_side": tiny_merge_min_side,
-            "tiny_merge_attach_distance": effective_tiny_merge_attach_distance,
-            "tiny_merge_color_threshold": effective_tiny_merge_color_threshold,
-            "tiny_merge_policy": tiny_merge_policy,
-            "adaptive_palette": adaptive_palette,
+        "generation": {
+            "source_mode": "line_plus_reference",
+            **generation_params,
         },
+        "generation_params": generation_params,
         "category_profile": resolved_profile,
         "target_unique_colors": resolved_target_unique_colors,
         "initial_unique_numbers": palette_result["initial_unique_numbers"],
@@ -1122,6 +1314,10 @@ def generate_level_assets(
         "palette_reduction_passes": palette_result["palette_reduction_passes"],
         "palette_reduction_reason": palette_result["palette_reduction_reason"],
         "absorbed_small_color_count": absorbed_small_color_count,
+        "compat": {
+            "region_palette_entries": True,
+            "android_source_of_truth": "regions",
+        },
     }
 
     config_out_path = os.path.join(output_dir, "config.json")

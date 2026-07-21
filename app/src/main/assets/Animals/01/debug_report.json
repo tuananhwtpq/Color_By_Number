@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "stats": {
+    "total_regions": 329,
+    "unique_numbers": 57,
+    "estimated_difficulty": 10,
+    "small_regions_count": 0,
+    "giant_regions_count": 0
+  },
+  "generation_params": {
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 8,
+    "hide_small_label_threshold": 48,
+    "small_region_attach_distance": 8,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 20,
+    "tiny_merge_min_side": 6,
+    "tiny_merge_attach_distance": 16,
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "category_profile": "standard",
+    "target_unique_colors": 64
+  },
+  "warnings": [
+    {
+      "code": "EDGE_LABEL_ANCHOR",
+      "message": "Một số label anchor nằm sát mép ảnh.",
+      "region_ids": [
+        305,
+        327
+      ]
+    }
+  ]
+}

@@ -1,9 +1,30 @@
 package com.example.baseproject.data
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
+
+object MaskRegionHitTester {
+    fun maskColorAt(
+        maskPixels: IntArray,
+        width: Int,
+        height: Int,
+        x: Int,
+        y: Int
+    ): Int? {
+        if (width <= 0 || height <= 0) return null
+        if (x !in 0 until width || y !in 0 until height) return null
+        val index = y * width + x
+        if (index !in maskPixels.indices) return null
+        return maskPixels[index]
+    }
+
+    fun isTouchableMaskColor(
+        maskColor: Int,
+        activeMaskColors: Set<Int>,
+        completedMaskColors: Set<Int>
+    ): Boolean {
+        return activeMaskColors.contains(maskColor) && !completedMaskColors.contains(maskColor)
+    }
+}
 
 class AnimatedFiller(
     private val maskPixels: IntArray,
