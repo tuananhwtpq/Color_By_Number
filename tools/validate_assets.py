@@ -1,12 +1,13 @@
 import argparse
+import csv
 import json
 import os
 import sys
 
 try:
-    from asset_quality import evaluate_level_dir, merge_quality_report, load_json
+    from asset_quality import build_recommendation, evaluate_level_dir, merge_quality_report, load_json
 except ImportError:
-    from tools.asset_quality import evaluate_level_dir, merge_quality_report, load_json
+    from tools.asset_quality import build_recommendation, evaluate_level_dir, merge_quality_report, load_json
 
 
 IMAGE_EXTENSIONS = (".png", ".webp", ".jpg", ".jpeg")
@@ -61,6 +62,124 @@ def format_pct(value):
     return f"{value:.1f}"
 
 
+def selected_profile_from_report(report):
+    generation_params = report.get("generation_params") or {}
+    selected = generation_params.get("selected_preprocessing") or {}
+    if not selected:
+        return "-"
+    profile = selected.get("profile", "-")
+    threshold = selected.get("brightness_threshold", "-")
+    close_radius = selected.get("line_close_radius", "-")
+    return f"{profile}:{threshold}:{close_radius}"
+
+
+def report_cell(value):
+    if value is None:
+        return ""
+    return str(value)
+
+
+def flatten_row(row):
+    metrics = row.get("metrics", {})
+    recommendation = row.get("recommendation") or build_recommendation(row)
+    return {
+        "category": row.get("category", ""),
+        "level": row.get("level", ""),
+        "grade": row.get("quality_grade", ""),
+        "score": row.get("quality_score", ""),
+        "regions": metrics.get("total_regions", ""),
+        "colors": metrics.get("unique_numbers", ""),
+        "largest_region_pct": metrics.get("largest_region_pct", ""),
+        "preview_mae": metrics.get("preview_mae", ""),
+        "line_dark_pct": metrics.get("line_dark_pct", ""),
+        "fail_reasons": summarize_issue_codes(row.get("fail_reasons", [])),
+        "warnings": summarize_issue_codes(row.get("warnings", [])),
+        "recommendation": recommendation.get("action", ""),
+        "recommendation_reasons": ",".join(recommendation.get("reasons", [])),
+        "design_focus": ",".join(recommendation.get("design_focus", [])),
+        "selected_profile": row.get("selected_profile") or selected_profile_from_report(row),
+        "path": row.get("path", ""),
+    }
+
+
+REPORT_COLUMNS = [
+    "category",
+    "level",
+    "grade",
+    "score",
+    "regions",
+    "colors",
+    "largest_region_pct",
+    "preview_mae",
+    "line_dark_pct",
+    "fail_reasons",
+    "warnings",
+    "recommendation",
+    "recommendation_reasons",
+    "design_focus",
+    "selected_profile",
+    "path",
+]
+
+
+def ensure_parent_dir(path):
+    parent = os.path.dirname(os.path.abspath(path))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
+def write_csv_report(rows, output_path):
+    ensure_parent_dir(output_path)
+    with open(output_path, "w", newline="", encoding="utf-8") as output_file:
+        writer = csv.DictWriter(output_file, fieldnames=REPORT_COLUMNS)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(flatten_row(row))
+
+
+def write_markdown_report(rows, output_path):
+    ensure_parent_dir(output_path)
+    headers = [
+        "Category",
+        "Level",
+        "Grade",
+        "Score",
+        "Regions",
+        "Colors",
+        "Largest%",
+        "MAE",
+        "Line dark%",
+        "Fails",
+        "Warnings",
+        "Recommendation",
+        "Reasons",
+        "Selected profile",
+    ]
+    with open(output_path, "w", encoding="utf-8") as output_file:
+        output_file.write("# Asset Quality Report\n\n")
+        output_file.write("| " + " | ".join(headers) + " |\n")
+        output_file.write("| " + " | ".join("---" for _ in headers) + " |\n")
+        for row in rows:
+            flat = flatten_row(row)
+            values = [
+                flat["category"],
+                flat["level"],
+                flat["grade"],
+                flat["score"],
+                flat["regions"],
+                flat["colors"],
+                flat["largest_region_pct"],
+                flat["preview_mae"],
+                flat["line_dark_pct"],
+                flat["fail_reasons"],
+                flat["warnings"],
+                flat["recommendation"],
+                flat["recommendation_reasons"],
+                flat["selected_profile"],
+            ]
+            output_file.write("| " + " | ".join(report_cell(value) for value in values) + " |\n")
+
+
 def print_table(rows):
     headers = [
         "grade",
@@ -73,6 +192,7 @@ def print_table(rows):
         "line_dark%",
         "fails",
         "warnings",
+        "recommendation",
     ]
     print(" | ".join(headers))
     print(" | ".join("-" * len(header) for header in headers))
@@ -91,6 +211,7 @@ def print_table(rows):
                     format_pct(metrics.get("line_dark_pct")),
                     summarize_issue_codes(row["fail_reasons"]),
                     summarize_issue_codes(row["warnings"]),
+                    row.get("recommendation", {}).get("action", "-"),
                 ]
             )
         )
@@ -138,6 +259,8 @@ def main():
         action="store_true",
         help="Fail level nếu không tìm thấy ảnh màu gốc để tính preview_mae.",
     )
+    parser.add_argument("--report-md", help="Ghi report tổng hợp dạng Markdown vào path này.")
+    parser.add_argument("--report-csv", help="Ghi report tổng hợp dạng CSV vào path này.")
     args = parser.parse_args()
 
     root_path = os.path.abspath(args.assets_path)
@@ -150,12 +273,19 @@ def main():
             reference_path=reference_path,
             require_reference=args.require_reference,
         )
+        existing_debug_report = {}
+        if os.path.exists(os.path.join(level_dir, "debug_report.json")):
+            existing_debug_report = load_json(os.path.join(level_dir, "debug_report.json"))
+        selected_profile = selected_profile_from_report(existing_debug_report)
         if args.write_debug_report:
             write_debug_report(level_dir, report)
         rows.append(
             {
                 "name": f"{category}/{level}",
+                "category": category,
+                "level": level,
                 "path": level_dir,
+                "selected_profile": selected_profile,
                 **report,
             }
         )
@@ -164,6 +294,13 @@ def main():
         print(json.dumps(rows, indent=2, ensure_ascii=False))
     else:
         print_table(rows)
+
+    if args.report_md:
+        write_markdown_report(rows, args.report_md)
+        print(f"Đã ghi Markdown report: {args.report_md}")
+    if args.report_csv:
+        write_csv_report(rows, args.report_csv)
+        print(f"Đã ghi CSV report: {args.report_csv}")
 
     return 1 if any(row["fail_reasons"] for row in rows) else 0
 

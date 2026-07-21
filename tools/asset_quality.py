@@ -404,6 +404,75 @@ def score_quality(metrics):
     }
 
 
+def issue_codes(report, key):
+    return {issue.get("code") for issue in report.get(key, [])}
+
+
+def build_recommendation(report):
+    grade = report.get("quality_grade")
+    warning_codes = issue_codes(report, "warnings")
+    fail_codes = issue_codes(report, "fail_reasons")
+    all_codes = warning_codes | fail_codes
+
+    reasons = []
+    design_focus = []
+
+    if "LINE_TOO_LIGHT" in all_codes and "GIANT_REGION" in all_codes:
+        reasons.append("DESIGN_FIX_LINE")
+        design_focus.append("line")
+    elif "LINE_TOO_LIGHT" in all_codes:
+        reasons.append("REVIEW_LINE_CONTRAST")
+        design_focus.append("line")
+
+    if "GIANT_REGION_WARNING" in all_codes:
+        reasons.append("REGENERATE_AUTO_OR_FIX_LINE")
+        design_focus.append("line")
+    if "GIANT_REGION" in all_codes and "DESIGN_FIX_LINE" not in reasons:
+        reasons.append("DESIGN_FIX_LINE")
+        design_focus.append("line")
+
+    if "PREVIEW_MAE_HIGH" in all_codes or "PREVIEW_MAE_TOO_HIGH" in all_codes:
+        reasons.append("DESIGN_FIX_COLOR")
+        design_focus.append("color_alignment")
+
+    if "TOO_MANY_REGIONS" in all_codes:
+        reasons.append("REVIEW_DETAIL_DENSITY")
+        design_focus.append("detail_density")
+
+    if any(
+        code in all_codes
+        for code in [
+            "MASK_CONFIG_MISMATCH",
+            "DUPLICATE_MASK_COLOR",
+            "DUPLICATE_MASK_COLOR_IN_REGION_PALETTE",
+            "REGION_AREA_MISMATCH",
+        ]
+    ):
+        reasons.append("REGENERATE_AUTO")
+
+    if grade == "A":
+        action = "KEEP"
+    elif grade == "B":
+        action = "REVIEW_VISUAL"
+    elif grade == "C":
+        action = "REGENERATE_AUTO"
+        if "DESIGN_FIX_LINE" in reasons or "DESIGN_FIX_COLOR" in reasons:
+            action = "REVIEW_VISUAL"
+    elif grade == "D":
+        action = "EXCLUDE_DEMO"
+    else:
+        action = "REVIEW_VISUAL"
+
+    if not reasons:
+        reasons.append(action)
+
+    return {
+        "action": action,
+        "reasons": list(dict.fromkeys(reasons)),
+        "design_focus": list(dict.fromkeys(design_focus)),
+    }
+
+
 def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     config_path = os.path.join(level_dir, "config.json")
     config = load_json(config_path)
@@ -419,11 +488,13 @@ def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     metrics["preview_mae"] = measure_preview_mae(reference_path, preview_path)
 
     quality = score_quality(metrics)
-    return {
+    report = {
         "schema_version": 1,
         **quality,
         "metrics": metrics,
     }
+    report["recommendation"] = build_recommendation(report)
+    return report
 
 
 def merge_quality_report(base_report, quality_report):
@@ -441,4 +512,6 @@ def merge_quality_report(base_report, quality_report):
         "warnings": merged_warnings,
         "fail_reasons": quality_report["fail_reasons"],
         "metrics": quality_report["metrics"],
+        "recommendation": quality_report.get("recommendation")
+        or build_recommendation(quality_report),
     }

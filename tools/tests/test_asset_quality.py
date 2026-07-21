@@ -5,7 +5,7 @@ import unittest
 
 from PIL import Image
 
-from tools.asset_quality import evaluate_level_dir
+from tools.asset_quality import build_recommendation, evaluate_level_dir
 
 
 def write_json(path, data):
@@ -246,6 +246,59 @@ class AssetQualityTest(unittest.TestCase):
 
             fail_codes = {reason["code"] for reason in report["fail_reasons"]}
             self.assertIn("REFERENCE_MISSING", fail_codes)
+
+    def test_recommendation_keep_for_grade_a(self):
+        recommendation = build_recommendation(
+            {
+                "quality_grade": "A",
+                "warnings": [],
+                "fail_reasons": [],
+                "metrics": {},
+            }
+        )
+
+        self.assertEqual("KEEP", recommendation["action"])
+
+    def test_recommendation_review_visual_for_grade_b_warning(self):
+        recommendation = build_recommendation(
+            {
+                "quality_grade": "B",
+                "warnings": [{"code": "GIANT_REGION_WARNING"}],
+                "fail_reasons": [],
+                "metrics": {},
+            }
+        )
+
+        self.assertEqual("REVIEW_VISUAL", recommendation["action"])
+        self.assertIn("REGENERATE_AUTO_OR_FIX_LINE", recommendation["reasons"])
+
+    def test_recommendation_design_fix_line_for_light_giant_line(self):
+        recommendation = build_recommendation(
+            {
+                "quality_grade": "D",
+                "warnings": [{"code": "LINE_TOO_LIGHT"}],
+                "fail_reasons": [{"code": "GIANT_REGION"}],
+                "metrics": {},
+            }
+        )
+
+        self.assertEqual("EXCLUDE_DEMO", recommendation["action"])
+        self.assertIn("DESIGN_FIX_LINE", recommendation["reasons"])
+        self.assertIn("line", recommendation["design_focus"])
+
+    def test_recommendation_design_fix_color_for_preview_mae_high(self):
+        recommendation = build_recommendation(
+            {
+                "quality_grade": "B",
+                "warnings": [{"code": "PREVIEW_MAE_HIGH"}],
+                "fail_reasons": [],
+                "metrics": {},
+            }
+        )
+
+        self.assertEqual("REVIEW_VISUAL", recommendation["action"])
+        self.assertIn("DESIGN_FIX_COLOR", recommendation["reasons"])
+        self.assertIn("color_alignment", recommendation["design_focus"])
 
 
 if __name__ == "__main__":
