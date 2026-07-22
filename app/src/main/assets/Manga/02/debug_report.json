@@ -1,41 +1,46 @@
 {
   "schema_version": 1,
   "stats": {
-    "total_regions": 66,
-    "unique_numbers": 61,
+    "total_regions": 67,
+    "unique_numbers": 49,
     "estimated_difficulty": 10,
-    "small_regions_count": 9,
+    "small_regions_count": 31,
     "giant_regions_count": 1
   },
   "generation_params": {
     "brightness_threshold": 120,
     "merge_threshold": 15.0,
     "line_close_radius": 0,
-    "min_region_area": 8,
-    "hide_small_label_threshold": 48,
-    "small_region_attach_distance": 8,
+    "min_region_area": 120,
+    "hide_small_label_threshold": 100,
     "tiny_region_side_threshold": 10,
-    "tiny_merge_min_area": 20,
+    "tiny_merge_min_area": 48,
     "tiny_merge_min_side": 6,
-    "tiny_merge_attach_distance": 16,
+    "small_region_merge_mode": "shared_boundary_adjacency",
+    "small_color_absorb_mode": "shared_boundary_adjacency",
+    "tiny_region_merge_mode": "shared_boundary_adjacency",
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
+    "tiny_merge_rejected_non_adjacent": 23,
+    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_giant_target": 0,
+    "tiny_merge_profile": "medium",
     "adaptive_palette": true,
     "quantize_method": "mediancut",
     "region_color_method": "median",
-    "category_profile": "standard",
+    "category_profile": "medium",
     "target_unique_colors": 64,
     "preprocess_profile": "standard",
     "selected_preprocessing": {
       "profile": "standard",
       "brightness_threshold": 120,
       "line_close_radius": 0,
-      "score": 6,
+      "score": 22,
       "evaluation_mode": "pre_generation_proxy",
-      "candidate_proxy_score": 6,
+      "candidate_proxy_score": 22,
       "candidate_proxy_grade": "D",
       "candidate_playable_score": 27,
-      "quality_score": 6,
+      "quality_score": 22,
       "quality_grade": "D",
       "fail_reasons": [
         {
@@ -57,27 +62,6 @@
           "message": "Phân bố vùng tạo rủi ro một tap hoặc một màu hoàn thành quá nhiều ảnh.",
           "value": "high",
           "threshold": "medium"
-        },
-        {
-          "code": "MANY_TINY_REGIONS",
-          "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
-          "value": 23,
-          "threshold": 20
-        },
-        {
-          "code": "TINY_REGION_DENSITY_WARNING",
-          "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile casual; level có thể khó tap hoặc khó đọc.",
-          "value": {
-            "tiny_lt_100_pct": 43.3,
-            "tiny_lt_200_pct": 55.2,
-            "hidden_label_pct": 0,
-            "median_region_area": 161.0
-          },
-          "threshold": {
-            "tiny_lt_100_pct": 35,
-            "tiny_lt_200_pct": 50,
-            "hidden_label_pct": 30
-          }
         }
       ],
       "total_regions": 67,
@@ -96,12 +80,12 @@
           "profile": "standard",
           "brightness_threshold": 120,
           "line_close_radius": 0,
-          "score": 6,
+          "score": 22,
           "evaluation_mode": "pre_generation_proxy",
-          "candidate_proxy_score": 6,
+          "candidate_proxy_score": 22,
           "candidate_proxy_grade": "D",
           "candidate_playable_score": 27,
-          "quality_score": 6,
+          "quality_score": 22,
           "quality_grade": "D",
           "fail_reasons": [
             {
@@ -123,27 +107,6 @@
               "message": "Phân bố vùng tạo rủi ro một tap hoặc một màu hoàn thành quá nhiều ảnh.",
               "value": "high",
               "threshold": "medium"
-            },
-            {
-              "code": "MANY_TINY_REGIONS",
-              "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
-              "value": 23,
-              "threshold": 20
-            },
-            {
-              "code": "TINY_REGION_DENSITY_WARNING",
-              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile casual; level có thể khó tap hoặc khó đọc.",
-              "value": {
-                "tiny_lt_100_pct": 43.3,
-                "tiny_lt_200_pct": 55.2,
-                "hidden_label_pct": 0,
-                "median_region_area": 161.0
-              },
-              "threshold": {
-                "tiny_lt_100_pct": 35,
-                "tiny_lt_200_pct": 50,
-                "hidden_label_pct": 30
-              }
             }
           ],
           "total_regions": 67,
@@ -177,6 +140,7 @@
       "region_ids": [
         2,
         5,
+        7,
         8,
         9,
         14,
@@ -185,6 +149,7 @@
         19,
         25,
         31,
+        34,
         36,
         40,
         41,
@@ -201,20 +166,21 @@
         60,
         61,
         63,
-        64
+        64,
+        65
       ]
     },
     {
       "code": "EDGE_LABEL_ANCHOR",
       "message": "Một số label anchor nằm sát mép ảnh.",
       "region_ids": [
-        66
+        67
       ]
     },
     {
       "code": "TOP_COLORS_DOMINATE_WARNING",
       "message": "Ba màu lớn nhất chiếm hơn 85% ảnh khi số vùng chưa cao; gameplay có thể quá ngắn.",
-      "value": 92.36,
+      "value": 93.52,
       "threshold": 85
     },
     {
@@ -225,17 +191,17 @@
     },
     {
       "code": "TINY_REGION_DENSITY_WARNING",
-      "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile casual; level có thể khó tap hoặc khó đọc.",
+      "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
       "value": {
-        "tiny_lt_100_pct": 42.4,
-        "tiny_lt_200_pct": 54.5,
-        "hidden_label_pct": 40.9,
-        "median_region_area": 163.5
+        "tiny_lt_100_pct": 43.3,
+        "tiny_lt_200_pct": 55.2,
+        "hidden_label_pct": 86.6,
+        "median_region_area": 161.0
       },
       "threshold": {
-        "tiny_lt_100_pct": 35,
-        "tiny_lt_200_pct": 50,
-        "hidden_label_pct": 30
+        "tiny_lt_100_pct": 45,
+        "tiny_lt_200_pct": 60,
+        "hidden_label_pct": 80
       }
     }
   ],
@@ -251,7 +217,7 @@
     {
       "code": "DOMINANT_COLOR_AREA",
       "message": "Một number/color chiếm hơn 85% ảnh; user có thể hoàn thành quá nhiều bằng một màu.",
-      "value": 85.36,
+      "value": 86.46,
       "threshold": 85
     },
     {
@@ -262,10 +228,10 @@
     }
   ],
   "metrics": {
-    "total_regions": 66,
-    "unique_numbers": 61,
-    "tiny_region_count_lt_50": 22,
-    "tiny_region_count_lt_200": 36,
+    "total_regions": 67,
+    "unique_numbers": 49,
+    "tiny_region_count_lt_50": 23,
+    "tiny_region_count_lt_200": 37,
     "mask_config_mismatch_count": 0,
     "mask_missing_config_colors": [],
     "config_missing_mask_colors": [],
@@ -277,67 +243,68 @@
     "largest_region_pct": 85.34,
     "max_region_pct": 85.34,
     "top_3_region_pct": 92.35,
-    "max_color_pct": 85.36,
-    "top_3_color_pct": 92.36,
-    "tiny_region_count_lt_100": 28,
-    "tiny_region_pct_lt_50": 33.3,
-    "tiny_region_pct_lt_100": 42.4,
-    "tiny_region_pct_lt_200": 54.5,
-    "config_hidden_label_count": 27,
-    "config_hidden_label_pct": 40.9,
-    "estimated_hidden_label_count": 57,
-    "estimated_hidden_label_pct": 86.4,
-    "hidden_label_count": 57,
-    "hidden_label_pct": 86.4,
+    "max_color_pct": 86.46,
+    "top_3_color_pct": 93.52,
+    "tiny_region_count_lt_100": 29,
+    "tiny_region_pct_lt_50": 34.3,
+    "tiny_region_pct_lt_100": 43.3,
+    "tiny_region_pct_lt_200": 55.2,
+    "config_hidden_label_count": 30,
+    "config_hidden_label_pct": 44.8,
+    "estimated_hidden_label_count": 58,
+    "estimated_hidden_label_pct": 86.6,
+    "hidden_label_count": 58,
+    "hidden_label_pct": 86.6,
     "label_min_screen_radius_px": 25,
-    "median_region_area": 163.5,
+    "median_region_area": 161.0,
     "p10_region_area": 4,
-    "p25_region_area": 28,
-    "region_density_by_canvas_size": 62.94,
+    "p25_region_area": 24,
+    "region_density_by_canvas_size": 63.9,
     "tiny_region_by_number_lt_100": {
       "1": 1,
-      "11": 1,
+      "10": 1,
+      "12": 1,
+      "13": 1,
       "14": 1,
       "15": 1,
-      "16": 1,
-      "17": 1,
+      "19": 1,
       "2": 1,
+      "20": 1,
       "21": 1,
-      "22": 1,
-      "23": 1,
-      "3": 1,
+      "24": 1,
+      "28": 1,
+      "29": 1,
+      "3": 2,
       "30": 1,
-      "34": 1,
-      "35": 2,
+      "33": 1,
+      "35": 1,
+      "36": 1,
       "37": 1,
-      "39": 1,
       "4": 1,
       "40": 1,
-      "41": 1,
-      "45": 1,
+      "44": 1,
+      "47": 1,
       "5": 1,
-      "51": 1,
-      "59": 1,
       "6": 1,
       "7": 1,
       "8": 1,
       "9": 1
     },
-    "untouchable_region_count": 40,
+    "untouchable_region_count": 41,
     "min_touch_target_at_default_zoom": 1.05,
     "playable_region_count": 30,
     "giant_region_count": 1,
     "background_region_candidate": true,
-    "playability_profile": "standard",
+    "playability_profile": "medium",
     "single_tap_completion_risk": "high",
     "playable_score": 0,
     "line_dark_pct": 4.36,
     "line_ink_pct": 4.36,
     "reference_missing": false,
     "reference_required": false,
-    "preview_mae": 13.7,
-    "color_mae": 13.7,
-    "preview_similarity_score": 94.63,
+    "preview_mae": 13.71,
+    "color_mae": 13.71,
+    "preview_similarity_score": 94.62,
     "shading_preservation_score": 95.38,
     "has_detail": true
   },

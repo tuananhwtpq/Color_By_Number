@@ -30,7 +30,8 @@ def make_report_row():
             "reasons": ["DESIGN_FIX_LINE", "DESIGN_FIX_COLOR"],
             "design_focus": ["line", "color_alignment"],
         },
-        "metrics": {
+            "metrics": {
+            "playability_profile": "medium",
             "total_regions": 10,
             "unique_numbers": 9,
             "largest_region_pct": 84.8,
@@ -103,6 +104,7 @@ class ValidateAssetsReportTest(unittest.TestCase):
             self.assertEqual("GIANT_REGION", rows[0]["fail_reasons"])
             self.assertIn("LINE_TOO_LIGHT", rows[0]["warnings"])
             self.assertEqual("manga:170:2", rows[0]["selected_profile"])
+            self.assertEqual("medium", rows[0]["playability_profile"])
             self.assertEqual("30.0", rows[0]["tiny_region_pct_lt_100"])
             self.assertEqual("285", rows[0]["median_region_area"])
             self.assertEqual('{"1": 2, "unknown": 1}', rows[0]["tiny_region_by_number_lt_100"])
@@ -120,6 +122,7 @@ class ValidateAssetsReportTest(unittest.TestCase):
             self.assertIn("Tiny <100%", content)
             self.assertIn("Hidden alias%", content)
             self.assertIn("Estimated hidden%", content)
+            self.assertIn("Playability profile", content)
             self.assertIn("| Manga | 03 | D | 43 |", content)
             self.assertIn("EXCLUDE_DEMO", content)
             self.assertIn("DESIGN_FIX_LINE", content)
@@ -136,6 +139,7 @@ class ValidateAssetsReportTest(unittest.TestCase):
         compact_header = compact_buffer.getvalue().splitlines()[0]
         full_header = full_buffer.getvalue().splitlines()[0]
         compact_columns = compact_header.split()
+        self.assertIn("profile", compact_header)
         self.assertIn("est_hidden%", compact_header)
         self.assertNotIn("hidden%", compact_columns)
         self.assertIn("config_hidden%", full_header)

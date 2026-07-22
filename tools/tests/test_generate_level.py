@@ -9,9 +9,12 @@ from PIL import Image, ImageDraw
 
 from tools.asset_quality import evaluate_level_dir, measure_preview_mae
 from tools.generate_level import (
+    absorb_small_region_colors,
     create_parser,
     get_representative_color,
+    merge_small_attached_regions,
     merge_tiny_regions_into_neighbors,
+    resolve_generation_profile,
     resolve_generation_profile_settings,
     resolve_target_unique_colors,
     score_preprocessing_candidate,
@@ -50,20 +53,26 @@ class GenerateLevelCliTest(unittest.TestCase):
         }
 
     def test_generation_profile_settings_keep_old_profiles_and_add_difficulty_defaults(self):
+        medium = resolve_generation_profile_settings("medium")
         standard = resolve_generation_profile_settings("standard")
+        easy = resolve_generation_profile_settings("easy")
         casual = resolve_generation_profile_settings("casual")
         hard = resolve_generation_profile_settings("hard")
         mandala = resolve_generation_profile_settings("mandala")
 
-        self.assertEqual(64, standard["target_unique_colors"])
-        self.assertEqual(standard["min_region_area"], casual["min_region_area"])
+        self.assertEqual("medium", resolve_generation_profile("standard"))
+        self.assertEqual("casual", resolve_generation_profile("easy"))
+        self.assertEqual(64, medium["target_unique_colors"])
+        self.assertEqual(medium, standard)
+        self.assertEqual(casual, easy)
+        self.assertGreater(casual["tiny_merge_min_area"], medium["tiny_merge_min_area"])
         self.assertEqual(80, hard["target_unique_colors"])
-        self.assertLess(hard["tiny_merge_min_area"], casual["tiny_merge_min_area"])
-        self.assertLess(mandala["hide_small_label_threshold"], standard["hide_small_label_threshold"])
+        self.assertLess(hard["tiny_merge_min_area"], medium["tiny_merge_min_area"])
+        self.assertLess(mandala["hide_small_label_threshold"], medium["hide_small_label_threshold"])
         self.assertEqual("mandala", mandala["tiny_merge_policy"])
 
         overridden = resolve_generation_profile_settings(
-            "easy",
+            "casual",
             explicit_target=12,
             overrides={"min_region_area": 99},
         )
@@ -73,14 +82,15 @@ class GenerateLevelCliTest(unittest.TestCase):
     def test_profile_vocabulary_accepts_existing_and_playability_names(self):
         parser = create_parser()
 
-        for profile in ["easy", "standard", "mandala", "casual", "hard"]:
+        for profile in ["easy", "standard", "mandala", "casual", "medium", "hard"]:
             args = parser.parse_args(["--category-profile", profile, "single", "line.png", "color.png"])
             self.assertEqual(profile, args.category_profile)
 
-        self.assertEqual(("casual", 64), resolve_target_unique_colors("Animals", "casual", None))
+        self.assertEqual(("casual", 48), resolve_target_unique_colors("Animals", "casual", None))
+        self.assertEqual(("medium", 64), resolve_target_unique_colors("Animals", "medium", None))
+        self.assertEqual(("medium", 64), resolve_target_unique_colors("Animals", "standard", None))
+        self.assertEqual(("casual", 48), resolve_target_unique_colors("Animals", "easy", None))
         self.assertEqual(("hard", 80), resolve_target_unique_colors("Animals", "hard", None))
-        self.assertEqual(("easy", 48), resolve_target_unique_colors("Animals", "easy", None))
-        self.assertEqual(("standard", 64), resolve_target_unique_colors("Animals", "standard", None))
         self.assertEqual(("mandala", 80), resolve_target_unique_colors("Mandala", None, None))
 
     def test_tiny_merge_v2_uses_actual_shared_boundary_not_only_bbox_overlap(self):
@@ -235,6 +245,109 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(0, remaining)
         self.assertEqual(len(long_points) + 1, max(info["area"] for info in merged))
 
+    def test_tiny_merge_v2_does_not_merge_into_giant_target_over_profile_limit(self):
+        tiny = self.make_region_info([(10, 0)], (250, 0, 0), hide_number=True)
+        giant_points = [(x, y) for y in range(90) for x in range(10)]
+        giant_points.append((9, 0))
+        giant_neighbor = self.make_region_info(giant_points, (250, 0, 0))
+        safe_neighbor = self.make_region_info([(11, 0), (11, 1), (12, 0), (12, 1)], (240, 0, 0))
+
+        merged, merged_count, forced_count, remaining, stats = merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, giant_neighbor, safe_neighbor],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=1,
+            color_threshold=20,
+            tiny_merge_policy="strict",
+            profile="casual",
+            total_pixels=1000,
+            return_stats=True,
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(0, remaining)
+        self.assertGreater(stats["tiny_merge_rejected_giant_target"], 0)
+        self.assertTrue(any(info["area"] == 5 and info["target_color"] == (240, 0, 0) for info in merged))
+
+    def test_production_merge_sequence_does_not_merge_small_regions_across_boundary_gap(self):
+        small = self.make_region_info(
+            [(2, 2), (2, 3), (3, 2), (3, 3)],
+            (250, 0, 0),
+            hide_number=True,
+        )
+        separated_by_line_gap = self.make_region_info(
+            [(6, 2), (6, 3), (7, 2), (7, 3), (8, 2), (8, 3)],
+            (250, 0, 0),
+        )
+
+        after_tiny_merge, tiny_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[small, separated_by_line_gap],
+            min_region_area=10,
+            tiny_area_threshold=1,
+            tiny_side_threshold=1,
+            tiny_merge_min_area=1,
+            tiny_merge_min_side=1,
+            attach_distance=12,
+            color_threshold=80,
+            tiny_merge_policy="relaxed",
+        )
+        after_small_merge, small_count = merge_small_attached_regions(
+            region_infos=after_tiny_merge,
+            min_region_area=10,
+            attach_distance=12,
+            color_threshold=80,
+            tiny_area_threshold=1,
+            tiny_side_threshold=1,
+            tiny_merge_min_area=1,
+            tiny_merge_min_side=1,
+        )
+
+        self.assertEqual(0, tiny_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(0, remaining)
+        self.assertEqual(0, small_count)
+        self.assertEqual(2, len(after_small_merge))
+
+    def test_absorb_small_region_colors_does_not_copy_color_across_boundary_gap(self):
+        small = self.make_region_info([(2, 2), (2, 3)], (250, 0, 0), hide_number=True)
+        separated_by_line_gap = self.make_region_info(
+            [(5, 2), (5, 3), (6, 2), (6, 3)],
+            (240, 0, 0),
+        )
+
+        absorbed_count = absorb_small_region_colors(
+            region_infos=[small, separated_by_line_gap],
+            attach_distance=12,
+            color_threshold=80,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+        )
+
+        self.assertEqual(0, absorbed_count)
+        self.assertEqual((250, 0, 0), small["target_color"])
+
+    def test_absorb_small_region_colors_can_copy_color_from_adjacent_neighbor(self):
+        small = self.make_region_info([(2, 2), (2, 3)], (250, 0, 0), hide_number=True)
+        adjacent_neighbor = self.make_region_info(
+            [(3, 2), (3, 3), (4, 2), (4, 3)],
+            (240, 0, 0),
+        )
+
+        absorbed_count = absorb_small_region_colors(
+            region_infos=[small, adjacent_neighbor],
+            attach_distance=0,
+            color_threshold=80,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+        )
+
+        self.assertEqual(1, absorbed_count)
+        self.assertEqual((240, 0, 0), small["target_color"])
+
     def test_candidate_selection_prefers_playable_score_over_proxy_quality(self):
         candidates = [
             {
@@ -260,18 +373,18 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual("mandala", selected["profile"])
 
     def test_candidate_scoring_uses_playability_profile_for_tiny_gate(self):
-        binary = Image.new("L", (100, 100), 0)
+        binary = Image.new("L", (240, 240), 0)
         draw = ImageDraw.Draw(binary)
         for index in range(45):
-            x = (index % 15) * 6
-            y = (index // 15) * 20
+            x = (index % 15) * 8
+            y = (index // 15) * 12
             draw.rectangle((x, y, x + 2, y + 2), fill=255)
         for index in range(55):
-            x = (index % 11) * 9
-            y = 60 + (index // 11) * 8
-            draw.rectangle((x, y, x + 5, y + 5), fill=255)
+            x = (index % 11) * 20
+            y = 70 + (index // 11) * 28
+            draw.rectangle((x, y, x + 14, y + 14), fill=255)
 
-        casual_report = score_preprocessing_candidate(binary, playability_profile="standard")
+        casual_report = score_preprocessing_candidate(binary, playability_profile="casual")
         mandala_report = score_preprocessing_candidate(binary, playability_profile="mandala")
 
         self.assertIn(
@@ -382,6 +495,20 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertNotIn("candidate_top", config["generation"]["selected_preprocessing"])
             self.assertIn("candidate_top", report["generation_params"]["selected_preprocessing"])
             self.assertEqual("reference_lerp_rgba", report["generation_params"]["detail_mode"])
+            self.assertEqual(
+                "shared_boundary_adjacency",
+                config["generation_params"]["small_region_merge_mode"],
+            )
+            self.assertEqual(
+                "shared_boundary_adjacency",
+                config["generation_params"]["small_color_absorb_mode"],
+            )
+            self.assertEqual(
+                "shared_boundary_adjacency",
+                config["generation_params"]["tiny_region_merge_mode"],
+            )
+            self.assertNotIn("small_region_attach_distance", config["generation_params"])
+            self.assertNotIn("tiny_merge_attach_distance", config["generation_params"])
             self.assertIn("preview_similarity_score", report["metrics"])
 
     def test_detail_layer_improves_gradient_preview_without_increasing_regions(self):

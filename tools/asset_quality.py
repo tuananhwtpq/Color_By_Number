@@ -6,15 +6,16 @@ from collections import Counter
 
 from PIL import Image, ImageChops, ImageStat
 
+try:
+    from playability_profiles import normalize_profile, profile_thresholds
+except ImportError:
+    from tools.playability_profiles import normalize_profile, profile_thresholds
+
 
 BACKGROUND_MASK_COLORS = {(0, 0, 0)}
 PLAYABLE_REGION_MIN_AREA = 200
 DEFAULT_VIEW_SIZE = (1080, 1080)
 ANDROID_LABEL_MIN_SCREEN_RADIUS_PX = 25
-
-
-def normalize_profile(profile):
-    return (profile or "casual").lower()
 
 
 def rgb_to_int(rgb):
@@ -657,6 +658,9 @@ def score_quality(metrics):
         )
         score -= 18
 
+    profile = normalize_profile(metrics.get("playability_profile"))
+    thresholds = profile_thresholds(profile)
+
     if total_regions < 10:
         fail_reasons.append(
             make_issue(
@@ -667,13 +671,13 @@ def score_quality(metrics):
             )
         )
         score -= 28
-    elif total_regions > 900:
+    elif total_regions > thresholds["max_region_count"]:
         warnings.append(
             make_issue(
                 "TOO_MANY_REGIONS",
-                "Số vùng tô rất cao; level có thể nặng và khó thao tác trên mobile.",
+                f"Số vùng tô rất cao so với profile {profile}; level có thể nặng và khó thao tác trên mobile.",
                 total_regions,
-                900,
+                thresholds["max_region_count"],
             )
         )
         score -= 12
@@ -844,36 +848,35 @@ def score_quality(metrics):
         score -= min(35, 12 + area_mismatch_count * 2)
 
     tiny_count = metrics.get("tiny_region_count_lt_50") or 0
-    if total_regions and tiny_count > max(20, total_regions * 0.25):
+    many_tiny_threshold = max(20, int(total_regions * thresholds["many_tiny_lt_50_ratio"]))
+    if total_regions and tiny_count > many_tiny_threshold:
         warnings.append(
             make_issue(
                 "MANY_TINY_REGIONS",
-                "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
+                f"Có nhiều vùng rất nhỏ dưới 50px so với profile {profile}; user có thể khó tap hoặc khó đọc số.",
                 tiny_count,
-                max(20, int(total_regions * 0.25)),
+                many_tiny_threshold,
             )
         )
         score -= 8
 
-    profile = normalize_profile(metrics.get("playability_profile"))
     tiny_pct_100 = metrics.get("tiny_region_pct_lt_100") or 0
     tiny_pct_200 = metrics.get("tiny_region_pct_lt_200") or 0
     hidden_label_pct = (
-        metrics.get("config_hidden_label_pct")
-        if metrics.get("config_hidden_label_pct") is not None
+        metrics.get("estimated_hidden_label_pct")
+        if metrics.get("estimated_hidden_label_pct") is not None
         else metrics.get("hidden_label_pct")
     ) or 0
     median_area = metrics.get("median_region_area") or 0
-    tiny_profile_is_strict = profile not in {"hard", "mandala"}
-    if tiny_profile_is_strict and (
-        tiny_pct_100 > 35
-        or tiny_pct_200 > 50
-        or hidden_label_pct > 30
+    if (
+        tiny_pct_100 > thresholds["max_tiny_pct_lt_100"]
+        or tiny_pct_200 > thresholds["max_tiny_pct_lt_200"]
+        or hidden_label_pct > thresholds["max_hidden_label_pct"]
     ):
         warnings.append(
             make_issue(
                 "TINY_REGION_DENSITY_WARNING",
-                "Tỷ lệ vùng nhỏ/ẩn số cao so với profile casual; level có thể khó tap hoặc khó đọc.",
+                f"Tỷ lệ vùng nhỏ/ẩn số cao so với profile {profile}; level có thể khó tap hoặc khó đọc.",
                 {
                     "tiny_lt_100_pct": tiny_pct_100,
                     "tiny_lt_200_pct": tiny_pct_200,
@@ -881,9 +884,9 @@ def score_quality(metrics):
                     "median_region_area": median_area,
                 },
                 {
-                    "tiny_lt_100_pct": 35,
-                    "tiny_lt_200_pct": 50,
-                    "hidden_label_pct": 30,
+                    "tiny_lt_100_pct": thresholds["max_tiny_pct_lt_100"],
+                    "tiny_lt_200_pct": thresholds["max_tiny_pct_lt_200"],
+                    "hidden_label_pct": thresholds["max_hidden_label_pct"],
                 },
             )
         )

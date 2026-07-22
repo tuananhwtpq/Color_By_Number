@@ -12,6 +12,7 @@ from tools.asset_quality import (
     evaluate_level_dir,
     measure_luminance_preservation_score,
     measure_preview_similarity_score,
+    normalize_profile,
     score_quality,
 )
 
@@ -184,6 +185,47 @@ class AssetQualityTest(unittest.TestCase):
 
         warning_codes = {issue["code"] for issue in quality["warnings"]}
         self.assertIn("TINY_REGION_DENSITY_WARNING", warning_codes)
+
+    def test_profile_aliases_and_thresholds_for_tiny_density_gate(self):
+        self.assertEqual("medium", normalize_profile("standard"))
+        self.assertEqual("casual", normalize_profile("easy"))
+
+        shared_metrics = {
+            "total_regions": 700,
+            "unique_numbers": 20,
+            "largest_region_pct": 20,
+            "tiny_region_count_lt_50": 60,
+            "tiny_region_pct_lt_100": 42,
+            "tiny_region_pct_lt_200": 55,
+            "estimated_hidden_label_pct": 78,
+            "config_hidden_label_pct": None,
+            "median_region_area": 150,
+            "preview_mae": 10,
+            "mask_config_mismatch_count": 0,
+        }
+
+        casual_quality = score_quality(
+            {**shared_metrics, "playability_profile": "casual"}
+        )
+        medium_quality = score_quality(
+            {**shared_metrics, "playability_profile": "medium"}
+        )
+        hard_quality = score_quality(
+            {**shared_metrics, "playability_profile": "hard"}
+        )
+
+        self.assertIn(
+            "TINY_REGION_DENSITY_WARNING",
+            {issue["code"] for issue in casual_quality["warnings"]},
+        )
+        self.assertNotIn(
+            "TINY_REGION_DENSITY_WARNING",
+            {issue["code"] for issue in medium_quality["warnings"]},
+        )
+        self.assertNotIn(
+            "TINY_REGION_DENSITY_WARNING",
+            {issue["code"] for issue in hard_quality["warnings"]},
+        )
 
     def test_gameplay_metrics_report_region_and_color_distribution(self):
         metrics = calculate_gameplay_metrics(

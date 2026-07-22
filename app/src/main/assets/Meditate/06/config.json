@@ -271,8 +271,8 @@
     {
       "number": 43,
       "target_color": "#bf977d",
-      "region_count": 2,
-      "total_area": 770
+      "region_count": 1,
+      "total_area": 621
     },
     {
       "number": 44,
@@ -282,36 +282,48 @@
     },
     {
       "number": 45,
+      "target_color": "#c39a87",
+      "region_count": 1,
+      "total_area": 149
+    },
+    {
+      "number": 46,
       "target_color": "#7fad94",
       "region_count": 1,
       "total_area": 3791
     },
     {
-      "number": 46,
+      "number": 47,
       "target_color": "#82b4a1",
       "region_count": 1,
       "total_area": 7710
     },
     {
-      "number": 47,
+      "number": 48,
       "target_color": "#cfac85",
       "region_count": 1,
       "total_area": 972560
     },
     {
-      "number": 48,
+      "number": 49,
       "target_color": "#b6b0ae",
       "region_count": 1,
       "total_area": 107
     },
     {
-      "number": 49,
-      "target_color": "#c9bca6",
-      "region_count": 2,
-      "total_area": 577
+      "number": 50,
+      "target_color": "#bbbcac",
+      "region_count": 1,
+      "total_area": 106
     },
     {
-      "number": 50,
+      "number": 51,
+      "target_color": "#c9bca6",
+      "region_count": 1,
+      "total_area": 471
+    },
+    {
+      "number": 52,
       "target_color": "#edbf9d",
       "region_count": 1,
       "total_area": 169
@@ -319,12 +331,12 @@
   ],
   "region_palette": [
     {
-      "number": 47,
+      "number": 48,
       "mask_color": "#000001",
       "target_color": "#cfac85"
     },
     {
-      "number": 50,
+      "number": 52,
       "mask_color": "#000002",
       "target_color": "#edbf9d"
     },
@@ -344,17 +356,17 @@
       "target_color": "#241106"
     },
     {
-      "number": 46,
+      "number": 47,
       "mask_color": "#000006",
       "target_color": "#82b4a1"
     },
     {
-      "number": 49,
+      "number": 50,
       "mask_color": "#000007",
-      "target_color": "#c9bca6"
+      "target_color": "#bbbcac"
     },
     {
-      "number": 45,
+      "number": 46,
       "mask_color": "#000008",
       "target_color": "#7fad94"
     },
@@ -364,7 +376,7 @@
       "target_color": "#ea665e"
     },
     {
-      "number": 49,
+      "number": 51,
       "mask_color": "#00000a",
       "target_color": "#c9bca6"
     },
@@ -399,14 +411,14 @@
       "target_color": "#b68663"
     },
     {
-      "number": 48,
+      "number": 49,
       "mask_color": "#000011",
       "target_color": "#b6b0ae"
     },
     {
-      "number": 43,
+      "number": 45,
       "mask_color": "#000012",
-      "target_color": "#bf977d"
+      "target_color": "#c39a87"
     },
     {
       "number": 22,
@@ -583,7 +595,7 @@
     {
       "id": 1,
       "mask_color": "#000001",
-      "number": 47,
+      "number": 48,
       "target_color": "#cfac85",
       "fill_color": "#cfac85",
       "representative_color": "#cfac85",
@@ -613,7 +625,7 @@
     {
       "id": 2,
       "mask_color": "#000002",
-      "number": 50,
+      "number": 52,
       "target_color": "#edbf9d",
       "fill_color": "#edbf9d",
       "representative_color": "#edbf9d",
@@ -665,7 +677,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -722,18 +734,18 @@
         "x": 130.0,
         "y": 485.0
       },
-      "hide_number": false,
+      "hide_number": true,
       "quality": {
-        "is_tiny": false,
-        "is_small": false,
-        "touchable": true,
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
         "merged_region_count": 1
       }
     },
     {
       "id": 6,
       "mask_color": "#000006",
-      "number": 46,
+      "number": 47,
       "target_color": "#82b4a1",
       "fill_color": "#82b4a1",
       "representative_color": "#82b4a1",
@@ -763,10 +775,10 @@
     {
       "id": 7,
       "mask_color": "#000007",
-      "number": 49,
-      "target_color": "#c9bca6",
-      "fill_color": "#c9bca6",
-      "representative_color": "#c9bca6",
+      "number": 50,
+      "target_color": "#bbbcac",
+      "fill_color": "#bbbcac",
+      "representative_color": "#bbbcac",
       "area": 106,
       "bbox": {
         "left": 958,
@@ -785,7 +797,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -793,7 +805,7 @@
     {
       "id": 8,
       "mask_color": "#000008",
-      "number": 45,
+      "number": 46,
       "target_color": "#7fad94",
       "fill_color": "#7fad94",
       "representative_color": "#7fad94",
@@ -845,7 +857,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -853,7 +865,7 @@
     {
       "id": 10,
       "mask_color": "#00000a",
-      "number": 49,
+      "number": 51,
       "target_color": "#c9bca6",
       "fill_color": "#c9bca6",
       "representative_color": "#c9bca6",
@@ -905,7 +917,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -935,7 +947,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -1063,7 +1075,7 @@
     {
       "id": 17,
       "mask_color": "#000011",
-      "number": 48,
+      "number": 49,
       "target_color": "#b6b0ae",
       "fill_color": "#b6b0ae",
       "representative_color": "#b6b0ae",
@@ -1085,7 +1097,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -1093,10 +1105,10 @@
     {
       "id": 18,
       "mask_color": "#000012",
-      "number": 43,
-      "target_color": "#bf977d",
-      "fill_color": "#bf977d",
-      "representative_color": "#bf977d",
+      "number": 45,
+      "target_color": "#c39a87",
+      "fill_color": "#c39a87",
+      "representative_color": "#c39a87",
       "area": 149,
       "bbox": {
         "left": 876,
@@ -1145,7 +1157,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -1325,7 +1337,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -1385,7 +1397,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -1445,7 +1457,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -1802,11 +1814,11 @@
         "x": 166.0,
         "y": 895.0
       },
-      "hide_number": false,
+      "hide_number": true,
       "quality": {
-        "is_tiny": false,
-        "is_small": false,
-        "touchable": true,
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
         "merged_region_count": 1
       }
     },
@@ -2105,7 +2117,7 @@
       "hide_number": false,
       "quality": {
         "is_tiny": false,
-        "is_small": false,
+        "is_small": true,
         "touchable": true,
         "merged_region_count": 1
       }
@@ -2135,7 +2147,7 @@
       "hide_number": true,
       "quality": {
         "is_tiny": true,
-        "is_small": false,
+        "is_small": true,
         "touchable": false,
         "merged_region_count": 1
       }
@@ -2143,15 +2155,15 @@
   ],
   "stats": {
     "total_regions": 52,
-    "unique_numbers": 50,
+    "unique_numbers": 52,
     "estimated_difficulty": 10,
-    "small_regions_count": 13,
+    "small_regions_count": 27,
     "giant_regions_count": 1
   },
   "estimated_difficulty": 10,
   "total_regions": 52,
-  "unique_numbers": 50,
-  "small_regions_count": 13,
+  "unique_numbers": 52,
+  "small_regions_count": 27,
   "skipped_noise_regions": 8,
   "merged_small_regions_count": 0,
   "merged_tiny_regions_count": 0,
@@ -2162,19 +2174,24 @@
     "brightness_threshold": 120,
     "merge_threshold": 15.0,
     "line_close_radius": 0,
-    "min_region_area": 8,
-    "hide_small_label_threshold": 48,
-    "small_region_attach_distance": 8,
+    "min_region_area": 120,
+    "hide_small_label_threshold": 100,
     "tiny_region_side_threshold": 10,
-    "tiny_merge_min_area": 20,
+    "tiny_merge_min_area": 48,
     "tiny_merge_min_side": 6,
-    "tiny_merge_attach_distance": 16,
+    "small_region_merge_mode": "shared_boundary_adjacency",
+    "small_color_absorb_mode": "shared_boundary_adjacency",
+    "tiny_region_merge_mode": "shared_boundary_adjacency",
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
+    "tiny_merge_rejected_non_adjacent": 23,
+    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_giant_target": 0,
+    "tiny_merge_profile": "medium",
     "adaptive_palette": true,
     "quantize_method": "mediancut",
     "region_color_method": "median",
-    "category_profile": "standard",
+    "category_profile": "medium",
     "target_unique_colors": 64,
     "preprocess_profile": "standard",
     "selected_preprocessing": {
@@ -2190,19 +2207,24 @@
     "brightness_threshold": 120,
     "merge_threshold": 15.0,
     "line_close_radius": 0,
-    "min_region_area": 8,
-    "hide_small_label_threshold": 48,
-    "small_region_attach_distance": 8,
+    "min_region_area": 120,
+    "hide_small_label_threshold": 100,
     "tiny_region_side_threshold": 10,
-    "tiny_merge_min_area": 20,
+    "tiny_merge_min_area": 48,
     "tiny_merge_min_side": 6,
-    "tiny_merge_attach_distance": 16,
+    "small_region_merge_mode": "shared_boundary_adjacency",
+    "small_color_absorb_mode": "shared_boundary_adjacency",
+    "tiny_region_merge_mode": "shared_boundary_adjacency",
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
+    "tiny_merge_rejected_non_adjacent": 23,
+    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_giant_target": 0,
+    "tiny_merge_profile": "medium",
     "adaptive_palette": true,
     "quantize_method": "mediancut",
     "region_color_method": "median",
-    "category_profile": "standard",
+    "category_profile": "medium",
     "target_unique_colors": 64,
     "preprocess_profile": "standard",
     "selected_preprocessing": {
@@ -2214,16 +2236,16 @@
     "detail_mode": "reference_lerp_rgba",
     "detail_alpha": 0.65
   },
-  "category_profile": "standard",
+  "category_profile": "medium",
   "target_unique_colors": 64,
-  "initial_unique_numbers": 50,
-  "final_unique_numbers": 50,
+  "initial_unique_numbers": 52,
+  "final_unique_numbers": 52,
   "quantization_method": "mediancut",
   "quantized_reference_color_count": 160,
   "final_merge_threshold": 15.0,
   "palette_reduction_passes": 0,
   "palette_reduction_reason": "within_limit",
-  "absorbed_small_color_count": 2,
+  "absorbed_small_color_count": 0,
   "compat": {
     "region_palette_entries": true,
     "android_source_of_truth": "regions"
