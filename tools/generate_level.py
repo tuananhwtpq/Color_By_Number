@@ -8,9 +8,19 @@ from PIL import Image, ImageFilter
 from PIL import ImageDraw
 
 try:
-    from asset_quality import evaluate_level_dir, merge_quality_report, score_quality
+    from asset_quality import (
+        calculate_gameplay_metrics,
+        evaluate_level_dir,
+        merge_quality_report,
+        score_quality,
+    )
 except ImportError:
-    from tools.asset_quality import evaluate_level_dir, merge_quality_report, score_quality
+    from tools.asset_quality import (
+        calculate_gameplay_metrics,
+        evaluate_level_dir,
+        merge_quality_report,
+        score_quality,
+    )
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,9 +28,63 @@ DEFAULT_ASSETS_ROOT = os.path.abspath(
     os.path.join(SCRIPT_DIR, "..", "app", "src", "main", "assets")
 )
 DEFAULT_PROFILE_TARGETS = {
+    "casual": 64,
     "mandala": 80,
     "standard": 64,
     "easy": 48,
+    "hard": 80,
+}
+GENERATION_PROFILE_DEFAULTS = {
+    "casual": {
+        "target_unique_colors": 64,
+        "min_region_area": 8,
+        "hide_small_label_threshold": 48,
+        "small_region_attach_distance": 8,
+        "tiny_region_side_threshold": 10,
+        "tiny_merge_min_area": 20,
+        "tiny_merge_min_side": 6,
+        "tiny_merge_policy": "relaxed",
+    },
+    "standard": {
+        "target_unique_colors": 64,
+        "min_region_area": 8,
+        "hide_small_label_threshold": 48,
+        "small_region_attach_distance": 8,
+        "tiny_region_side_threshold": 10,
+        "tiny_merge_min_area": 20,
+        "tiny_merge_min_side": 6,
+        "tiny_merge_policy": "relaxed",
+    },
+    "easy": {
+        "target_unique_colors": 48,
+        "min_region_area": 20,
+        "hide_small_label_threshold": 96,
+        "small_region_attach_distance": 10,
+        "tiny_region_side_threshold": 14,
+        "tiny_merge_min_area": 48,
+        "tiny_merge_min_side": 8,
+        "tiny_merge_policy": "relaxed",
+    },
+    "hard": {
+        "target_unique_colors": 80,
+        "min_region_area": 6,
+        "hide_small_label_threshold": 32,
+        "small_region_attach_distance": 6,
+        "tiny_region_side_threshold": 8,
+        "tiny_merge_min_area": 12,
+        "tiny_merge_min_side": 4,
+        "tiny_merge_policy": "strict",
+    },
+    "mandala": {
+        "target_unique_colors": 80,
+        "min_region_area": 4,
+        "hide_small_label_threshold": 24,
+        "small_region_attach_distance": 5,
+        "tiny_region_side_threshold": 7,
+        "tiny_merge_min_area": 8,
+        "tiny_merge_min_side": 4,
+        "tiny_merge_policy": "mandala",
+    },
 }
 TINY_MERGE_POLICY_DEFAULTS = {
     "relaxed": {
@@ -74,7 +138,17 @@ def resolve_target_unique_colors(category_name, requested_profile=None, explicit
     profile = infer_category_profile(category_name, requested_profile)
     if explicit_target is not None:
         return profile, max(2, explicit_target)
-    return profile, DEFAULT_PROFILE_TARGETS[profile]
+    return profile, GENERATION_PROFILE_DEFAULTS[profile]["target_unique_colors"]
+
+
+def resolve_generation_profile_settings(profile, explicit_target=None, overrides=None):
+    settings = dict(GENERATION_PROFILE_DEFAULTS[profile])
+    if explicit_target is not None:
+        settings["target_unique_colors"] = max(2, explicit_target)
+    for key, value in (overrides or {}).items():
+        if value is not None:
+            settings[key] = value
+    return settings
 
 
 def get_quantize_method(method_name):
@@ -183,13 +257,19 @@ def build_preprocessing_candidates(
     return profiles.get(preprocess_profile, [base_candidate])
 
 
-def score_preprocessing_candidate(binary_img):
+def score_preprocessing_candidate(binary_img, playability_profile="standard"):
     regions = extract_regions(binary_img)
     total_pixels = max(1, binary_img.width * binary_img.height)
     region_areas = [len(region) for region in regions if len(region) > 1]
     total_regions = len(region_areas)
     largest_pct = max(region_areas, default=0) * 100.0 / total_pixels
     tiny_regions = sum(1 for area in region_areas if area < 50)
+    gameplay_metrics = calculate_gameplay_metrics(
+        total_pixels=total_pixels,
+        region_areas=region_areas,
+        color_areas=None,
+        profile=playability_profile,
+    )
 
     metrics = {
         "total_regions": total_regions,
@@ -197,6 +277,7 @@ def score_preprocessing_candidate(binary_img):
         "largest_region_pct": round(largest_pct, 2),
         "tiny_region_count_lt_50": tiny_regions,
         "mask_config_mismatch_count": 0,
+        **gameplay_metrics,
     }
     quality = score_quality(metrics)
     return {
@@ -204,16 +285,34 @@ def score_preprocessing_candidate(binary_img):
         "evaluation_mode": "pre_generation_proxy",
         "candidate_proxy_score": quality["quality_score"],
         "candidate_proxy_grade": quality["quality_grade"],
+        "candidate_playable_score": gameplay_metrics["playable_score"],
         "quality_score": quality["quality_score"],
         "quality_grade": quality["quality_grade"],
         "fail_reasons": quality["fail_reasons"],
         "warnings": quality["warnings"],
         "total_regions": total_regions,
         "largest_region_pct": round(largest_pct, 2),
+        "top_3_region_pct": gameplay_metrics["top_3_region_pct"],
+        "playable_region_count": gameplay_metrics["playable_region_count"],
+        "giant_region_count": gameplay_metrics["giant_region_count"],
+        "single_tap_completion_risk": gameplay_metrics["single_tap_completion_risk"],
+        "playable_score": gameplay_metrics["playable_score"],
         "tiny_region_count_lt_50": tiny_regions,
         "preview_mae": None,
         "preview_mae_reason": "not_available_before_full_generation",
     }
+
+
+def select_preprocessing_candidate(candidates):
+    return max(
+        candidates,
+        key=lambda item: (
+            item.get("playable_score", item.get("candidate_playable_score", 0)),
+            item.get("quality_score", item.get("score", 0)),
+            -abs(item.get("largest_region_pct", 0) - 35.0),
+            item.get("total_regions", 0),
+        ),
+    )
 
 
 def select_binary_fill_map(
@@ -221,6 +320,7 @@ def select_binary_fill_map(
     brightness_threshold,
     line_close_radius,
     preprocess_profile,
+    playability_profile="standard",
 ):
     line_img = Image.open(line_art_path).convert("RGB")
     gray = line_img.convert("L")
@@ -239,19 +339,15 @@ def select_binary_fill_map(
         binary = close_small_line_gaps(binary, candidate["line_close_radius"])
         candidate_report = {
             **candidate,
-            **score_preprocessing_candidate(binary),
+            **score_preprocessing_candidate(
+                binary,
+                playability_profile=playability_profile,
+            ),
             "binary": binary,
         }
         candidates.append(candidate_report)
 
-    selected = max(
-        candidates,
-        key=lambda item: (
-            item["score"],
-            -abs(item["largest_region_pct"] - 35.0),
-            item["total_regions"],
-        ),
-    )
+    selected = select_preprocessing_candidate(candidates)
     selected_report = {key: value for key, value in selected.items() if key != "binary"}
     selected_report["candidate_count"] = len(candidates)
     selected_report["candidate_top"] = [
@@ -259,6 +355,7 @@ def select_binary_fill_map(
         for candidate in sorted(
             candidates,
             key=lambda item: (
+                item.get("playable_score", item.get("candidate_playable_score", 0)),
                 item["quality_score"],
                 -abs(item["largest_region_pct"] - 35.0),
                 item["total_regions"],
@@ -267,6 +364,14 @@ def select_binary_fill_map(
         )[:3]
     ]
     return line_img, selected["binary"], selected_report
+
+
+def make_runtime_preprocessing_report(selected_preprocessing):
+    return {
+        key: selected_preprocessing[key]
+        for key in ["profile", "brightness_threshold", "line_close_radius"]
+        if key in selected_preprocessing
+    }
 
 
 def make_line_output_image(binary_img):
@@ -560,7 +665,9 @@ def build_palette_with_adaptive_merge(
         }
 
     profile_multiplier = {
+        "casual": 1.0,
         "easy": 1.15,
+        "hard": 0.92,
         "standard": 1.0,
         "mandala": 0.92,
     }[category_profile]
@@ -893,6 +1000,40 @@ def region_neighbor_score(small_info, candidate_info, color_gap):
     )
 
 
+def sample_region_points(points, max_points=400):
+    if len(points) <= max_points:
+        return points
+    stride = max(1, int(math.ceil(len(points) / max_points)))
+    return points[::stride]
+
+
+def region_edge_distance(region_a, region_b):
+    points_a = sample_region_points(region_a["region"])
+    points_b = sample_region_points(region_b["region"])
+    best_distance = None
+    for ax, ay in points_a:
+        for bx, by in points_b:
+            distance = max(abs(ax - bx), abs(ay - by))
+            if best_distance is None or distance < best_distance:
+                best_distance = distance
+                if best_distance <= 1:
+                    return best_distance
+    return best_distance
+
+
+def tiny_region_neighbor_score(small_info, candidate_info, color_gap, edge_distance):
+    centroid_dx = small_info["centroid"]["x"] - candidate_info["centroid"]["x"]
+    centroid_dy = small_info["centroid"]["y"] - candidate_info["centroid"]["y"]
+    centroid_distance = math.sqrt(centroid_dx * centroid_dx + centroid_dy * centroid_dy)
+    normalized_area_penalty = small_info["area"] / max(1.0, candidate_info["area"])
+    return (
+        edge_distance * 4.0
+        + color_gap
+        + centroid_distance * 0.03
+        + normalized_area_penalty * 5.0
+    )
+
+
 def merge_region_info_into_parent(parent_info, child_info):
     merged_regions = list(parent_info["region"])
     merged_regions.extend(child_info["region"])
@@ -973,8 +1114,17 @@ def merge_tiny_regions_into_neighbors(
                 if max(gap_x, gap_y) > effective_attach_distance:
                     continue
 
+                edge_distance = region_edge_distance(small_info, candidate_info)
+                if edge_distance is None or edge_distance > effective_attach_distance:
+                    continue
+
                 color_gap = color_distance(small_info["target_color"], candidate_info["target_color"])
-                score = region_neighbor_score(small_info, candidate_info, color_gap)
+                score = tiny_region_neighbor_score(
+                    small_info,
+                    candidate_info,
+                    color_gap,
+                    edge_distance,
+                )
 
                 if color_gap <= effective_color_threshold:
                     if best_candidate_score is None or score < best_candidate_score:
@@ -1194,16 +1344,16 @@ def generate_level_assets(
     generated_id="",
     brightness_threshold=120,
     color_merge_threshold=15.0,
-    min_region_area=8,
+    min_region_area=None,
     line_close_radius=0,
-    hide_small_label_threshold=48,
-    small_region_attach_distance=8,
-    tiny_region_side_threshold=10,
-    tiny_merge_min_area=20,
-    tiny_merge_min_side=6,
+    hide_small_label_threshold=None,
+    small_region_attach_distance=None,
+    tiny_region_side_threshold=None,
+    tiny_merge_min_area=None,
+    tiny_merge_min_side=None,
     tiny_merge_attach_distance=None,
     tiny_merge_color_threshold=None,
-    tiny_merge_policy="relaxed",
+    tiny_merge_policy=None,
     target_unique_colors=None,
     category_profile=None,
     quantize_method="mediancut",
@@ -1213,11 +1363,38 @@ def generate_level_assets(
     detail_alpha=0.65,
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
+    resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
+        category_name=category_name,
+        requested_profile=category_profile,
+        explicit_target=target_unique_colors,
+    )
+    profile_settings = resolve_generation_profile_settings(
+        resolved_profile,
+        explicit_target=target_unique_colors,
+        overrides={
+            "min_region_area": min_region_area,
+            "hide_small_label_threshold": hide_small_label_threshold,
+            "small_region_attach_distance": small_region_attach_distance,
+            "tiny_region_side_threshold": tiny_region_side_threshold,
+            "tiny_merge_min_area": tiny_merge_min_area,
+            "tiny_merge_min_side": tiny_merge_min_side,
+            "tiny_merge_policy": tiny_merge_policy,
+        },
+    )
+    resolved_target_unique_colors = profile_settings["target_unique_colors"]
+    min_region_area = profile_settings["min_region_area"]
+    hide_small_label_threshold = profile_settings["hide_small_label_threshold"]
+    small_region_attach_distance = profile_settings["small_region_attach_distance"]
+    tiny_region_side_threshold = profile_settings["tiny_region_side_threshold"]
+    tiny_merge_min_area = profile_settings["tiny_merge_min_area"]
+    tiny_merge_min_side = profile_settings["tiny_merge_min_side"]
+    tiny_merge_policy = profile_settings["tiny_merge_policy"]
     source_line_img, binary_img, selected_preprocessing = select_binary_fill_map(
         line_art_path,
         brightness_threshold=brightness_threshold,
         line_close_radius=line_close_radius,
         preprocess_profile=preprocess_profile,
+        playability_profile=resolved_profile,
     )
     print(
         "Preprocess được chọn: "
@@ -1235,11 +1412,6 @@ def generate_level_assets(
 
     width, height = source_line_img.size
     line_img = make_line_output_image(binary_img)
-    resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
-        category_name=category_name,
-        requested_profile=category_profile,
-        explicit_target=target_unique_colors,
-    )
     quantized_ref_img, quantized_palette_budget, quantized_palette_count = build_quantized_reference_image(
         ref_img,
         target_unique_colors=resolved_target_unique_colors,
@@ -1451,7 +1623,7 @@ def generate_level_assets(
         "small_regions_count": small_regions_count,
         "giant_regions_count": giant_regions_count,
     }
-    generation_params = {
+    debug_generation_params = {
         "brightness_threshold": brightness_threshold,
         "merge_threshold": color_merge_threshold,
         "line_close_radius": line_close_radius,
@@ -1474,6 +1646,10 @@ def generate_level_assets(
         "has_detail": True,
         "detail_mode": "reference_lerp_rgba",
         "detail_alpha": detail_alpha,
+    }
+    runtime_generation_params = {
+        **debug_generation_params,
+        "selected_preprocessing": make_runtime_preprocessing_report(selected_preprocessing),
     }
 
     print(
@@ -1549,7 +1725,7 @@ def generate_level_assets(
         height=height,
         region_configs=region_configs,
         stats=stats,
-        generation_params=generation_params,
+        generation_params=debug_generation_params,
     )
     config_data = {
         "schema_version": 2,
@@ -1583,9 +1759,9 @@ def generate_level_assets(
         "remaining_tiny_regions_count": remaining_tiny_regions_count,
         "generation": {
             "source_mode": "line_plus_reference",
-            **generation_params,
+            **runtime_generation_params,
         },
-        "generation_params": generation_params,
+        "generation_params": runtime_generation_params,
         "category_profile": resolved_profile,
         "target_unique_colors": resolved_target_unique_colors,
         "initial_unique_numbers": palette_result["initial_unique_numbers"],
@@ -1645,8 +1821,7 @@ def create_parser():
     parser.add_argument(
         "--min-region-area",
         type=int,
-        default=8,
-        help="Ngưỡng vùng nhỏ để đánh dấu small region.",
+        help="Ngưỡng vùng nhỏ để đánh dấu small region. Mặc định lấy theo --category-profile.",
     )
     parser.add_argument(
         "--line-close-radius",
@@ -1657,32 +1832,27 @@ def create_parser():
     parser.add_argument(
         "--hide-small-label-threshold",
         type=int,
-        default=48,
-        help="Ẩn số ở các vùng quá nhỏ hơn ngưỡng này.",
+        help="Ẩn số ở các vùng quá nhỏ hơn ngưỡng này. Mặc định lấy theo --category-profile.",
     )
     parser.add_argument(
         "--small-region-attach-distance",
         type=int,
-        default=8,
-        help="Khoảng cách tối đa để gộp vùng rất nhỏ vào vùng lớn cùng màu ở gần.",
+        help="Khoảng cách tối đa để gộp vùng rất nhỏ vào vùng lớn cùng màu ở gần. Mặc định lấy theo --category-profile.",
     )
     parser.add_argument(
         "--tiny-region-side-threshold",
         type=int,
-        default=10,
-        help="Ngưỡng cạnh nhỏ nhất của bbox để xem vùng là quá nhỏ cho việc hiển thị số.",
+        help="Ngưỡng cạnh nhỏ nhất của bbox để xem vùng là quá nhỏ cho việc hiển thị số. Mặc định lấy theo --category-profile.",
     )
     parser.add_argument(
         "--tiny-merge-min-area",
         type=int,
-        default=20,
-        help="Ngưỡng area tối thiểu; nhỏ hơn ngưỡng này sẽ ưu tiên gộp hình học vào vùng lân cận.",
+        help="Ngưỡng area tối thiểu; nhỏ hơn ngưỡng này sẽ ưu tiên gộp hình học vào vùng lân cận. Mặc định lấy theo --category-profile.",
     )
     parser.add_argument(
         "--tiny-merge-min-side",
         type=int,
-        default=6,
-        help="Ngưỡng cạnh nhỏ nhất; nhỏ hơn ngưỡng này sẽ ưu tiên gộp hình học vào vùng lân cận.",
+        help="Ngưỡng cạnh nhỏ nhất; nhỏ hơn ngưỡng này sẽ ưu tiên gộp hình học vào vùng lân cận. Mặc định lấy theo --category-profile.",
     )
     parser.add_argument(
         "--tiny-merge-attach-distance",
@@ -1697,8 +1867,7 @@ def create_parser():
     parser.add_argument(
         "--tiny-merge-policy",
         choices=sorted(TINY_MERGE_POLICY_DEFAULTS.keys()),
-        default="relaxed",
-        help="Chính sách gộp chấm siêu nhỏ: relaxed, strict hoặc mandala.",
+        help="Chính sách gộp chấm siêu nhỏ: relaxed, strict hoặc mandala. Mặc định lấy theo --category-profile.",
     )
     parser.add_argument(
         "--target-unique-colors",
@@ -1708,7 +1877,7 @@ def create_parser():
     parser.add_argument(
         "--category-profile",
         choices=sorted(DEFAULT_PROFILE_TARGETS.keys()),
-        help="Profile palette theo loại tranh: mandala, standard hoặc easy.",
+        help="Profile palette/playability theo loại tranh: casual, easy, standard, hard hoặc mandala.",
     )
     parser.add_argument(
         "--quantize-method",

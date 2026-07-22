@@ -2121,69 +2121,7 @@
     "selected_preprocessing": {
       "profile": "standard",
       "brightness_threshold": 120,
-      "line_close_radius": 0,
-      "score": 50,
-      "evaluation_mode": "pre_generation_proxy",
-      "candidate_proxy_score": 50,
-      "candidate_proxy_grade": "D",
-      "quality_score": 50,
-      "quality_grade": "D",
-      "fail_reasons": [
-        {
-          "code": "GIANT_REGION",
-          "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
-          "value": 85.34,
-          "threshold": 70
-        }
-      ],
-      "warnings": [
-        {
-          "code": "MANY_TINY_REGIONS",
-          "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
-          "value": 23,
-          "threshold": 20
-        }
-      ],
-      "total_regions": 67,
-      "largest_region_pct": 85.34,
-      "tiny_region_count_lt_50": 23,
-      "preview_mae": null,
-      "preview_mae_reason": "not_available_before_full_generation",
-      "candidate_count": 1,
-      "candidate_top": [
-        {
-          "profile": "standard",
-          "brightness_threshold": 120,
-          "line_close_radius": 0,
-          "score": 50,
-          "evaluation_mode": "pre_generation_proxy",
-          "candidate_proxy_score": 50,
-          "candidate_proxy_grade": "D",
-          "quality_score": 50,
-          "quality_grade": "D",
-          "fail_reasons": [
-            {
-              "code": "GIANT_REGION",
-              "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
-              "value": 85.34,
-              "threshold": 70
-            }
-          ],
-          "warnings": [
-            {
-              "code": "MANY_TINY_REGIONS",
-              "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
-              "value": 23,
-              "threshold": 20
-            }
-          ],
-          "total_regions": 67,
-          "largest_region_pct": 85.34,
-          "tiny_region_count_lt_50": 23,
-          "preview_mae": null,
-          "preview_mae_reason": "not_available_before_full_generation"
-        }
-      ]
+      "line_close_radius": 0
     },
     "has_detail": true,
     "detail_mode": "reference_lerp_rgba",
@@ -2211,69 +2149,7 @@
     "selected_preprocessing": {
       "profile": "standard",
       "brightness_threshold": 120,
-      "line_close_radius": 0,
-      "score": 50,
-      "evaluation_mode": "pre_generation_proxy",
-      "candidate_proxy_score": 50,
-      "candidate_proxy_grade": "D",
-      "quality_score": 50,
-      "quality_grade": "D",
-      "fail_reasons": [
-        {
-          "code": "GIANT_REGION",
-          "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
-          "value": 85.34,
-          "threshold": 70
-        }
-      ],
-      "warnings": [
-        {
-          "code": "MANY_TINY_REGIONS",
-          "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
-          "value": 23,
-          "threshold": 20
-        }
-      ],
-      "total_regions": 67,
-      "largest_region_pct": 85.34,
-      "tiny_region_count_lt_50": 23,
-      "preview_mae": null,
-      "preview_mae_reason": "not_available_before_full_generation",
-      "candidate_count": 1,
-      "candidate_top": [
-        {
-          "profile": "standard",
-          "brightness_threshold": 120,
-          "line_close_radius": 0,
-          "score": 50,
-          "evaluation_mode": "pre_generation_proxy",
-          "candidate_proxy_score": 50,
-          "candidate_proxy_grade": "D",
-          "quality_score": 50,
-          "quality_grade": "D",
-          "fail_reasons": [
-            {
-              "code": "GIANT_REGION",
-              "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
-              "value": 85.34,
-              "threshold": 70
-            }
-          ],
-          "warnings": [
-            {
-              "code": "MANY_TINY_REGIONS",
-              "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
-              "value": 23,
-              "threshold": 20
-            }
-          ],
-          "total_regions": 67,
-          "largest_region_pct": 85.34,
-          "tiny_region_count_lt_50": 23,
-          "preview_mae": null,
-          "preview_mae_reason": "not_available_before_full_generation"
-        }
-      ]
+      "line_close_radius": 0
     },
     "has_detail": true,
     "detail_mode": "reference_lerp_rgba",

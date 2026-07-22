@@ -70,6 +70,13 @@ def format_terminal_cell(value):
     return str(value)
 
 
+def json_dumps_string_keys(value):
+    if not isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    normalized = {str(key): item for key, item in value.items()}
+    return json.dumps(normalized, ensure_ascii=False, sort_keys=True)
+
+
 def format_table(rows, columns):
     formatted_rows = []
     for row in rows:
@@ -133,6 +140,34 @@ def flatten_row(row):
         "regions": metrics.get("total_regions", ""),
         "colors": metrics.get("unique_numbers", ""),
         "largest_region_pct": metrics.get("largest_region_pct", ""),
+        "top_3_region_pct": metrics.get("top_3_region_pct", ""),
+        "max_color_pct": metrics.get("max_color_pct", ""),
+        "top_3_color_pct": metrics.get("top_3_color_pct", ""),
+        "tiny_region_count_lt_50": metrics.get("tiny_region_count_lt_50", ""),
+        "tiny_region_count_lt_100": metrics.get("tiny_region_count_lt_100", ""),
+        "tiny_region_count_lt_200": metrics.get("tiny_region_count_lt_200", ""),
+        "tiny_region_pct_lt_50": metrics.get("tiny_region_pct_lt_50", ""),
+        "tiny_region_pct_lt_100": metrics.get("tiny_region_pct_lt_100", ""),
+        "tiny_region_pct_lt_200": metrics.get("tiny_region_pct_lt_200", ""),
+        "config_hidden_label_count": metrics.get("config_hidden_label_count", ""),
+        "config_hidden_label_pct": metrics.get("config_hidden_label_pct", ""),
+        "estimated_hidden_label_count": metrics.get("estimated_hidden_label_count", ""),
+        "estimated_hidden_label_pct": metrics.get("estimated_hidden_label_pct", ""),
+        "hidden_label_count": metrics.get("hidden_label_count", ""),
+        "hidden_label_pct": metrics.get("hidden_label_pct", ""),
+        "label_min_screen_radius_px": metrics.get("label_min_screen_radius_px", ""),
+        "median_region_area": metrics.get("median_region_area", ""),
+        "p10_region_area": metrics.get("p10_region_area", ""),
+        "p25_region_area": metrics.get("p25_region_area", ""),
+        "region_density_by_canvas_size": metrics.get("region_density_by_canvas_size", ""),
+        "untouchable_region_count": metrics.get("untouchable_region_count", ""),
+        "min_touch_target_at_default_zoom": metrics.get("min_touch_target_at_default_zoom", ""),
+        "tiny_region_by_number_lt_100": json_dumps_string_keys(
+            metrics.get("tiny_region_by_number_lt_100", {})
+        ),
+        "playable_region_count": metrics.get("playable_region_count", ""),
+        "playable_score": metrics.get("playable_score", ""),
+        "single_tap_completion_risk": metrics.get("single_tap_completion_risk", ""),
         "preview_mae": metrics.get("preview_mae", ""),
         "preview_similarity_score": metrics.get("preview_similarity_score", ""),
         "shading_preservation_score": metrics.get("shading_preservation_score", ""),
@@ -156,6 +191,32 @@ REPORT_COLUMNS = [
     "regions",
     "colors",
     "largest_region_pct",
+    "top_3_region_pct",
+    "max_color_pct",
+    "top_3_color_pct",
+    "tiny_region_count_lt_50",
+    "tiny_region_count_lt_100",
+    "tiny_region_count_lt_200",
+    "tiny_region_pct_lt_50",
+    "tiny_region_pct_lt_100",
+    "tiny_region_pct_lt_200",
+    "config_hidden_label_count",
+    "config_hidden_label_pct",
+    "estimated_hidden_label_count",
+    "estimated_hidden_label_pct",
+    "hidden_label_count",
+    "hidden_label_pct",
+    "label_min_screen_radius_px",
+    "median_region_area",
+    "p10_region_area",
+    "p25_region_area",
+    "region_density_by_canvas_size",
+    "untouchable_region_count",
+    "min_touch_target_at_default_zoom",
+    "tiny_region_by_number_lt_100",
+    "playable_region_count",
+    "playable_score",
+    "single_tap_completion_risk",
     "preview_mae",
     "preview_similarity_score",
     "shading_preservation_score",
@@ -196,6 +257,32 @@ def write_markdown_report(rows, output_path):
         "Regions",
         "Colors",
         "Largest%",
+        "Top3 region%",
+        "Max color%",
+        "Top3 color%",
+        "Tiny <50",
+        "Tiny <100",
+        "Tiny <200",
+        "Tiny <50%",
+        "Tiny <100%",
+        "Tiny <200%",
+        "Config hidden labels",
+        "Config hidden%",
+        "Estimated hidden labels",
+        "Estimated hidden%",
+        "Hidden alias labels",
+        "Hidden alias%",
+        "Label min radius",
+        "Median area",
+        "P10 area",
+        "P25 area",
+        "Density/MP",
+        "Untouchable",
+        "Min touch",
+        "Tiny by number <100",
+        "Playable regions",
+        "Playable score",
+        "Tap risk",
         "MAE",
         "Similarity",
         "Shading",
@@ -221,6 +308,32 @@ def write_markdown_report(rows, output_path):
                 flat["regions"],
                 flat["colors"],
                 flat["largest_region_pct"],
+                flat["top_3_region_pct"],
+                flat["max_color_pct"],
+                flat["top_3_color_pct"],
+                flat["tiny_region_count_lt_50"],
+                flat["tiny_region_count_lt_100"],
+                flat["tiny_region_count_lt_200"],
+                flat["tiny_region_pct_lt_50"],
+                flat["tiny_region_pct_lt_100"],
+                flat["tiny_region_pct_lt_200"],
+                flat["config_hidden_label_count"],
+                flat["config_hidden_label_pct"],
+                flat["estimated_hidden_label_count"],
+                flat["estimated_hidden_label_pct"],
+                flat["hidden_label_count"],
+                flat["hidden_label_pct"],
+                flat["label_min_screen_radius_px"],
+                flat["median_region_area"],
+                flat["p10_region_area"],
+                flat["p25_region_area"],
+                flat["region_density_by_canvas_size"],
+                flat["untouchable_region_count"],
+                flat["min_touch_target_at_default_zoom"],
+                flat["tiny_region_by_number_lt_100"],
+                flat["playable_region_count"],
+                flat["playable_score"],
+                flat["single_tap_completion_risk"],
                 flat["preview_mae"],
                 flat["preview_similarity_score"],
                 flat["shading_preservation_score"],
@@ -235,23 +348,52 @@ def write_markdown_report(rows, output_path):
             output_file.write("| " + " | ".join(report_cell(value) for value in values) + " |\n")
 
 
-def print_table(rows):
-    columns = [
-        {"key": "grade", "title": "grade", "align": "left"},
-        {"key": "score", "title": "score", "align": "right"},
-        {"key": "level", "title": "level", "align": "left"},
-        {"key": "regions", "title": "regions", "align": "right"},
-        {"key": "colors", "title": "colors", "align": "right"},
-        {"key": "largest_region_pct", "title": "largest%", "align": "right"},
-        {"key": "preview_mae", "title": "mae", "align": "right"},
-        {"key": "preview_similarity_score", "title": "sim", "align": "right"},
-        {"key": "shading_preservation_score", "title": "shading", "align": "right"},
-        {"key": "has_detail", "title": "detail", "align": "left"},
-        {"key": "line_dark_pct", "title": "line_dark%", "align": "right"},
-        {"key": "fail_reasons", "title": "fails", "align": "left"},
-        {"key": "warnings", "title": "warnings", "align": "left"},
-        {"key": "recommendation", "title": "recommendation", "align": "left"},
-    ]
+COMPACT_TABLE_COLUMNS = [
+    {"key": "grade", "title": "grade", "align": "left"},
+    {"key": "score", "title": "score", "align": "right"},
+    {"key": "level", "title": "level", "align": "left"},
+    {"key": "regions", "title": "regions", "align": "right"},
+    {"key": "colors", "title": "colors", "align": "right"},
+    {"key": "largest_region_pct", "title": "largest%", "align": "right"},
+    {"key": "playable_score", "title": "play", "align": "right"},
+    {"key": "tiny_region_pct_lt_100", "title": "tiny100%", "align": "right"},
+    {"key": "estimated_hidden_label_pct", "title": "est_hidden%", "align": "right"},
+    {"key": "preview_similarity_score", "title": "sim", "align": "right"},
+    {"key": "has_detail", "title": "detail", "align": "left"},
+    {"key": "fail_reasons", "title": "fails", "align": "left"},
+    {"key": "warnings", "title": "warnings", "align": "left"},
+    {"key": "recommendation", "title": "recommendation", "align": "left"},
+]
+
+
+FULL_TABLE_COLUMNS = [
+    {"key": "grade", "title": "grade", "align": "left"},
+    {"key": "score", "title": "score", "align": "right"},
+    {"key": "level", "title": "level", "align": "left"},
+    {"key": "regions", "title": "regions", "align": "right"},
+    {"key": "colors", "title": "colors", "align": "right"},
+    {"key": "largest_region_pct", "title": "largest%", "align": "right"},
+    {"key": "playable_score", "title": "play", "align": "right"},
+    {"key": "tiny_region_pct_lt_100", "title": "tiny100%", "align": "right"},
+    {"key": "tiny_region_pct_lt_200", "title": "tiny200%", "align": "right"},
+    {"key": "config_hidden_label_pct", "title": "config_hidden%", "align": "right"},
+    {"key": "estimated_hidden_label_pct", "title": "est_hidden%", "align": "right"},
+    {"key": "median_region_area", "title": "median", "align": "right"},
+    {"key": "region_density_by_canvas_size", "title": "density", "align": "right"},
+    {"key": "single_tap_completion_risk", "title": "tap_risk", "align": "left"},
+    {"key": "preview_mae", "title": "mae", "align": "right"},
+    {"key": "preview_similarity_score", "title": "sim", "align": "right"},
+    {"key": "shading_preservation_score", "title": "shading", "align": "right"},
+    {"key": "has_detail", "title": "detail", "align": "left"},
+    {"key": "line_dark_pct", "title": "line_dark%", "align": "right"},
+    {"key": "fail_reasons", "title": "fails", "align": "left"},
+    {"key": "warnings", "title": "warnings", "align": "left"},
+    {"key": "recommendation", "title": "recommendation", "align": "left"},
+]
+
+
+def print_table(rows, wide=False):
+    columns = FULL_TABLE_COLUMNS if wide else COMPACT_TABLE_COLUMNS
 
     table_rows = []
     for row in rows:
@@ -264,6 +406,15 @@ def print_table(rows):
                 "regions": metrics.get("total_regions"),
                 "colors": metrics.get("unique_numbers"),
                 "largest_region_pct": format_pct(metrics.get("largest_region_pct")),
+                "playable_score": metrics.get("playable_score"),
+                "tiny_region_pct_lt_100": format_pct(metrics.get("tiny_region_pct_lt_100")),
+                "tiny_region_pct_lt_200": format_pct(metrics.get("tiny_region_pct_lt_200")),
+                "config_hidden_label_pct": format_pct(metrics.get("config_hidden_label_pct")),
+                "estimated_hidden_label_pct": format_pct(metrics.get("estimated_hidden_label_pct")),
+                "hidden_label_pct": format_pct(metrics.get("hidden_label_pct")),
+                "median_region_area": metrics.get("median_region_area"),
+                "region_density_by_canvas_size": format_pct(metrics.get("region_density_by_canvas_size")),
+                "single_tap_completion_risk": metrics.get("single_tap_completion_risk"),
                 "preview_mae": format_pct(metrics.get("preview_mae")),
                 "preview_similarity_score": format_pct(metrics.get("preview_similarity_score")),
                 "shading_preservation_score": format_pct(metrics.get("shading_preservation_score")),
@@ -321,6 +472,12 @@ def main():
     )
     parser.add_argument("--report-md", help="Ghi report tổng hợp dạng Markdown vào path này.")
     parser.add_argument("--report-csv", help="Ghi report tổng hợp dạng CSV vào path này.")
+    parser.add_argument(
+        "--wide",
+        "--full-table",
+        action="store_true",
+        help="In bảng terminal đầy đủ thay vì bảng compact mặc định.",
+    )
     args = parser.parse_args()
 
     root_path = os.path.abspath(args.assets_path)
@@ -353,7 +510,7 @@ def main():
     if args.json:
         print(json.dumps(rows, indent=2, ensure_ascii=False))
     else:
-        print_table(rows)
+        print_table(rows, wide=args.wide)
 
     if args.report_md:
         write_markdown_report(rows, args.report_md)

@@ -30,21 +30,34 @@
       "profile": "standard",
       "brightness_threshold": 120,
       "line_close_radius": 0,
-      "score": 50,
+      "score": 14,
       "evaluation_mode": "pre_generation_proxy",
-      "candidate_proxy_score": 50,
+      "candidate_proxy_score": 14,
       "candidate_proxy_grade": "D",
-      "quality_score": 50,
+      "candidate_playable_score": 27,
+      "quality_score": 14,
       "quality_grade": "D",
       "fail_reasons": [
         {
           "code": "GIANT_REGION",
-          "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
+          "message": "Vùng lớn nhất chiếm hơn 80% ảnh; một lần tap có thể tô gần hết ảnh.",
           "value": 85.34,
-          "threshold": 70
+          "threshold": 80
+        },
+        {
+          "code": "PLAYABLE_SCORE_TOO_LOW",
+          "message": "Điểm gameplay dưới 35/100; level không đủ cân bằng để đưa vào demo.",
+          "value": 27,
+          "threshold": 35
         }
       ],
       "warnings": [
+        {
+          "code": "SINGLE_TAP_COMPLETION_RISK",
+          "message": "Phân bố vùng tạo rủi ro một tap hoặc một màu hoàn thành quá nhiều ảnh.",
+          "value": "high",
+          "threshold": "medium"
+        },
         {
           "code": "MANY_TINY_REGIONS",
           "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
@@ -54,6 +67,11 @@
       ],
       "total_regions": 67,
       "largest_region_pct": 85.34,
+      "top_3_region_pct": 92.35,
+      "playable_region_count": 30,
+      "giant_region_count": 1,
+      "single_tap_completion_risk": "high",
+      "playable_score": 27,
       "tiny_region_count_lt_50": 23,
       "preview_mae": null,
       "preview_mae_reason": "not_available_before_full_generation",
@@ -63,21 +81,34 @@
           "profile": "standard",
           "brightness_threshold": 120,
           "line_close_radius": 0,
-          "score": 50,
+          "score": 14,
           "evaluation_mode": "pre_generation_proxy",
-          "candidate_proxy_score": 50,
+          "candidate_proxy_score": 14,
           "candidate_proxy_grade": "D",
-          "quality_score": 50,
+          "candidate_playable_score": 27,
+          "quality_score": 14,
           "quality_grade": "D",
           "fail_reasons": [
             {
               "code": "GIANT_REGION",
-              "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
+              "message": "Vùng lớn nhất chiếm hơn 80% ảnh; một lần tap có thể tô gần hết ảnh.",
               "value": 85.34,
-              "threshold": 70
+              "threshold": 80
+            },
+            {
+              "code": "PLAYABLE_SCORE_TOO_LOW",
+              "message": "Điểm gameplay dưới 35/100; level không đủ cân bằng để đưa vào demo.",
+              "value": 27,
+              "threshold": 35
             }
           ],
           "warnings": [
+            {
+              "code": "SINGLE_TAP_COMPLETION_RISK",
+              "message": "Phân bố vùng tạo rủi ro một tap hoặc một màu hoàn thành quá nhiều ảnh.",
+              "value": "high",
+              "threshold": "medium"
+            },
             {
               "code": "MANY_TINY_REGIONS",
               "message": "Có nhiều vùng rất nhỏ dưới 50px; user có thể khó tap hoặc khó đọc số.",
@@ -87,6 +118,11 @@
           ],
           "total_regions": 67,
           "largest_region_pct": 85.34,
+          "top_3_region_pct": 92.35,
+          "playable_region_count": 30,
+          "giant_region_count": 1,
+          "single_tap_completion_risk": "high",
+          "playable_score": 27,
           "tiny_region_count_lt_50": 23,
           "preview_mae": null,
           "preview_mae_reason": "not_available_before_full_generation"
@@ -111,22 +147,45 @@
       "region_ids": [
         51
       ]
+    },
+    {
+      "code": "TOP_COLORS_DOMINATE_WARNING",
+      "message": "Ba màu lớn nhất chiếm hơn 85% ảnh khi số vùng chưa cao; gameplay có thể quá ngắn.",
+      "value": 92.37,
+      "threshold": 85
+    },
+    {
+      "code": "SINGLE_TAP_COMPLETION_RISK",
+      "message": "Phân bố vùng tạo rủi ro một tap hoặc một màu hoàn thành quá nhiều ảnh.",
+      "value": "high",
+      "threshold": "medium"
     }
   ],
   "quality_grade": "D",
-  "quality_score": 58,
+  "quality_score": 0,
   "fail_reasons": [
     {
       "code": "GIANT_REGION",
-      "message": "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
+      "message": "Vùng lớn nhất chiếm hơn 80% ảnh; một lần tap có thể tô gần hết ảnh.",
       "value": 85.35,
-      "threshold": 70
+      "threshold": 80
+    },
+    {
+      "code": "DOMINANT_COLOR_AREA",
+      "message": "Một number/color chiếm hơn 85% ảnh; user có thể hoàn thành quá nhiều bằng một màu.",
+      "value": 85.37,
+      "threshold": 85
+    },
+    {
+      "code": "PLAYABLE_SCORE_TOO_LOW",
+      "message": "Điểm gameplay dưới 35/100; level không đủ cân bằng để đưa vào demo.",
+      "value": 0,
+      "threshold": 35
     }
   ],
   "metrics": {
     "total_regions": 51,
     "unique_numbers": 46,
-    "largest_region_pct": 85.35,
     "tiny_region_count_lt_50": 7,
     "tiny_region_count_lt_200": 21,
     "mask_config_mismatch_count": 0,
@@ -137,6 +196,48 @@
     "duplicate_region_palette_mask_colors": [],
     "region_area_mismatch_count": 0,
     "region_area_mismatches": [],
+    "largest_region_pct": 85.35,
+    "max_region_pct": 85.35,
+    "top_3_region_pct": 92.35,
+    "max_color_pct": 85.37,
+    "top_3_color_pct": 92.37,
+    "tiny_region_count_lt_100": 13,
+    "tiny_region_pct_lt_50": 13.7,
+    "tiny_region_pct_lt_100": 25.5,
+    "tiny_region_pct_lt_200": 41.2,
+    "config_hidden_label_count": 12,
+    "config_hidden_label_pct": 23.5,
+    "estimated_hidden_label_count": 41,
+    "estimated_hidden_label_pct": 80.4,
+    "hidden_label_count": 41,
+    "hidden_label_pct": 80.4,
+    "label_min_screen_radius_px": 25,
+    "median_region_area": 285.0,
+    "p10_region_area": 37,
+    "p25_region_area": 89,
+    "region_density_by_canvas_size": 48.64,
+    "tiny_region_by_number_lt_100": {
+      "1": 1,
+      "10": 1,
+      "17": 1,
+      "2": 1,
+      "21": 2,
+      "23": 1,
+      "25": 1,
+      "26": 1,
+      "27": 1,
+      "31": 1,
+      "37": 1,
+      "6": 1
+    },
+    "untouchable_region_count": 23,
+    "min_touch_target_at_default_zoom": 6.33,
+    "playable_region_count": 30,
+    "giant_region_count": 1,
+    "background_region_candidate": true,
+    "playability_profile": "standard",
+    "single_tap_completion_risk": "high",
+    "playable_score": 0,
     "line_dark_pct": 4.36,
     "line_ink_pct": 4.36,
     "reference_missing": false,
@@ -150,6 +251,7 @@
   "recommendation": {
     "action": "EXCLUDE_DEMO",
     "reasons": [
+      "REGENERATE_AUTO",
       "DESIGN_FIX_LINE"
     ],
     "design_focus": [

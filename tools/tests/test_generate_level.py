@@ -8,7 +8,15 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from tools.asset_quality import evaluate_level_dir, measure_preview_mae
-from tools.generate_level import get_representative_color
+from tools.generate_level import (
+    create_parser,
+    get_representative_color,
+    merge_tiny_regions_into_neighbors,
+    resolve_generation_profile_settings,
+    resolve_target_unique_colors,
+    score_preprocessing_candidate,
+    select_preprocessing_candidate,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -16,6 +24,166 @@ GENERATOR = PROJECT_ROOT / "tools" / "generate_level.py"
 
 
 class GenerateLevelCliTest(unittest.TestCase):
+    def make_region_info(self, points, target_color, hide_number=False):
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        return {
+            "region": list(points),
+            "area": len(points),
+            "bbox": {
+                "left": min(xs),
+                "top": min(ys),
+                "right": max(xs),
+                "bottom": max(ys),
+            },
+            "centroid": {
+                "x": sum(xs) / len(points),
+                "y": sum(ys) / len(points),
+            },
+            "label_anchor": {
+                "x": sum(xs) / len(points),
+                "y": sum(ys) / len(points),
+            },
+            "target_color": target_color,
+            "hide_number": hide_number,
+            "merged_region_count": 1,
+        }
+
+    def test_generation_profile_settings_keep_old_profiles_and_add_difficulty_defaults(self):
+        standard = resolve_generation_profile_settings("standard")
+        casual = resolve_generation_profile_settings("casual")
+        hard = resolve_generation_profile_settings("hard")
+        mandala = resolve_generation_profile_settings("mandala")
+
+        self.assertEqual(64, standard["target_unique_colors"])
+        self.assertEqual(standard["min_region_area"], casual["min_region_area"])
+        self.assertEqual(80, hard["target_unique_colors"])
+        self.assertLess(hard["tiny_merge_min_area"], casual["tiny_merge_min_area"])
+        self.assertLess(mandala["hide_small_label_threshold"], standard["hide_small_label_threshold"])
+        self.assertEqual("mandala", mandala["tiny_merge_policy"])
+
+        overridden = resolve_generation_profile_settings(
+            "easy",
+            explicit_target=12,
+            overrides={"min_region_area": 99},
+        )
+        self.assertEqual(12, overridden["target_unique_colors"])
+        self.assertEqual(99, overridden["min_region_area"])
+
+    def test_profile_vocabulary_accepts_existing_and_playability_names(self):
+        parser = create_parser()
+
+        for profile in ["easy", "standard", "mandala", "casual", "hard"]:
+            args = parser.parse_args(["--category-profile", profile, "single", "line.png", "color.png"])
+            self.assertEqual(profile, args.category_profile)
+
+        self.assertEqual(("casual", 64), resolve_target_unique_colors("Animals", "casual", None))
+        self.assertEqual(("hard", 80), resolve_target_unique_colors("Animals", "hard", None))
+        self.assertEqual(("easy", 48), resolve_target_unique_colors("Animals", "easy", None))
+        self.assertEqual(("standard", 64), resolve_target_unique_colors("Animals", "standard", None))
+        self.assertEqual(("mandala", 80), resolve_target_unique_colors("Mandala", None, None))
+
+    def test_tiny_merge_v2_uses_actual_edge_proximity_not_only_bbox_overlap(self):
+        tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
+        fake_bbox_neighbor = self.make_region_info(
+            [(0, 0), (0, 10), (10, 0), (10, 10)],
+            (250, 0, 0),
+        )
+        real_near_neighbor = self.make_region_info(
+            [(7, 5), (7, 6), (8, 5), (8, 6)],
+            (0, 0, 250),
+        )
+
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, fake_bbox_neighbor, real_near_neighbor],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=2,
+            color_threshold=1,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(1, forced_count)
+        self.assertEqual(0, remaining)
+        self.assertEqual(2, len(merged))
+        self.assertTrue(any(info["area"] == 5 and info["target_color"] == (0, 0, 250) for info in merged))
+
+    def test_tiny_merge_v2_leaves_bbox_overlap_region_when_no_real_edge_neighbor(self):
+        tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
+        fake_bbox_neighbor = self.make_region_info(
+            [(0, 0), (0, 10), (10, 0), (10, 10)],
+            (250, 0, 0),
+        )
+
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, fake_bbox_neighbor],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=2,
+            color_threshold=80,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(0, merged_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(1, remaining)
+        self.assertEqual(2, len(merged))
+
+    def test_candidate_selection_prefers_playable_score_over_proxy_quality(self):
+        candidates = [
+            {
+                "profile": "standard",
+                "score": 88,
+                "quality_score": 88,
+                "playable_score": 42,
+                "largest_region_pct": 64.9,
+                "total_regions": 523,
+            },
+            {
+                "profile": "mandala",
+                "score": 82,
+                "quality_score": 82,
+                "playable_score": 91,
+                "largest_region_pct": 42.0,
+                "total_regions": 540,
+            },
+        ]
+
+        selected = select_preprocessing_candidate(candidates)
+
+        self.assertEqual("mandala", selected["profile"])
+
+    def test_candidate_scoring_uses_playability_profile_for_tiny_gate(self):
+        binary = Image.new("L", (100, 100), 0)
+        draw = ImageDraw.Draw(binary)
+        for index in range(45):
+            x = (index % 15) * 6
+            y = (index // 15) * 20
+            draw.rectangle((x, y, x + 2, y + 2), fill=255)
+        for index in range(55):
+            x = (index % 11) * 9
+            y = 60 + (index // 11) * 8
+            draw.rectangle((x, y, x + 5, y + 5), fill=255)
+
+        casual_report = score_preprocessing_candidate(binary, playability_profile="standard")
+        mandala_report = score_preprocessing_candidate(binary, playability_profile="mandala")
+
+        self.assertIn(
+            "TINY_REGION_DENSITY_WARNING",
+            {issue["code"] for issue in casual_report["warnings"]},
+        )
+        self.assertNotIn(
+            "TINY_REGION_DENSITY_WARNING",
+            {issue["code"] for issue in mandala_report["warnings"]},
+        )
+
     def test_representative_color_uses_median_to_ignore_outlier_highlights(self):
         ref = Image.new("RGB", (5, 1))
         pixels = ref.load()
@@ -110,6 +278,10 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertIn("fail_reasons", report)
             self.assertIn("metrics", report)
             self.assertTrue(report["generation_params"]["has_detail"])
+            self.assertNotIn("candidate_top", config["generation_params"]["selected_preprocessing"])
+            self.assertNotIn("candidate_playable_score", config["generation_params"]["selected_preprocessing"])
+            self.assertNotIn("candidate_top", config["generation"]["selected_preprocessing"])
+            self.assertIn("candidate_top", report["generation_params"]["selected_preprocessing"])
             self.assertEqual("reference_lerp_rgba", report["generation_params"]["detail_mode"])
             self.assertIn("preview_similarity_score", report["metrics"])
 

@@ -1,11 +1,20 @@
 import json
+import math
 import os
+import statistics
 from collections import Counter
 
 from PIL import Image, ImageChops, ImageStat
 
 
 BACKGROUND_MASK_COLORS = {(0, 0, 0)}
+PLAYABLE_REGION_MIN_AREA = 200
+DEFAULT_VIEW_SIZE = (1080, 1080)
+ANDROID_LABEL_MIN_SCREEN_RADIUS_PX = 25
+
+
+def normalize_profile(profile):
+    return (profile or "casual").lower()
 
 
 def rgb_to_int(rgb):
@@ -142,6 +151,270 @@ def measure_line_ink(line_path):
         }
 
 
+def calculate_single_tap_completion_risk(
+    largest_region_pct,
+    total_regions,
+    max_color_pct=None,
+    top_3_color_pct=None,
+):
+    max_color_pct = 0 if max_color_pct is None else max_color_pct
+    top_3_color_pct = 0 if top_3_color_pct is None else top_3_color_pct
+    if largest_region_pct > 90 or total_regions < 5:
+        return "critical"
+    if largest_region_pct > 80 or total_regions < 10 or max_color_pct > 85:
+        return "high"
+    if largest_region_pct > 70 or max_color_pct > 70:
+        return "medium"
+    if largest_region_pct > 50 or max_color_pct > 60 or (
+        top_3_color_pct > 85 and total_regions < 80
+    ):
+        return "low"
+    return "none"
+
+
+def score_playability(metrics):
+    score = 100
+    largest_region_pct = metrics.get("largest_region_pct") or 0
+    total_regions = metrics.get("total_regions") or 0
+    top_3_region_pct = metrics.get("top_3_region_pct") or 0
+    max_color_pct = metrics.get("max_color_pct")
+    top_3_color_pct = metrics.get("top_3_color_pct")
+    playable_region_count = metrics.get("playable_region_count") or 0
+
+    if largest_region_pct > 90:
+        score -= 60
+    elif largest_region_pct > 80:
+        score -= 48
+    elif largest_region_pct > 70:
+        score -= 35
+    elif largest_region_pct > 50:
+        score -= 18
+
+    if total_regions < 5:
+        score -= 35
+    elif total_regions < 10:
+        score -= 28
+    elif total_regions < 30:
+        score -= 10
+
+    if top_3_region_pct > 90:
+        score -= 25
+    elif top_3_region_pct > 80:
+        score -= 15
+
+    if max_color_pct is not None:
+        if max_color_pct > 85:
+            score -= 30
+        elif max_color_pct > 70:
+            score -= 22
+        elif max_color_pct > 60:
+            score -= 12
+
+    if top_3_color_pct is not None:
+        if top_3_color_pct > 90:
+            score -= 18
+        elif top_3_color_pct > 85 and total_regions < 80:
+            score -= 12
+
+    if playable_region_count < 5:
+        score -= 20
+    elif playable_region_count < 10:
+        score -= 12
+
+    return max(0, min(100, int(round(score))))
+
+
+def nearest_rank_area(sorted_areas, percentile):
+    if not sorted_areas:
+        return 0
+    index = int(math.ceil((percentile / 100.0) * len(sorted_areas))) - 1
+    index = max(0, min(len(sorted_areas) - 1, index))
+    return sorted_areas[index]
+
+
+def estimate_region_screen_touch_size(region, fit_scale):
+    bbox = region.get("bbox") or {}
+    if bbox:
+        width = max(1, int(bbox.get("right", 0)) - int(bbox.get("left", 0)) + 1)
+        height = max(1, int(bbox.get("bottom", 0)) - int(bbox.get("top", 0)) + 1)
+        return min(width, height) * fit_scale
+    area = max(0, int(region.get("area", 0) or 0))
+    if area <= 0:
+        return 0.0
+    return math.sqrt(area) * fit_scale
+
+
+def estimate_region_screen_radius(region, fit_scale):
+    if region.get("radius") is not None:
+        return max(0.0, float(region.get("radius") or 0)) * fit_scale
+
+    bbox = region.get("bbox") or {}
+    if bbox:
+        width = max(1, int(bbox.get("right", 0)) - int(bbox.get("left", 0)) + 1)
+        height = max(1, int(bbox.get("bottom", 0)) - int(bbox.get("top", 0)) + 1)
+        return max(6.0, min(width, height) / 2.0) * fit_scale
+
+    return 12.0 * fit_scale
+
+
+def analyze_region_playability(
+    total_pixels,
+    regions,
+    color_areas=None,
+    playable_region_min_area=PLAYABLE_REGION_MIN_AREA,
+    background_region_candidate=False,
+    canvas_width=None,
+    canvas_height=None,
+    default_view_width=DEFAULT_VIEW_SIZE[0],
+    default_view_height=DEFAULT_VIEW_SIZE[1],
+    profile="casual",
+    label_min_screen_radius_px=ANDROID_LABEL_MIN_SCREEN_RADIUS_PX,
+):
+    total_pixels = max(1, int(total_pixels or 0))
+    normalized_regions = []
+    for region in regions or []:
+        area = int(region.get("area", 0) or 0)
+        if area <= 0:
+            continue
+        normalized_regions.append({**region, "area": area})
+
+    region_areas = [region["area"] for region in normalized_regions]
+    color_areas = (
+        None
+        if color_areas is None
+        else [int(area) for area in color_areas if int(area) > 0]
+    )
+    sorted_regions = sorted(region_areas, reverse=True)
+    sorted_areas = sorted(region_areas)
+    sorted_colors = sorted(color_areas, reverse=True) if color_areas is not None else []
+    total_regions = len(region_areas)
+
+    def pct(count):
+        return round(count * 100.0 / max(1, total_regions), 1)
+
+    tiny_lt_50 = sum(1 for area in region_areas if area < 50)
+    tiny_lt_100 = sum(1 for area in region_areas if area < 100)
+    tiny_lt_200 = sum(1 for area in region_areas if area < 200)
+    config_hidden_label_count = sum(
+        1
+        for region in normalized_regions
+        if region.get("hide_number") is True or region.get("hide_label") is True
+    )
+
+    canvas_width = int(canvas_width or 0)
+    canvas_height = int(canvas_height or 0)
+    if canvas_width <= 0 or canvas_height <= 0:
+        side = math.sqrt(total_pixels)
+        canvas_width = max(1, int(round(side)))
+        canvas_height = max(1, int(round(total_pixels / canvas_width)))
+    fit_scale = min(
+        default_view_width / max(1, canvas_width),
+        default_view_height / max(1, canvas_height),
+    )
+    touch_sizes = [
+        estimate_region_screen_touch_size(region, fit_scale)
+        for region in normalized_regions
+    ]
+    min_touch_target = round(min(touch_sizes), 2) if touch_sizes else 0.0
+    untouchable_count = sum(1 for size in touch_sizes if size < 24.0)
+    screen_radii = [
+        estimate_region_screen_radius(region, fit_scale)
+        for region in normalized_regions
+    ]
+    estimated_hidden_label_count = sum(
+        1
+        for region, screen_radius in zip(normalized_regions, screen_radii)
+        if region.get("hide_number") is True
+        or region.get("hide_label") is True
+        or screen_radius < label_min_screen_radius_px
+    )
+
+    tiny_by_number = Counter()
+    for region in normalized_regions:
+        if region["area"] < 100:
+            tiny_by_number[region.get("number", "?")] += 1
+
+    largest_region_pct = round((sorted_regions[0] if sorted_regions else 0) * 100.0 / total_pixels, 2)
+    top_3_region_pct = round(sum(sorted_regions[:3]) * 100.0 / total_pixels, 2)
+    max_color_pct = (
+        round(sorted_colors[0] * 100.0 / total_pixels, 2)
+        if sorted_colors
+        else None
+    )
+    top_3_color_pct = (
+        round(sum(sorted_colors[:3]) * 100.0 / total_pixels, 2)
+        if sorted_colors
+        else None
+    )
+
+    metrics = {
+        "largest_region_pct": largest_region_pct,
+        "max_region_pct": largest_region_pct,
+        "top_3_region_pct": top_3_region_pct,
+        "max_color_pct": max_color_pct,
+        "top_3_color_pct": top_3_color_pct,
+        "tiny_region_count_lt_50": tiny_lt_50,
+        "tiny_region_count_lt_100": tiny_lt_100,
+        "tiny_region_count_lt_200": tiny_lt_200,
+        "tiny_region_pct_lt_50": pct(tiny_lt_50),
+        "tiny_region_pct_lt_100": pct(tiny_lt_100),
+        "tiny_region_pct_lt_200": pct(tiny_lt_200),
+        "config_hidden_label_count": config_hidden_label_count,
+        "config_hidden_label_pct": pct(config_hidden_label_count),
+        "estimated_hidden_label_count": estimated_hidden_label_count,
+        "estimated_hidden_label_pct": pct(estimated_hidden_label_count),
+        "hidden_label_count": estimated_hidden_label_count,
+        "hidden_label_pct": pct(estimated_hidden_label_count),
+        "label_min_screen_radius_px": label_min_screen_radius_px,
+        "median_region_area": float(statistics.median(sorted_areas)) if sorted_areas else 0,
+        "p10_region_area": nearest_rank_area(sorted_areas, 10),
+        "p25_region_area": nearest_rank_area(sorted_areas, 25),
+        "region_density_by_canvas_size": round(total_regions / (total_pixels / 1000000.0), 2),
+        "tiny_region_by_number_lt_100": dict(sorted(tiny_by_number.items(), key=lambda item: str(item[0]))),
+        "untouchable_region_count": untouchable_count,
+        "min_touch_target_at_default_zoom": min_touch_target,
+        "playable_region_count": sum(
+            1 for area in region_areas if area >= playable_region_min_area
+        ),
+        "giant_region_count": sum(
+            1 for area in region_areas if area * 100.0 / total_pixels > 50
+        ),
+        "background_region_candidate": bool(background_region_candidate),
+        "playability_profile": normalize_profile(profile),
+    }
+    metrics["single_tap_completion_risk"] = calculate_single_tap_completion_risk(
+        largest_region_pct=largest_region_pct,
+        total_regions=total_regions,
+        max_color_pct=max_color_pct,
+        top_3_color_pct=top_3_color_pct,
+    )
+    metrics["playable_score"] = score_playability(
+        {
+            **metrics,
+            "total_regions": total_regions,
+        }
+    )
+    return metrics
+
+
+def calculate_gameplay_metrics(
+    total_pixels,
+    region_areas,
+    color_areas=None,
+    playable_region_min_area=PLAYABLE_REGION_MIN_AREA,
+    background_region_candidate=False,
+    profile="casual",
+):
+    return analyze_region_playability(
+        total_pixels=total_pixels,
+        regions=[{"area": area} for area in region_areas],
+        color_areas=color_areas,
+        playable_region_min_area=playable_region_min_area,
+        background_region_candidate=background_region_candidate,
+        profile=profile,
+    )
+
+
 def measure_mask_config(level_dir, config, mask_path):
     regions = config.get("regions", [])
     config_entries = collect_config_mask_color_entries(config)
@@ -159,12 +432,26 @@ def measure_mask_config(level_dir, config, mask_path):
         if count > 1
     )
     total_pixels = max(1, int(config.get("width", 0)) * int(config.get("height", 0)))
+    region_numbers_by_id = {region.get("id"): region.get("number") for region in regions}
+    region_by_mask_color = {}
+    for region in regions:
+        rgb = parse_hex_color(region.get("mask_color"))
+        if rgb is not None:
+            region_by_mask_color[rgb] = region
+    profile = (
+        config.get("category_profile")
+        or (config.get("generation_params") or {}).get("category_profile")
+        or (config.get("generation") or {}).get("category_profile")
+        or config.get("category")
+    )
 
     if not os.path.exists(mask_path):
+        color_area_totals = Counter()
+        for region in regions:
+            color_area_totals[region.get("number")] += int(region.get("area", 0) or 0)
         return {
             "total_regions": len(regions),
             "unique_numbers": len({region.get("number") for region in regions}),
-            "largest_region_pct": 0.0,
             "tiny_region_count_lt_50": 0,
             "tiny_region_count_lt_200": 0,
             "mask_config_mismatch_count": max(1, len(config_colors)),
@@ -175,12 +462,38 @@ def measure_mask_config(level_dir, config, mask_path):
             "duplicate_region_palette_mask_colors": duplicate_region_palette_colors,
             "region_area_mismatch_count": 0,
             "region_area_mismatches": [],
+            **analyze_region_playability(
+                total_pixels=total_pixels,
+                regions=regions,
+                color_areas=list(color_area_totals.values()),
+                canvas_width=int(config.get("width", 0) or 0),
+                canvas_height=int(config.get("height", 0) or 0),
+                profile=profile,
+            ),
         }
 
     with Image.open(mask_path).convert("RGB") as mask_img:
-        mask_pixels = Counter(mask_img.getdata())
         if not config.get("width") or not config.get("height"):
             total_pixels = max(1, mask_img.width * mask_img.height)
+        mask_width = mask_img.width
+        mask_height = mask_img.height
+        mask_pixels = Counter()
+        color_bboxes = {}
+        mask_reader = mask_img.load()
+        for y in range(mask_img.height):
+            for x in range(mask_img.width):
+                color = mask_reader[x, y]
+                mask_pixels[color] += 1
+                if color in BACKGROUND_MASK_COLORS:
+                    continue
+                if color not in color_bboxes:
+                    color_bboxes[color] = [x, y, x, y]
+                else:
+                    bbox = color_bboxes[color]
+                    bbox[0] = min(bbox[0], x)
+                    bbox[1] = min(bbox[1], y)
+                    bbox[2] = max(bbox[2], x)
+                    bbox[3] = max(bbox[3], y)
 
     mask_region_counts = {
         color: count
@@ -197,6 +510,30 @@ def measure_mask_config(level_dir, config, mask_path):
         area_values = [int(region.get("area", 0)) for region in regions]
     else:
         area_values = []
+    color_area_totals = Counter()
+    region_summaries = []
+    for entry in config_entries:
+        actual_area = mask_region_counts.get(
+            entry["mask_color"],
+            entry["area"],
+        )
+        color_area_totals[region_numbers_by_id.get(entry["id"])] += actual_area
+        region = region_by_mask_color.get(entry["mask_color"], {})
+        region_summaries.append(
+            {
+                "area": actual_area,
+                "number": region.get("number"),
+                "hide_number": region.get("hide_number"),
+                "hide_label": region.get("hide_label"),
+                "radius": region.get("radius"),
+                "bbox": region.get("bbox"),
+            }
+        )
+    configured_colors = {entry["mask_color"] for entry in config_entries}
+    for color, area in mask_region_counts.items():
+        if color in configured_colors:
+            continue
+        region_summaries.append({"area": area, "number": "unknown"})
 
     area_mismatches = []
     for entry in config_entries:
@@ -218,6 +555,16 @@ def measure_mask_config(level_dir, config, mask_path):
         )
 
     largest_area = max(area_values, default=0)
+    largest_color = max(mask_region_counts, key=mask_region_counts.get, default=None)
+    largest_bbox = color_bboxes.get(largest_color) if largest_color else None
+    background_region_candidate = False
+    if largest_bbox and largest_area * 100.0 / total_pixels > 50:
+        background_region_candidate = (
+            largest_bbox[0] == 0
+            or largest_bbox[1] == 0
+            or largest_bbox[2] == mask_width - 1
+            or largest_bbox[3] == mask_height - 1
+        )
     tiny_lt_50 = sum(1 for area in area_values if 0 < area < 50)
     tiny_lt_200 = sum(1 for area in area_values if 0 < area < 200)
 
@@ -231,7 +578,6 @@ def measure_mask_config(level_dir, config, mask_path):
             config.get("stats", {}).get("unique_numbers")
             or len({region.get("number") for region in regions})
         ),
-        "largest_region_pct": round(largest_area * 100.0 / total_pixels, 2),
         "tiny_region_count_lt_50": tiny_lt_50,
         "tiny_region_count_lt_200": tiny_lt_200,
         "mask_config_mismatch_count": mismatch_count,
@@ -242,6 +588,15 @@ def measure_mask_config(level_dir, config, mask_path):
         "duplicate_region_palette_mask_colors": duplicate_region_palette_colors,
         "region_area_mismatch_count": len(area_mismatches),
         "region_area_mismatches": area_mismatches[:50],
+        **analyze_region_playability(
+            total_pixels=total_pixels,
+            regions=region_summaries if region_summaries else [{"area": area} for area in area_values],
+            color_areas=list(color_area_totals.values()) if color_area_totals else None,
+            background_region_candidate=background_region_candidate,
+            canvas_width=mask_width,
+            canvas_height=mask_height,
+            profile=profile,
+        ),
     }
 
 
@@ -263,16 +618,34 @@ def score_quality(metrics):
     score = 100
 
     largest_region_pct = metrics.get("largest_region_pct") or 0
-    if largest_region_pct > 70:
+    total_regions = metrics.get("total_regions") or 0
+    max_color_pct = metrics.get("max_color_pct")
+    top_3_color_pct = metrics.get("top_3_color_pct")
+    tap_risk = metrics.get("single_tap_completion_risk") or "none"
+    playable_score = metrics.get("playable_score")
+
+    if largest_region_pct > 80:
         fail_reasons.append(
             make_issue(
                 "GIANT_REGION",
-                "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
+                "Vùng lớn nhất chiếm hơn 80% ảnh; một lần tap có thể tô gần hết ảnh.",
                 largest_region_pct,
-                70,
+                80,
             )
         )
-        score -= 42
+        score -= 48
+    elif largest_region_pct > 70:
+        issue = make_issue(
+            "GIANT_REGION",
+            "Vùng lớn nhất chiếm hơn 70% ảnh; line có thể bị hở nên nhiều mảng bị dính vào nhau.",
+            largest_region_pct,
+            70,
+        )
+        if total_regions < 80 or (max_color_pct is not None and max_color_pct > 70):
+            fail_reasons.append(issue)
+        else:
+            warnings.append({**issue, "code": "GIANT_REGION_SEVERE_WARNING"})
+        score -= 35
     elif largest_region_pct > 50:
         warnings.append(
             make_issue(
@@ -284,14 +657,13 @@ def score_quality(metrics):
         )
         score -= 18
 
-    total_regions = metrics.get("total_regions") or 0
-    if total_regions < 8:
+    if total_regions < 10:
         fail_reasons.append(
             make_issue(
                 "LOW_REGION_COUNT",
                 "Số vùng tô quá thấp cho một level Color by Number; nhiều vùng có thể đang bị dính.",
                 total_regions,
-                8,
+                10,
             )
         )
         score -= 28
@@ -305,6 +677,75 @@ def score_quality(metrics):
             )
         )
         score -= 12
+
+    if max_color_pct is not None:
+        if max_color_pct > 85:
+            fail_reasons.append(
+                make_issue(
+                    "DOMINANT_COLOR_AREA",
+                    "Một number/color chiếm hơn 85% ảnh; user có thể hoàn thành quá nhiều bằng một màu.",
+                    max_color_pct,
+                    85,
+                )
+            )
+            score -= 30
+        elif max_color_pct > 70:
+            warnings.append(
+                make_issue(
+                    "DOMINANT_COLOR_AREA_WARNING",
+                    "Một number/color chiếm hơn 70% ảnh; cần kiểm tra cân bằng gameplay.",
+                    max_color_pct,
+                    70,
+                )
+            )
+            score -= 16
+
+    if top_3_color_pct is not None and top_3_color_pct > 85 and total_regions < 80:
+        warnings.append(
+            make_issue(
+                "TOP_COLORS_DOMINATE_WARNING",
+                "Ba màu lớn nhất chiếm hơn 85% ảnh khi số vùng chưa cao; gameplay có thể quá ngắn.",
+                top_3_color_pct,
+                85,
+            )
+        )
+        score -= 10
+
+    if tap_risk in {"critical", "high"}:
+        issue = make_issue(
+            "SINGLE_TAP_COMPLETION_RISK",
+            "Phân bố vùng tạo rủi ro một tap hoặc một màu hoàn thành quá nhiều ảnh.",
+            tap_risk,
+            "medium",
+        )
+        if tap_risk == "critical":
+            fail_reasons.append(issue)
+            score -= 22
+        else:
+            warnings.append(issue)
+            score -= 12
+
+    if playable_score is not None:
+        if playable_score < 35:
+            fail_reasons.append(
+                make_issue(
+                    "PLAYABLE_SCORE_TOO_LOW",
+                    "Điểm gameplay dưới 35/100; level không đủ cân bằng để đưa vào demo.",
+                    playable_score,
+                    35,
+                )
+            )
+            score -= 18
+        elif playable_score < 70:
+            warnings.append(
+                make_issue(
+                    "PLAYABLE_SCORE_LOW",
+                    "Điểm gameplay dưới 70/100; nên regenerate auto hoặc kiểm tra line.",
+                    playable_score,
+                    70,
+                )
+            )
+            score -= 8
 
     preview_mae = metrics.get("preview_mae")
     if preview_mae is not None:
@@ -414,6 +855,40 @@ def score_quality(metrics):
         )
         score -= 8
 
+    profile = normalize_profile(metrics.get("playability_profile"))
+    tiny_pct_100 = metrics.get("tiny_region_pct_lt_100") or 0
+    tiny_pct_200 = metrics.get("tiny_region_pct_lt_200") or 0
+    hidden_label_pct = (
+        metrics.get("config_hidden_label_pct")
+        if metrics.get("config_hidden_label_pct") is not None
+        else metrics.get("hidden_label_pct")
+    ) or 0
+    median_area = metrics.get("median_region_area") or 0
+    tiny_profile_is_strict = profile not in {"hard", "mandala"}
+    if tiny_profile_is_strict and (
+        tiny_pct_100 > 35
+        or tiny_pct_200 > 50
+        or hidden_label_pct > 30
+    ):
+        warnings.append(
+            make_issue(
+                "TINY_REGION_DENSITY_WARNING",
+                "Tỷ lệ vùng nhỏ/ẩn số cao so với profile casual; level có thể khó tap hoặc khó đọc.",
+                {
+                    "tiny_lt_100_pct": tiny_pct_100,
+                    "tiny_lt_200_pct": tiny_pct_200,
+                    "hidden_label_pct": hidden_label_pct,
+                    "median_region_area": median_area,
+                },
+                {
+                    "tiny_lt_100_pct": 35,
+                    "tiny_lt_200_pct": 50,
+                    "hidden_label_pct": 30,
+                },
+            )
+        )
+        score -= 8
+
     score = max(0, min(100, int(round(score))))
     if fail_reasons:
         grade = "D"
@@ -454,10 +929,26 @@ def build_recommendation(report):
         reasons.append("REVIEW_LINE_CONTRAST")
         design_focus.append("line")
 
-    if "GIANT_REGION_WARNING" in all_codes:
-        reasons.append("REGENERATE_AUTO_OR_FIX_LINE")
+    gameplay_auto_codes = {
+        "GIANT_REGION_WARNING",
+        "GIANT_REGION_SEVERE_WARNING",
+        "DOMINANT_COLOR_AREA_WARNING",
+        "TOP_COLORS_DOMINATE_WARNING",
+        "PLAYABLE_SCORE_LOW",
+        "TINY_REGION_DENSITY_WARNING",
+    }
+    gameplay_fix_codes = {
+        "GIANT_REGION",
+        "LOW_REGION_COUNT",
+        "SINGLE_TAP_COMPLETION_RISK",
+        "PLAYABLE_SCORE_TOO_LOW",
+        "DOMINANT_COLOR_AREA",
+    }
+
+    if gameplay_auto_codes & all_codes:
+        reasons.append("REGENERATE_AUTO")
         design_focus.append("line")
-    if "GIANT_REGION" in all_codes and "DESIGN_FIX_LINE" not in reasons:
+    if gameplay_fix_codes & all_codes and "DESIGN_FIX_LINE" not in reasons:
         reasons.append("DESIGN_FIX_LINE")
         design_focus.append("line")
 
@@ -483,7 +974,7 @@ def build_recommendation(report):
     if grade == "A":
         action = "KEEP"
     elif grade == "B":
-        action = "REVIEW_VISUAL"
+        action = "REGENERATE_AUTO" if gameplay_auto_codes & all_codes else "REVIEW_VISUAL"
     elif grade == "C":
         action = "REGENERATE_AUTO"
         if "DESIGN_FIX_LINE" in reasons or "DESIGN_FIX_COLOR" in reasons:
