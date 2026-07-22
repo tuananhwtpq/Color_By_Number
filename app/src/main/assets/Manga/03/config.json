@@ -30,54 +30,66 @@
     },
     {
       "number": 3,
+      "target_color": "#070f22",
+      "region_count": 1,
+      "total_area": 25
+    },
+    {
+      "number": 4,
       "target_color": "#080f29",
       "region_count": 1,
       "total_area": 2314
     },
     {
-      "number": 4,
+      "number": 5,
       "target_color": "#071132",
       "region_count": 1,
       "total_area": 316
     },
     {
-      "number": 5,
+      "number": 6,
       "target_color": "#12193a",
       "region_count": 1,
       "total_area": 2241
     },
     {
-      "number": 6,
+      "number": 7,
       "target_color": "#121c45",
       "region_count": 1,
-      "total_area": 889596
+      "total_area": 889566
     },
     {
-      "number": 7,
+      "number": 8,
       "target_color": "#2a3a81",
       "region_count": 1,
       "total_area": 109368
     },
     {
-      "number": 8,
+      "number": 9,
       "target_color": "#224194",
       "region_count": 1,
       "total_area": 513
     },
     {
-      "number": 9,
+      "number": 10,
       "target_color": "#374076",
       "region_count": 1,
       "total_area": 1029
     },
     {
-      "number": 10,
+      "number": 11,
+      "target_color": "#486ac3",
+      "region_count": 1,
+      "total_area": 5
+    },
+    {
+      "number": 12,
       "target_color": "#b270c1",
       "region_count": 1,
       "total_area": 656
     },
     {
-      "number": 11,
+      "number": 13,
       "target_color": "#fe7992",
       "region_count": 1,
       "total_area": 9219
@@ -85,75 +97,85 @@
   ],
   "region_palette": [
     {
-      "number": 6,
+      "number": 7,
       "mask_color": "#000001",
       "target_color": "#121c45"
     },
     {
-      "number": 3,
+      "number": 4,
       "mask_color": "#000002",
       "target_color": "#080f29"
     },
     {
-      "number": 5,
+      "number": 6,
       "mask_color": "#000003",
       "target_color": "#12193a"
     },
     {
-      "number": 8,
+      "number": 9,
       "mask_color": "#000004",
       "target_color": "#224194"
     },
     {
-      "number": 4,
+      "number": 5,
       "mask_color": "#000005",
       "target_color": "#071132"
     },
     {
-      "number": 11,
+      "number": 13,
       "mask_color": "#000006",
       "target_color": "#fe7992"
     },
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#000007",
+      "target_color": "#486ac3"
+    },
+    {
+      "number": 10,
+      "mask_color": "#000008",
       "target_color": "#374076"
     },
     {
       "number": 2,
-      "mask_color": "#000008",
+      "mask_color": "#000009",
       "target_color": "#070e22"
     },
     {
-      "number": 10,
-      "mask_color": "#000009",
+      "number": 12,
+      "mask_color": "#00000a",
       "target_color": "#b270c1"
     },
     {
       "number": 1,
-      "mask_color": "#00000a",
+      "mask_color": "#00000b",
       "target_color": "#070e21"
     },
     {
       "number": 2,
-      "mask_color": "#00000b",
+      "mask_color": "#00000c",
       "target_color": "#070e22"
     },
     {
-      "number": 7,
-      "mask_color": "#00000c",
+      "number": 8,
+      "mask_color": "#00000d",
       "target_color": "#2a3a81"
+    },
+    {
+      "number": 3,
+      "mask_color": "#00000e",
+      "target_color": "#070f22"
     }
   ],
   "regions": [
     {
       "id": 1,
       "mask_color": "#000001",
-      "number": 6,
+      "number": 7,
       "target_color": "#121c45",
       "fill_color": "#121c45",
       "representative_color": "#121c45",
-      "area": 889596,
+      "area": 889566,
       "bbox": {
         "left": 0,
         "top": 0,
@@ -161,8 +183,8 @@
         "bottom": 1023
       },
       "centroid": {
-        "x": 508.9692646999312,
-        "y": 462.73995723901635
+        "x": 508.9561471549047,
+        "y": 462.7273175908252
       },
       "label_anchor": {
         "x": 998.0,
@@ -179,7 +201,7 @@
     {
       "id": 2,
       "mask_color": "#000002",
-      "number": 3,
+      "number": 4,
       "target_color": "#080f29",
       "fill_color": "#080f29",
       "representative_color": "#080f29",
@@ -209,7 +231,7 @@
     {
       "id": 3,
       "mask_color": "#000003",
-      "number": 5,
+      "number": 6,
       "target_color": "#12193a",
       "fill_color": "#12193a",
       "representative_color": "#12193a",
@@ -239,7 +261,7 @@
     {
       "id": 4,
       "mask_color": "#000004",
-      "number": 8,
+      "number": 9,
       "target_color": "#224194",
       "fill_color": "#224194",
       "representative_color": "#224194",
@@ -269,7 +291,7 @@
     {
       "id": 5,
       "mask_color": "#000005",
-      "number": 4,
+      "number": 5,
       "target_color": "#071132",
       "fill_color": "#071132",
       "representative_color": "#071132",
@@ -299,7 +321,7 @@
     {
       "id": 6,
       "mask_color": "#000006",
-      "number": 11,
+      "number": 13,
       "target_color": "#fe7992",
       "fill_color": "#fe7992",
       "representative_color": "#fe7992",
@@ -329,7 +351,37 @@
     {
       "id": 7,
       "mask_color": "#000007",
-      "number": 9,
+      "number": 11,
+      "target_color": "#486ac3",
+      "fill_color": "#486ac3",
+      "representative_color": "#486ac3",
+      "area": 5,
+      "bbox": {
+        "left": 582,
+        "top": 507,
+        "right": 584,
+        "bottom": 510
+      },
+      "centroid": {
+        "x": 582.8,
+        "y": 508.2
+      },
+      "label_anchor": {
+        "x": 583.0,
+        "y": 508.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 2
+      }
+    },
+    {
+      "id": 8,
+      "mask_color": "#000008",
+      "number": 10,
       "target_color": "#374076",
       "fill_color": "#374076",
       "representative_color": "#374076",
@@ -357,8 +409,8 @@
       }
     },
     {
-      "id": 8,
-      "mask_color": "#000008",
+      "id": 9,
+      "mask_color": "#000009",
       "number": 2,
       "target_color": "#070e22",
       "fill_color": "#070e22",
@@ -387,9 +439,9 @@
       }
     },
     {
-      "id": 9,
-      "mask_color": "#000009",
-      "number": 10,
+      "id": 10,
+      "mask_color": "#00000a",
+      "number": 12,
       "target_color": "#b270c1",
       "fill_color": "#b270c1",
       "representative_color": "#b270c1",
@@ -417,8 +469,8 @@
       }
     },
     {
-      "id": 10,
-      "mask_color": "#00000a",
+      "id": 11,
+      "mask_color": "#00000b",
       "number": 1,
       "target_color": "#070e21",
       "fill_color": "#070e21",
@@ -447,8 +499,8 @@
       }
     },
     {
-      "id": 11,
-      "mask_color": "#00000b",
+      "id": 12,
+      "mask_color": "#00000c",
       "number": 2,
       "target_color": "#070e22",
       "fill_color": "#070e22",
@@ -477,9 +529,9 @@
       }
     },
     {
-      "id": 12,
-      "mask_color": "#00000c",
-      "number": 7,
+      "id": 13,
+      "mask_color": "#00000d",
+      "number": 8,
       "target_color": "#2a3a81",
       "fill_color": "#2a3a81",
       "representative_color": "#2a3a81",
@@ -505,24 +557,54 @@
         "touchable": true,
         "merged_region_count": 1
       }
+    },
+    {
+      "id": 14,
+      "mask_color": "#00000e",
+      "number": 3,
+      "target_color": "#070f22",
+      "fill_color": "#070f22",
+      "representative_color": "#070f22",
+      "area": 25,
+      "bbox": {
+        "left": 959,
+        "top": 901,
+        "right": 963,
+        "bottom": 906
+      },
+      "centroid": {
+        "x": 960.96,
+        "y": 903.4
+      },
+      "label_anchor": {
+        "x": 961.0,
+        "y": 903.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 1
+      }
     }
   ],
   "stats": {
-    "total_regions": 12,
-    "unique_numbers": 11,
+    "total_regions": 14,
+    "unique_numbers": 13,
     "estimated_difficulty": 2,
-    "small_regions_count": 0,
+    "small_regions_count": 1,
     "giant_regions_count": 1
   },
   "estimated_difficulty": 2,
-  "total_regions": 12,
-  "unique_numbers": 11,
-  "small_regions_count": 0,
+  "total_regions": 14,
+  "unique_numbers": 13,
+  "small_regions_count": 1,
   "skipped_noise_regions": 3,
-  "merged_small_regions_count": 1,
-  "merged_tiny_regions_count": 3,
-  "forced_tiny_region_merges_count": 2,
-  "remaining_tiny_regions_count": 0,
+  "merged_small_regions_count": 2,
+  "merged_tiny_regions_count": 0,
+  "forced_tiny_region_merges_count": 0,
+  "remaining_tiny_regions_count": 3,
   "generation": {
     "source_mode": "line_plus_reference",
     "brightness_threshold": 120,
@@ -582,8 +664,8 @@
   },
   "category_profile": "standard",
   "target_unique_colors": 64,
-  "initial_unique_numbers": 11,
-  "final_unique_numbers": 11,
+  "initial_unique_numbers": 13,
+  "final_unique_numbers": 13,
   "quantization_method": "mediancut",
   "quantized_reference_color_count": 160,
   "final_merge_threshold": 15.0,

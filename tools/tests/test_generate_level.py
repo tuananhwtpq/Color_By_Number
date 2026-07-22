@@ -83,14 +83,14 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(("standard", 64), resolve_target_unique_colors("Animals", "standard", None))
         self.assertEqual(("mandala", 80), resolve_target_unique_colors("Mandala", None, None))
 
-    def test_tiny_merge_v2_uses_actual_edge_proximity_not_only_bbox_overlap(self):
+    def test_tiny_merge_v2_uses_actual_shared_boundary_not_only_bbox_overlap(self):
         tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
         fake_bbox_neighbor = self.make_region_info(
             [(0, 0), (0, 10), (10, 0), (10, 10)],
             (250, 0, 0),
         )
         real_near_neighbor = self.make_region_info(
-            [(7, 5), (7, 6), (8, 5), (8, 6)],
+            [(6, 5), (6, 6), (7, 5), (7, 6)],
             (0, 0, 250),
         )
 
@@ -111,6 +111,30 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(0, remaining)
         self.assertEqual(2, len(merged))
         self.assertTrue(any(info["area"] == 5 and info["target_color"] == (0, 0, 250) for info in merged))
+
+    def test_tiny_merge_v2_does_not_merge_across_line_gap_even_when_nearby(self):
+        tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
+        separated_by_boundary = self.make_region_info(
+            [(7, 5), (7, 6), (8, 5), (8, 6)],
+            (250, 0, 0),
+        )
+
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, separated_by_boundary],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=12,
+            color_threshold=80,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(0, merged_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(1, remaining)
+        self.assertEqual(2, len(merged))
 
     def test_tiny_merge_v2_leaves_bbox_overlap_region_when_no_real_edge_neighbor(self):
         tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
@@ -135,6 +159,81 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(0, forced_count)
         self.assertEqual(1, remaining)
         self.assertEqual(2, len(merged))
+
+    def test_tiny_merge_v2_fallback_still_requires_adjacency(self):
+        tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
+        non_adjacent = self.make_region_info(
+            [(7, 5), (7, 6), (8, 5), (8, 6)],
+            (0, 0, 250),
+        )
+
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, non_adjacent],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=12,
+            color_threshold=1,
+            tiny_merge_policy="mandala",
+        )
+
+        self.assertEqual(0, merged_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(1, remaining)
+        self.assertEqual(2, len(merged))
+
+    def test_tiny_merge_v2_prefers_closest_color_among_adjacent_neighbors(self):
+        tiny = self.make_region_info([(5, 5)], (248, 0, 0), hide_number=True)
+        color_match_neighbor = self.make_region_info([(4, 5), (4, 6)], (250, 0, 0))
+        color_far_neighbor = self.make_region_info([(6, 5), (6, 6), (7, 5), (7, 6)], (0, 0, 250))
+
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, color_far_neighbor, color_match_neighbor],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=1,
+            color_threshold=10,
+            tiny_merge_policy="strict",
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(0, remaining)
+        self.assertTrue(any(info["area"] == 3 and info["target_color"] == (250, 0, 0) for info in merged))
+
+    def test_tiny_merge_v2_does_not_miss_long_thin_adjacent_neighbor(self):
+        tiny = self.make_region_info([(0, 1)], (250, 0, 0), hide_number=True)
+        long_points = []
+        for x in range(2, 802):
+            long_points.append((x, 1))
+            long_points.append((x, 2))
+        long_points.append((1, 1))
+        long_thin_neighbor = self.make_region_info(
+            long_points,
+            (250, 0, 0),
+        )
+
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, long_thin_neighbor],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=1,
+            color_threshold=10,
+            tiny_merge_policy="strict",
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(0, remaining)
+        self.assertEqual(len(long_points) + 1, max(info["area"] for info in merged))
 
     def test_candidate_selection_prefers_playable_score_over_proxy_quality(self):
         candidates = [

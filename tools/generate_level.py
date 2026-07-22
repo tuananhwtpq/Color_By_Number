@@ -1000,37 +1000,35 @@ def region_neighbor_score(small_info, candidate_info, color_gap):
     )
 
 
-def sample_region_points(points, max_points=400):
-    if len(points) <= max_points:
-        return points
-    stride = max(1, int(math.ceil(len(points) / max_points)))
-    return points[::stride]
+def build_region_point_index(region_infos):
+    point_index = {}
+    for region_idx, info in enumerate(region_infos):
+        for point in info["region"]:
+            point_index[point] = region_idx
+    return point_index
 
 
-def region_edge_distance(region_a, region_b):
-    points_a = sample_region_points(region_a["region"])
-    points_b = sample_region_points(region_b["region"])
-    best_distance = None
-    for ax, ay in points_a:
-        for bx, by in points_b:
-            distance = max(abs(ax - bx), abs(ay - by))
-            if best_distance is None or distance < best_distance:
-                best_distance = distance
-                if best_distance <= 1:
-                    return best_distance
-    return best_distance
+def find_adjacent_region_indices(small_idx, region_infos, point_index):
+    adjacent_counts = Counter()
+    for x, y in region_infos[small_idx]["region"]:
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            neighbor_idx = point_index.get((x + dx, y + dy))
+            if neighbor_idx is None or neighbor_idx == small_idx:
+                continue
+            adjacent_counts[neighbor_idx] += 1
+    return adjacent_counts
 
 
-def tiny_region_neighbor_score(small_info, candidate_info, color_gap, edge_distance):
+def tiny_region_neighbor_score(small_info, candidate_info, color_gap, shared_boundary_count):
     centroid_dx = small_info["centroid"]["x"] - candidate_info["centroid"]["x"]
     centroid_dy = small_info["centroid"]["y"] - candidate_info["centroid"]["y"]
     centroid_distance = math.sqrt(centroid_dx * centroid_dx + centroid_dy * centroid_dy)
     normalized_area_penalty = small_info["area"] / max(1.0, candidate_info["area"])
     return (
-        edge_distance * 4.0
-        + color_gap
+        color_gap
         + centroid_distance * 0.03
         + normalized_area_penalty * 5.0
+        - min(shared_boundary_count, 12) * 0.25
     )
 
 
@@ -1067,10 +1065,6 @@ def merge_tiny_regions_into_neighbors(
         return region_infos, 0, 0, 0
 
     policy = TINY_MERGE_POLICY_DEFAULTS[tiny_merge_policy]
-    effective_attach_distance = max(
-        tiny_merge_min_side,
-        int(round(attach_distance * policy["attach_distance_multiplier"])),
-    )
     effective_color_threshold = max(6.0, color_threshold * policy["color_threshold_multiplier"])
 
     region_infos = classify_region_infos(
@@ -1086,6 +1080,7 @@ def merge_tiny_regions_into_neighbors(
     forced_tiny_region_merges_count = 0
 
     while True:
+        point_index = build_region_point_index(region_infos)
         micro_indices = sorted(
             [idx for idx, info in enumerate(region_infos) if info.get("is_micro_region")],
             key=lambda idx: region_infos[idx]["area"],
@@ -1106,16 +1101,10 @@ def merge_tiny_regions_into_neighbors(
             fallback_candidate_idx = None
             fallback_candidate_score = None
 
-            for candidate_idx, candidate_info in enumerate(region_infos):
-                if candidate_idx == small_idx or candidate_info["area"] <= small_info["area"]:
-                    continue
-
-                gap_x, gap_y = bbox_gap(small_info["bbox"], candidate_info["bbox"])
-                if max(gap_x, gap_y) > effective_attach_distance:
-                    continue
-
-                edge_distance = region_edge_distance(small_info, candidate_info)
-                if edge_distance is None or edge_distance > effective_attach_distance:
+            adjacent_counts = find_adjacent_region_indices(small_idx, region_infos, point_index)
+            for candidate_idx, shared_boundary_count in adjacent_counts.items():
+                candidate_info = region_infos[candidate_idx]
+                if candidate_info["area"] <= small_info["area"]:
                     continue
 
                 color_gap = color_distance(small_info["target_color"], candidate_info["target_color"])
@@ -1123,7 +1112,7 @@ def merge_tiny_regions_into_neighbors(
                     small_info,
                     candidate_info,
                     color_gap,
-                    edge_distance,
+                    shared_boundary_count,
                 )
 
                 if color_gap <= effective_color_threshold:
