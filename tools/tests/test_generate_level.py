@@ -4,13 +4,17 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from PIL import Image, ImageDraw
 
 from tools.asset_quality import evaluate_level_dir, measure_preview_mae
 from tools.generate_level import (
+    LevelQualityGateError,
     absorb_small_region_colors,
     create_parser,
+    evaluate_quality_gate,
+    generate_level_assets,
     get_representative_color,
     merge_small_attached_regions,
     merge_tiny_regions_into_neighbors,
@@ -19,6 +23,7 @@ from tools.generate_level import (
     resolve_target_unique_colors,
     score_preprocessing_candidate,
     select_preprocessing_candidate,
+    split_remaining_giant_regions,
 )
 
 
@@ -442,6 +447,7 @@ class GenerateLevelCliTest(unittest.TestCase):
                     str(GENERATOR),
                     "--target-unique-colors",
                     "4",
+                    "--allow-low-quality",
                     "single",
                     str(line_path),
                     str(ref_path),
@@ -537,6 +543,7 @@ class GenerateLevelCliTest(unittest.TestCase):
                     str(GENERATOR),
                     "--target-unique-colors",
                     "2",
+                    "--allow-low-quality",
                     "single",
                     str(line_path),
                     str(ref_path),
@@ -656,11 +663,243 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertIn("candidate_top", selected_preprocessing)
             self.assertGreaterEqual(len(selected_preprocessing["candidate_top"]), 1)
             top_candidate = selected_preprocessing["candidate_top"][0]
-            self.assertEqual("pre_generation_proxy", top_candidate["evaluation_mode"])
+            self.assertEqual("pre_generation_proxy_post_merge", top_candidate["evaluation_mode"])
             self.assertIn("candidate_proxy_score", top_candidate)
             self.assertIn("candidate_proxy_grade", top_candidate)
             self.assertIsNone(top_candidate["preview_mae"])
             self.assertEqual("not_available_before_full_generation", top_candidate["preview_mae_reason"])
+
+    def test_source_line_preprocessing_treats_gray_antialias_strokes_as_boundaries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            line_path = tmp_dir / "line.png"
+            ref_path = tmp_dir / "ref.png"
+            output_dir = tmp_dir / "assets" / "Test" / "gray-line"
+
+            line = Image.new("RGB", (16, 10), "white")
+            draw = ImageDraw.Draw(line)
+            draw.rectangle((0, 0, 15, 9), outline="black")
+            draw.line((8, 0, 8, 9), fill=(210, 210, 210))
+            line.save(line_path)
+
+            ref = Image.new("RGB", (16, 10), "white")
+            ref_draw = ImageDraw.Draw(ref)
+            ref_draw.rectangle((1, 1, 7, 8), fill=(240, 40, 40))
+            ref_draw.rectangle((9, 1, 14, 8), fill=(40, 90, 240))
+            ref.save(ref_path)
+
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(GENERATOR),
+                    "--target-unique-colors",
+                    "4",
+                    "--min-region-area",
+                    "1",
+                    "--hide-small-label-threshold",
+                    "1",
+                    "--tiny-merge-min-area",
+                    "1",
+                    "--tiny-merge-min-side",
+                    "1",
+                    "--allow-low-quality",
+                    "single",
+                    str(line_path),
+                    str(ref_path),
+                    "--category",
+                    "Test",
+                    "--name",
+                    "Gray line",
+                    "--id",
+                    "gray-line",
+                    "--output-directory",
+                    str(output_dir),
+                ],
+                check=True,
+                cwd=PROJECT_ROOT,
+            )
+
+            config = json.loads((output_dir / "config.json").read_text())
+            report = json.loads((output_dir / "debug_report.json").read_text())
+            line_pixels = Image.open(output_dir / "line.png").convert("RGB").load()
+            preview_pixels = Image.open(output_dir / "preview_colored.png").convert("RGB").load()
+
+            self.assertGreaterEqual(config["stats"]["total_regions"], 2)
+            self.assertEqual(
+                "source-line",
+                report["generation_params"]["selected_preprocessing"]["profile"],
+            )
+            self.assertEqual((0, 0, 0), line_pixels[8, 5])
+            self.assertLess(preview_pixels[8, 5][0], 230)
+
+    def test_candidate_scoring_sees_post_merge_consolidation_not_just_raw_fragments(self):
+        # extract_regions() is monkeypatched to return a host blob plus 20 single-pixel
+        # fragments that are pixel-adjacent to the host and near-identical in color, the
+        # same shape merge_tiny_regions_into_neighbors expects when real thin/dashed line
+        # art produces slivers that get absorbed into a neighbor. Raw (pre-merge) scoring
+        # should see 21 separate small regions; post-merge scoring (ref_img + merge
+        # settings) should see them consolidate back into the true dominant region, the
+        # exact effect the old pre-merge-only scoring was blind to.
+        width, height = 100, 100
+        binary = Image.new("L", (width, height), 0)
+        ref = Image.new("RGB", (width, height), (255, 255, 255))
+        ref_pixels = ref.load()
+
+        host_points = [(x, y) for y in range(40) for x in range(40)]
+        for x, y in host_points:
+            ref_pixels[x, y] = (200, 0, 0)
+
+        fragment_points_list = []
+        for index in range(20):
+            y = index * 2
+            points = [(40, y), (41, y)]
+            fragment_points_list.append(points)
+            for point in points:
+                ref_pixels[point] = (198, 2, 2)
+
+        all_regions = [host_points] + fragment_points_list
+        merge_settings = {
+            "min_region_area": 50,
+            "tiny_area_threshold": 50,
+            "tiny_side_threshold": 5,
+            "tiny_merge_min_area": 10,
+            "tiny_merge_min_side": 3,
+            "tiny_merge_color_threshold": 30,
+            "small_merge_color_threshold": 30,
+            "tiny_merge_policy": "relaxed",
+            "profile": "medium",
+        }
+
+        with mock.patch("tools.generate_level.extract_regions", return_value=all_regions):
+            raw_report = score_preprocessing_candidate(binary, playability_profile="medium")
+            merged_report = score_preprocessing_candidate(
+                binary,
+                playability_profile="medium",
+                ref_img=ref,
+                merge_settings=merge_settings,
+            )
+
+        self.assertEqual("pre_generation_proxy", raw_report["evaluation_mode"])
+        self.assertEqual(21, raw_report["total_regions"])
+        self.assertEqual(20, raw_report["tiny_region_count_lt_50"])
+
+        self.assertEqual("pre_generation_proxy_post_merge", merged_report["evaluation_mode"])
+        self.assertEqual(1, merged_report["total_regions"])
+        self.assertEqual(0, merged_report["tiny_region_count_lt_50"])
+        self.assertGreater(merged_report["largest_region_pct"], raw_report["largest_region_pct"])
+
+    def test_evaluate_quality_gate_flags_grade_largest_pct_and_giant_count(self):
+        ok_report = {
+            "quality_grade": "B",
+            "metrics": {"largest_region_pct": 40, "giant_region_count": 0},
+        }
+        self.assertEqual([], evaluate_quality_gate(ok_report))
+
+        bad_report = {
+            "quality_grade": "D",
+            "metrics": {"largest_region_pct": 80, "giant_region_count": 2},
+        }
+        reasons = evaluate_quality_gate(bad_report)
+        self.assertEqual(3, len(reasons))
+
+    def test_hard_gate_raises_and_does_not_write_low_quality_asset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            line_path = tmp_dir / "line.png"
+            ref_path = tmp_dir / "ref.png"
+            output_dir = tmp_dir / "assets" / "Test" / "badlevel"
+
+            line = Image.new("RGB", (16, 16), "white")
+            draw = ImageDraw.Draw(line)
+            draw.rectangle((0, 0, 15, 15), outline="black")
+            line.save(line_path)
+
+            ref = Image.new("RGB", (16, 16), (200, 30, 30))
+            ref.save(ref_path)
+
+            with self.assertRaises(LevelQualityGateError):
+                generate_level_assets(
+                    str(line_path),
+                    str(ref_path),
+                    str(output_dir),
+                    category_name="Test",
+                    data_name="BadLevel",
+                    generated_id="badlevel",
+                    target_unique_colors=4,
+                )
+
+            self.assertFalse(output_dir.exists())
+            self.assertEqual([], list(tmp_dir.glob("assets/Test/.level-staging-*")))
+
+            generate_level_assets(
+                str(line_path),
+                str(ref_path),
+                str(output_dir),
+                category_name="Test",
+                data_name="BadLevel",
+                generated_id="badlevel",
+                target_unique_colors=4,
+                allow_low_quality=True,
+            )
+
+            self.assertTrue((output_dir / "config.json").exists())
+            report = json.loads((output_dir / "debug_report.json").read_text())
+            self.assertEqual("D", report["quality_grade"])
+
+    def test_split_remaining_giant_regions_recovers_color_patches_after_merge(self):
+        width, height = 20, 10
+        ref = Image.new("RGB", (width, height))
+        ref_pixels = ref.load()
+        for y in range(height):
+            for x in range(width):
+                ref_pixels[x, y] = (220, 30, 30) if x < 10 else (30, 30, 220)
+
+        points = [(x, y) for y in range(height) for x in range(width)]
+        giant_info = self.make_region_info(points, (125, 30, 125))
+        giant_info["merged_region_count"] = 5
+
+        updated_infos, stats = split_remaining_giant_regions(
+            region_infos=[giant_info],
+            ref_img=ref,
+            total_pixels=width * height,
+            giant_pct_threshold=50.0,
+            region_color_method="median",
+            min_region_area=5,
+            tiny_area_threshold=5,
+            tiny_side_threshold=2,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+        )
+
+        self.assertEqual(1, stats["giant_region_split_count"])
+        self.assertGreaterEqual(len(updated_infos), 2)
+        self.assertGreater(stats["giant_region_sub_segments"], 1)
+        colors = {info["target_color"] for info in updated_infos}
+        self.assertTrue(any(color[0] > color[2] for color in colors))
+        self.assertTrue(any(color[2] > color[0] for color in colors))
+
+    def test_split_remaining_giant_regions_leaves_region_not_formed_by_merge_untouched(self):
+        width, height = 20, 10
+        ref = Image.new("RGB", (width, height), (128, 60, 190))
+        points = [(x, y) for y in range(height) for x in range(width)]
+        giant_info = self.make_region_info(points, (128, 60, 190))
+        giant_info["merged_region_count"] = 1
+
+        updated_infos, stats = split_remaining_giant_regions(
+            region_infos=[giant_info],
+            ref_img=ref,
+            total_pixels=width * height,
+            giant_pct_threshold=50.0,
+            region_color_method="median",
+            min_region_area=5,
+            tiny_area_threshold=5,
+            tiny_side_threshold=2,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+        )
+
+        self.assertEqual(0, stats["giant_region_split_count"])
+        self.assertEqual(1, len(updated_infos))
 
 
 if __name__ == "__main__":

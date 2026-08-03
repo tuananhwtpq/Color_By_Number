@@ -22,7 +22,8 @@ class LevelConfigTest {
               "assets": {
                 "line": "line.png",
                 "mask": "mask.png",
-                "preview": "preview_colored.png"
+                "preview": "preview_colored.png",
+                "debug_source_line": "debug_source_line.png"
               },
               "palette": [
                 {
@@ -84,6 +85,7 @@ class LevelConfigTest {
 
         assertEquals(2, config.schemaVersion)
         assertEquals("line.png", config.assets?.line)
+        assertEquals("debug_source_line.png", config.assets?.debugSourceLine)
         assertEquals(2, config.stats?.totalRegions)
 
         val regionPalette = config.toRegionPaletteItems()

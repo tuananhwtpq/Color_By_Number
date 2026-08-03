@@ -164,15 +164,14 @@ class PaintCanvasView @JvmOverloads constructor(
                 null
             }
 
-            val blurredLine = fastBlur(line)
             val lp = IntArray(w * h)
-            blurredLine.getPixels(lp, 0, w, 0, 0, w, h)
+            line.getPixels(lp, 0, w, 0, 0, w, h)
 
             // Giải phóng maskBitmap để tiết kiệm 4.6MB RAM
             mask.recycle()
 
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                lineBitmap = blurredLine
+                lineBitmap = line
                 maskWidth = w
                 maskHeight = h
                 regions = regionsData
@@ -340,50 +339,6 @@ class PaintCanvasView @JvmOverloads constructor(
             detailBmp.setPixels(detailArr, 0, maskWidth, 0, 0, maskWidth, maskHeight)
         }
         invalidate()
-    }
-
-    private fun fastBlur(bitmap: Bitmap, radius: Int = 1): Bitmap {
-        val w = bitmap.width
-        val h = bitmap.height
-        var pix = IntArray(w * h)
-        bitmap.getPixels(pix, 0, w, 0, 0, w, h)
-
-        for (pass in 0 until 2) {
-            val out = IntArray(w * h)
-            for (y in 0 until h) {
-                for (x in 0 until w) {
-                    var sum = 0;
-                    var count = 0
-                    for (dx in -radius..radius) {
-                        val nx = x + dx
-                        if (nx in 0 until w) {
-                            sum += (pix[y * w + nx] and 0xFF); count++
-                        }
-                    }
-                    val c = sum / count
-                    out[y * w + x] = Color.argb(0xFF, c, c, c)
-                }
-            }
-            val out2 = IntArray(w * h)
-            for (x in 0 until w) {
-                for (y in 0 until h) {
-                    var sum = 0;
-                    var count = 0
-                    for (dy in -radius..radius) {
-                        val ny = y + dy
-                        if (ny in 0 until h) {
-                            sum += (out[ny * w + x] and 0xFF); count++
-                        }
-                    }
-                    val c = sum / count
-                    out2[y * w + x] = Color.argb(0xFF, c, c, c)
-                }
-            }
-            pix = out2
-        }
-        val outBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        outBitmap.setPixels(pix, 0, w, 0, 0, w, h)
-        return outBitmap
     }
 
     fun setActiveColors(maskToTargetColors: Map<Int, Int>) {

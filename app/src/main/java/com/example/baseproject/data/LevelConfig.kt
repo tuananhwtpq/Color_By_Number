@@ -100,7 +100,9 @@ data class LevelAssets(
     @SerializedName("preview") val preview: String? = null,
     @SerializedName("detail") val detail: String? = null,
     @SerializedName("debug_regions") val debugRegions: String? = null,
-    @SerializedName("debug_report") val debugReport: String? = null
+    @SerializedName("debug_report") val debugReport: String? = null,
+    @SerializedName("debug_source_line") val debugSourceLine: String? = null,
+    @SerializedName("debug_preview_flat") val debugPreviewFlat: String? = null
 )
 
 data class LevelStats(

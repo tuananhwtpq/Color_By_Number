@@ -77,6 +77,7 @@ class PaintViewModel(
                             category = category,
                             levelId = levelId,
                             lineBitmap = bundle.lineBitmap,
+                            displayLineBitmap = bundle.displayLineBitmap,
                             maskBitmap = bundle.maskBitmap,
                             detailBitmap = bundle.detailBitmap,
                             regions = bundle.regions,

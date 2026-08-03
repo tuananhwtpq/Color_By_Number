@@ -149,7 +149,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                 lifecycleScope.launch {
                     ensureFullPreviewBitmap(renderData)
                     binding.paintCanvas.setBitmapsSuspend(
-                        renderData.lineBitmap,
+                        renderData.displayLineBitmap,
                         renderData.maskBitmap,
                         renderData.detailBitmap,
                         renderData.regions
@@ -272,7 +272,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
         val previewBitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             buildFullPreviewBitmap(
-                lineBitmap = renderData.lineBitmap,
+                lineBitmap = renderData.displayLineBitmap,
                 maskBitmap = renderData.maskBitmap,
                 detailBitmap = renderData.detailBitmap,
                 allMaskColorsToTargetColors = renderData.allMaskColorsToTargetColors

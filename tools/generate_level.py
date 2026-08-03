@@ -2,6 +2,8 @@ import argparse
 import json
 import math
 import os
+import shutil
+import tempfile
 from collections import Counter, deque
 
 from PIL import Image, ImageFilter
@@ -229,6 +231,12 @@ def build_preprocessing_candidates(
             {"profile": "mandala", "brightness_threshold": 110, "line_close_radius": 1},
             {"profile": "mandala", "brightness_threshold": 130, "line_close_radius": 1},
         ],
+        "source-line": [
+            {"profile": "source-line", "brightness_threshold": 200, "line_close_radius": 0},
+            {"profile": "source-line", "brightness_threshold": 220, "line_close_radius": 0},
+            {"profile": "source-line", "brightness_threshold": 235, "line_close_radius": 0},
+            {"profile": "source-line", "brightness_threshold": 220, "line_close_radius": 1},
+        ],
         "poster": [
             {"profile": "poster", "brightness_threshold": 90, "line_close_radius": 1},
             {"profile": "poster", "brightness_threshold": 110, "line_close_radius": 1},
@@ -237,16 +245,116 @@ def build_preprocessing_candidates(
     }
     if preprocess_profile == "auto":
         candidates = [base_candidate]
-        for name in ["thin-line", "manga", "mandala", "poster"]:
+        for name in ["thin-line", "manga", "mandala", "source-line", "poster"]:
             candidates.extend(profiles[name])
         return candidates
     return profiles.get(preprocess_profile, [base_candidate])
 
 
-def score_preprocessing_candidate(binary_img, playability_profile="standard"):
+def estimate_post_merge_region_stats(
+    binary_img,
+    ref_img,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+    tiny_merge_color_threshold,
+    small_merge_color_threshold,
+    tiny_merge_policy,
+    profile,
+):
+    """Ước lượng region_infos SAU khi chạy merge_tiny_regions_into_neighbors +
+    merge_small_attached_regions, để candidate scoring nhìn thấy hệ quả gộp vùng
+    (mảnh vụn bị dồn cục thành 1 vùng khổng lồ) thay vì chỉ nhìn kết quả flood-fill thô.
+
+    Chạy ở chế độ nhẹ: bỏ qua find_label_anchor (chỉ ảnh hưởng hiển thị, không ảnh
+    hưởng area/largest_region_pct) và dùng representative color rẻ hơn (dominant +
+    quantize) để giữ tốc độ chấp nhận được khi phải lặp qua nhiều candidate.
+    """
     regions = extract_regions(binary_img)
     total_pixels = max(1, binary_img.width * binary_img.height)
-    region_areas = [len(region) for region in regions if len(region) > 1]
+    ref_pixels = ref_img.load()
+
+    region_infos = []
+    for region in regions:
+        area = len(region)
+        if area <= 1:
+            continue
+        representative_color = get_dominant_color(ref_pixels, region, quantize_step=16)
+        bbox = get_region_bbox(region)
+        centroid = get_region_centroid(region)
+        region_infos.append(
+            update_region_classification(
+                info={
+                    "region": region,
+                    "area": area,
+                    "bbox": bbox,
+                    "centroid": centroid,
+                    "label_anchor": centroid,
+                    "target_color": representative_color,
+                    "representative_color": representative_color,
+                    "hide_number": area < tiny_area_threshold or bbox_min_side(bbox) < tiny_side_threshold,
+                    "merged_region_count": 1,
+                },
+                min_region_area=min_region_area,
+                tiny_area_threshold=tiny_area_threshold,
+                tiny_side_threshold=tiny_side_threshold,
+                tiny_merge_min_area=tiny_merge_min_area,
+                tiny_merge_min_side=tiny_merge_min_side,
+            )
+        )
+
+    region_infos, *_ = merge_tiny_regions_into_neighbors(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=tiny_area_threshold,
+        tiny_side_threshold=tiny_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        attach_distance=0,
+        color_threshold=tiny_merge_color_threshold,
+        tiny_merge_policy=tiny_merge_policy,
+        profile=profile,
+        total_pixels=total_pixels,
+        skip_label_anchor=True,
+    )
+    region_infos, _ = merge_small_attached_regions(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        attach_distance=0,
+        color_threshold=small_merge_color_threshold,
+        tiny_area_threshold=tiny_area_threshold,
+        tiny_side_threshold=tiny_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        profile=profile,
+        total_pixels=total_pixels,
+        skip_label_anchor=True,
+    )
+    return region_infos, total_pixels
+
+
+def score_preprocessing_candidate(
+    binary_img,
+    playability_profile="standard",
+    ref_img=None,
+    merge_settings=None,
+):
+    total_pixels = max(1, binary_img.width * binary_img.height)
+    if ref_img is not None and merge_settings is not None:
+        region_infos, total_pixels = estimate_post_merge_region_stats(
+            binary_img=binary_img,
+            ref_img=ref_img,
+            **merge_settings,
+        )
+        region_areas = [info["area"] for info in region_infos]
+        evaluation_mode = "pre_generation_proxy_post_merge"
+    else:
+        regions = extract_regions(binary_img)
+        region_areas = [len(region) for region in regions if len(region) > 1]
+        evaluation_mode = "pre_generation_proxy"
+
     total_regions = len(region_areas)
     largest_pct = max(region_areas, default=0) * 100.0 / total_pixels
     tiny_regions = sum(1 for area in region_areas if area < 50)
@@ -273,7 +381,7 @@ def score_preprocessing_candidate(binary_img, playability_profile="standard"):
     quality = score_quality(metrics)
     return {
         "score": quality["quality_score"],
-        "evaluation_mode": "pre_generation_proxy",
+        "evaluation_mode": evaluation_mode,
         "candidate_proxy_score": quality["quality_score"],
         "candidate_proxy_grade": quality["quality_grade"],
         "candidate_playable_score": proxy_gameplay_metrics["playable_score"],
@@ -312,6 +420,8 @@ def select_binary_fill_map(
     line_close_radius,
     preprocess_profile,
     playability_profile="standard",
+    ref_img=None,
+    merge_settings=None,
 ):
     line_img = Image.open(line_art_path).convert("RGB")
     gray = line_img.convert("L")
@@ -333,6 +443,8 @@ def select_binary_fill_map(
             **score_preprocessing_candidate(
                 binary,
                 playability_profile=playability_profile,
+                ref_img=ref_img,
+                merge_settings=merge_settings,
             ),
             "binary": binary,
         }
@@ -989,12 +1101,17 @@ def tiny_region_neighbor_score(small_info, candidate_info, color_gap, shared_bou
     )
 
 
-def merge_region_info_into_parent(parent_info, child_info):
+def merge_region_info_into_parent(parent_info, child_info, skip_label_anchor=False):
     merged_regions = list(parent_info["region"])
     merged_regions.extend(child_info["region"])
     merged_bbox = merge_bboxes([parent_info["bbox"], child_info["bbox"]])
     merged_centroid = get_region_centroid(merged_regions)
-    merged_label_anchor = find_label_anchor(merged_regions, merged_bbox, merged_centroid)
+    if skip_label_anchor:
+        # Label anchor placement is expensive (directional boundary scan) and irrelevant
+        # when this merge is only run to estimate post-merge region sizes for candidate scoring.
+        merged_label_anchor = merged_centroid
+    else:
+        merged_label_anchor = find_label_anchor(merged_regions, merged_bbox, merged_centroid)
     parent_info["region"] = merged_regions
     parent_info["area"] = len(merged_regions)
     parent_info["bbox"] = merged_bbox
@@ -1020,6 +1137,7 @@ def merge_tiny_regions_into_neighbors(
     profile="medium",
     total_pixels=None,
     return_stats=False,
+    skip_label_anchor=False,
 ):
     if not region_infos:
         empty_stats = {
@@ -1119,7 +1237,9 @@ def merge_tiny_regions_into_neighbors(
             if target_idx is None:
                 continue
 
-            merge_region_info_into_parent(region_infos[target_idx], small_info)
+            merge_region_info_into_parent(
+                region_infos[target_idx], small_info, skip_label_anchor=skip_label_anchor
+            )
             region_infos.pop(small_idx)
             classify_region_infos(
                 region_infos=region_infos,
@@ -1210,6 +1330,7 @@ def merge_small_attached_regions(
     tiny_merge_min_side,
     profile="medium",
     total_pixels=None,
+    skip_label_anchor=False,
 ):
     if not region_infos:
         return region_infos, 0
@@ -1274,7 +1395,9 @@ def merge_small_attached_regions(
             if best_candidate_idx is None:
                 continue
 
-            merge_region_info_into_parent(region_infos[best_candidate_idx], small_info)
+            merge_region_info_into_parent(
+                region_infos[best_candidate_idx], small_info, skip_label_anchor=skip_label_anchor
+            )
             region_infos.pop(small_idx)
             classify_region_infos(
                 region_infos=region_infos,
@@ -1294,6 +1417,193 @@ def merge_small_attached_regions(
     return region_infos, merged_count
 
 
+def split_giant_region_into_color_segments(region_info, ref_img, max_sub_colors=8):
+    """Chia 1 vùng khổng lồ thành các mảng con theo màu tham chiếu (color quantization,
+    tương đương k-means trong không gian màu) rồi tách connected component trong từng
+    nhóm màu, để khôi phục lại các mảng màu đã mất thay vì để nguyên 1 khối.
+    """
+    region_points = region_info["region"]
+    if len(region_points) < 4:
+        return [region_points]
+
+    ref_pixels = ref_img.load()
+    sample_img = Image.new("RGB", (len(region_points), 1))
+    sample_img.putdata([tuple(ref_pixels[x, y][:3]) for x, y in region_points])
+    palette_budget = max(2, min(max_sub_colors, 32))
+    quantized = sample_img.quantize(
+        colors=palette_budget,
+        method=Image.Quantize.MEDIANCUT,
+        dither=Image.Dither.NONE,
+    ).convert("RGB")
+    labels = list(quantized.getdata())
+    label_by_point = dict(zip(region_points, labels))
+
+    visited = set()
+    components = []
+    for point in region_points:
+        if point in visited:
+            continue
+        label = label_by_point[point]
+        queue = deque([point])
+        visited.add(point)
+        component = []
+        while queue:
+            cx, cy = queue.popleft()
+            component.append((cx, cy))
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                neighbor = (cx + dx, cy + dy)
+                if neighbor in visited or label_by_point.get(neighbor) != label:
+                    continue
+                visited.add(neighbor)
+                queue.append(neighbor)
+        components.append(component)
+    return components
+
+
+def build_region_info_from_points(
+    points,
+    ref_pixels,
+    region_color_method,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+):
+    representative_color = get_representative_color(
+        ref_pixels, points, method=region_color_method, quantize_step=0
+    )
+    bbox = get_region_bbox(points)
+    centroid = get_region_centroid(points)
+    label_anchor = find_label_anchor(points, bbox, centroid)
+    area = len(points)
+    hide_number = area < tiny_area_threshold or bbox_min_side(bbox) < tiny_side_threshold
+    return update_region_classification(
+        info={
+            "region": points,
+            "area": area,
+            "bbox": bbox,
+            "centroid": centroid,
+            "label_anchor": label_anchor,
+            "target_color": representative_color,
+            "representative_color": representative_color,
+            "hide_number": hide_number,
+            "merged_region_count": 1,
+        },
+        min_region_area=min_region_area,
+        tiny_area_threshold=tiny_area_threshold,
+        tiny_side_threshold=tiny_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+    )
+
+
+def component_average_color_deviation(ref_pixels, points):
+    colors = [ref_pixels[x, y][:3] for x, y in points]
+    channels = list(zip(*colors))
+    mean = tuple(sum(channel) / len(channel) for channel in channels)
+    return sum(color_distance(color, mean) for color in colors) / len(colors)
+
+
+def giant_region_split_looks_like_flat_patches(
+    components,
+    ref_pixels,
+    min_region_area,
+    max_component_color_deviation,
+):
+    """True nếu kết quả tách trông giống các mảng màu PHẲNG thật sự bị dính vào nhau
+    (ít nhất 2 mảng "đáng kể" area >= min_region_area, và mỗi mảng gần như đồng màu nội
+    bộ), thay vì chỉ là quantization cắt ngẫu nhiên một vùng gradient/shading mượt thành
+    nhiều dải màu (mỗi dải vẫn còn biến thiên màu nội bộ đáng kể vì màu vốn liên tục).
+    MEDIANCUT tối thiểu hoá variance trong mỗi bucket theo thiết kế, nên chỉ nhìn
+    "variance thấp" không đủ phân biệt — ngưỡng max_component_color_deviation được hiệu
+    chỉnh từ dữ liệu thật (mảng màu phẳng thật ~0-5, nửa gradient bị cắt cưỡng bức ~9+).
+    """
+    substantial = sorted(
+        (points for points in components if len(points) >= min_region_area),
+        key=len,
+        reverse=True,
+    )
+    if len(substantial) < 2:
+        return False
+    return all(
+        component_average_color_deviation(ref_pixels, points) < max_component_color_deviation
+        for points in substantial[:2]
+    )
+
+
+def split_remaining_giant_regions(
+    region_infos,
+    ref_img,
+    total_pixels,
+    giant_pct_threshold,
+    region_color_method,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+    max_sub_colors=8,
+    max_component_color_deviation=7.0,
+):
+    """Fallback cho vùng khổng lồ còn sót lại sau khi đã chọn candidate preprocessing tốt
+    nhất (ví dụ ảnh nét vẽ gốc thật sự có khe hở lớn): sub-segment vùng đó bằng ảnh màu
+    tham chiếu thay vì để nguyên 1 khối chiếm phần lớn canvas.
+
+    Chỉ áp dụng khi có bằng chứng vùng khổng lồ này đáng lẽ phải tách: hoặc nó được hình
+    thành TỪ việc gộp nhiều vùng nhỏ lại (merged_region_count > 1, đúng hệ quả bug "mảnh
+    vụn dồn cục"), hoặc kết quả tách trông giống các mảng màu phẳng thật sự (xem
+    giant_region_split_looks_like_flat_patches). Một mảng gradient mượt duy nhất từ đầu
+    (chưa từng bị gộp, và tách ra vẫn còn biến thiên màu nội bộ) không bị đụng tới để
+    không phá vỡ thiết kế detail-overlay hiện có.
+    """
+    ref_pixels = ref_img.load()
+    updated_infos = []
+    split_count = 0
+    new_sub_region_count = 0
+
+    for info in region_infos:
+        pct = info["area"] * 100.0 / max(1, total_pixels)
+        if pct <= giant_pct_threshold:
+            updated_infos.append(info)
+            continue
+
+        components = split_giant_region_into_color_segments(
+            info, ref_img, max_sub_colors=max_sub_colors
+        )
+        if len(components) <= 1:
+            updated_infos.append(info)
+            continue
+
+        should_split = info.get("merged_region_count", 1) > 1 or giant_region_split_looks_like_flat_patches(
+            components, ref_pixels, min_region_area, max_component_color_deviation
+        )
+        if not should_split:
+            updated_infos.append(info)
+            continue
+
+        split_count += 1
+        for points in components:
+            updated_infos.append(
+                build_region_info_from_points(
+                    points=points,
+                    ref_pixels=ref_pixels,
+                    region_color_method=region_color_method,
+                    min_region_area=min_region_area,
+                    tiny_area_threshold=tiny_area_threshold,
+                    tiny_side_threshold=tiny_side_threshold,
+                    tiny_merge_min_area=tiny_merge_min_area,
+                    tiny_merge_min_side=tiny_merge_min_side,
+                )
+            )
+            new_sub_region_count += 1
+
+    return updated_infos, {
+        "giant_region_split_count": split_count,
+        "giant_region_sub_segments": new_sub_region_count,
+    }
+
+
 def build_single_output_dir(args):
     if args.output_directory:
         return args.output_directory
@@ -1301,6 +1611,29 @@ def build_single_output_dir(args):
     category = args.category or "Uncategorized"
     generated_id = args.generated_id or find_next_available_id(args.output_root)
     return os.path.join(args.output_root, category, generated_id)
+
+
+class LevelQualityGateError(RuntimeError):
+    """Raised khi asset vừa sinh ra không đạt ngưỡng chất lượng tối thiểu."""
+
+
+def evaluate_quality_gate(quality_report):
+    metrics = quality_report.get("metrics", {})
+    reasons = []
+
+    grade = quality_report.get("quality_grade")
+    if grade in {"D", "F"}:
+        reasons.append(f"quality_grade={grade}")
+
+    largest_region_pct = metrics.get("largest_region_pct") or 0
+    if largest_region_pct > 55:
+        reasons.append(f"largest_region_pct={largest_region_pct}>55")
+
+    giant_region_count = metrics.get("giant_region_count") or 0
+    if giant_region_count > 0:
+        reasons.append(f"giant_region_count={giant_region_count}>0")
+
+    return reasons
 
 
 def generate_level_assets(
@@ -1329,6 +1662,7 @@ def generate_level_assets(
     preprocess_profile="standard",
     region_color_method="median",
     detail_alpha=0.65,
+    allow_low_quality=False,
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
     resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
@@ -1357,12 +1691,42 @@ def generate_level_assets(
     tiny_merge_min_area = profile_settings["tiny_merge_min_area"]
     tiny_merge_min_side = profile_settings["tiny_merge_min_side"]
     tiny_merge_policy = profile_settings["tiny_merge_policy"]
+
+    # Deprecated/no-op. Kept only so old CLI invocations do not fail.
+    _ = tiny_merge_attach_distance
+    effective_tiny_merge_color_threshold = (
+        tiny_merge_color_threshold
+        if tiny_merge_color_threshold is not None
+        else max(10.0, color_merge_threshold * 1.5)
+    )
+    small_merge_color_threshold = max(6.0, color_merge_threshold * 0.65)
+
+    print(f"Đang tải ảnh tham chiếu màu: {reference_path}")
+    ref_img = Image.open(reference_path).convert("RGB")
+
+    # Candidate scoring cần thấy được hệ quả của bước gộp vùng nhỏ (không chỉ flood-fill
+    # thô), nên truyền sẵn ảnh tham chiếu + tham số gộp để select_binary_fill_map mô
+    # phỏng merge_tiny_regions_into_neighbors/merge_small_attached_regions cho mỗi candidate.
+    merge_settings_for_scoring = {
+        "min_region_area": min_region_area,
+        "tiny_area_threshold": hide_small_label_threshold,
+        "tiny_side_threshold": tiny_region_side_threshold,
+        "tiny_merge_min_area": tiny_merge_min_area,
+        "tiny_merge_min_side": tiny_merge_min_side,
+        "tiny_merge_color_threshold": effective_tiny_merge_color_threshold,
+        "small_merge_color_threshold": small_merge_color_threshold,
+        "tiny_merge_policy": tiny_merge_policy,
+        "profile": resolved_profile,
+    }
+
     source_line_img, binary_img, selected_preprocessing = select_binary_fill_map(
         line_art_path,
         brightness_threshold=brightness_threshold,
         line_close_radius=line_close_radius,
         preprocess_profile=preprocess_profile,
         playability_profile=resolved_profile,
+        ref_img=ref_img,
+        merge_settings=merge_settings_for_scoring,
     )
     print(
         "Preprocess được chọn: "
@@ -1371,9 +1735,6 @@ def generate_level_assets(
         f"close_radius={selected_preprocessing['line_close_radius']}, "
         f"candidate_score={selected_preprocessing['score']}"
     )
-
-    print(f"Đang tải ảnh tham chiếu màu: {reference_path}")
-    ref_img = Image.open(reference_path).convert("RGB")
 
     if source_line_img.size != ref_img.size:
         raise ValueError("Kích thước của ảnh nét vẽ và ảnh tham chiếu phải trùng khớp.")
@@ -1437,14 +1798,6 @@ def generate_level_assets(
             )
         )
 
-    # Deprecated/no-op. Kept only so old CLI invocations do not fail.
-    _ = tiny_merge_attach_distance
-    effective_tiny_merge_color_threshold = (
-        tiny_merge_color_threshold
-        if tiny_merge_color_threshold is not None
-        else max(10.0, color_merge_threshold * 1.5)
-    )
-
     (
         region_infos,
         merged_tiny_regions_count,
@@ -1470,7 +1823,7 @@ def generate_level_assets(
         region_infos=region_infos,
         min_region_area=min_region_area,
         attach_distance=0,
-        color_threshold=max(6.0, color_merge_threshold * 0.65),
+        color_threshold=small_merge_color_threshold,
         tiny_area_threshold=hide_small_label_threshold,
         tiny_side_threshold=tiny_region_side_threshold,
         tiny_merge_min_area=tiny_merge_min_area,
@@ -1494,6 +1847,65 @@ def generate_level_assets(
         tiny_side_threshold=tiny_region_side_threshold,
     )
 
+    giant_split_stats = {"giant_region_split_count": 0, "giant_region_sub_segments": 0}
+    giant_split_pct_threshold = max(
+        55.0, profile_thresholds(resolved_profile)["max_largest_region_pct"]
+    )
+    region_infos, giant_split_stats = split_remaining_giant_regions(
+        region_infos=region_infos,
+        ref_img=ref_img,
+        total_pixels=width * height,
+        giant_pct_threshold=giant_split_pct_threshold,
+        region_color_method=region_color_method,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+    )
+    if giant_split_stats["giant_region_split_count"] > 0:
+        print(
+            "Phát hiện vùng khổng lồ còn sót lại sau khi chọn candidate tốt nhất; "
+            f"đã sub-segment {giant_split_stats['giant_region_split_count']} vùng thành "
+            f"{giant_split_stats['giant_region_sub_segments']} mảng màu con dựa trên ảnh tham chiếu."
+        )
+        (
+            region_infos,
+            merged_tiny_regions_count_after_split,
+            forced_tiny_region_merges_count_after_split,
+            remaining_tiny_regions_count,
+            tiny_merge_stats,
+        ) = merge_tiny_regions_into_neighbors(
+            region_infos=region_infos,
+            min_region_area=min_region_area,
+            tiny_area_threshold=hide_small_label_threshold,
+            tiny_side_threshold=tiny_region_side_threshold,
+            tiny_merge_min_area=tiny_merge_min_area,
+            tiny_merge_min_side=tiny_merge_min_side,
+            attach_distance=0,
+            color_threshold=effective_tiny_merge_color_threshold,
+            tiny_merge_policy=tiny_merge_policy,
+            profile=resolved_profile,
+            total_pixels=width * height,
+            return_stats=True,
+        )
+        merged_tiny_regions_count += merged_tiny_regions_count_after_split
+        forced_tiny_region_merges_count += forced_tiny_region_merges_count_after_split
+
+        region_infos, merged_small_region_count_after_split = merge_small_attached_regions(
+            region_infos=region_infos,
+            min_region_area=min_region_area,
+            attach_distance=0,
+            color_threshold=small_merge_color_threshold,
+            tiny_area_threshold=hide_small_label_threshold,
+            tiny_side_threshold=tiny_region_side_threshold,
+            tiny_merge_min_area=tiny_merge_min_area,
+            tiny_merge_min_side=tiny_merge_min_side,
+            profile=resolved_profile,
+            total_pixels=width * height,
+        )
+        merged_small_region_count += merged_small_region_count_after_split
+
     palette_result = build_palette_with_adaptive_merge(
         region_infos=region_infos,
         merge_threshold=color_merge_threshold,
@@ -1504,7 +1916,14 @@ def generate_level_assets(
     palette_colors = palette_result["palette_colors"]
     color_to_number = {color: index + 1 for index, color in enumerate(palette_colors)}
 
-    os.makedirs(output_dir, exist_ok=True)
+    # Ghi asset vào thư mục staging trước; chỉ move đè lên output_dir thật khi asset đạt
+    # hard gate chất lượng (hoặc allow_low_quality=True), để không bao giờ âm thầm để lại
+    # asset D/F hay level cũ bị xóa dở dang khi generation thất bại.
+    final_output_dir = os.path.normpath(output_dir)
+    staging_parent = os.path.dirname(final_output_dir) or "."
+    os.makedirs(staging_parent, exist_ok=True)
+    staging_dir = tempfile.mkdtemp(prefix=".level-staging-", dir=staging_parent)
+    output_dir = staging_dir
 
     region_palette_config = []
     region_configs = []
@@ -1656,13 +2075,13 @@ def generate_level_assets(
         mask_to_target_rgb=mask_to_target_rgb,
     )
     flat_preview_out_path = os.path.join(output_dir, "debug_preview_flat.png")
-    apply_line_overlay(flat_preview_img, line_img).save(flat_preview_out_path)
+    apply_line_overlay(flat_preview_img, source_line_img).save(flat_preview_out_path)
     print(f"Đã lưu ảnh Preview flat để debug: {flat_preview_out_path}")
 
     detail_img = make_detail_overlay_image(
         reference_img=ref_img,
         flat_preview_img=flat_preview_img,
-        line_img=line_img,
+        line_img=source_line_img,
         mask_img=mask_img,
         mask_to_target_rgb=mask_to_target_rgb,
         detail_alpha=detail_alpha,
@@ -1675,7 +2094,7 @@ def generate_level_assets(
         width=width,
         height=height,
         mask_img=mask_img,
-        line_img=line_img,
+        line_img=source_line_img,
         mask_to_target_rgb=mask_to_target_rgb,
         detail_img=detail_img,
     )
@@ -1702,8 +2121,8 @@ def generate_level_assets(
     )
     config_data = {
         "schema_version": 2,
-        "id": generated_id if generated_id else os.path.basename(output_dir),
-        "name": data_name if data_name else os.path.basename(output_dir),
+        "id": generated_id if generated_id else os.path.basename(final_output_dir),
+        "name": data_name if data_name else os.path.basename(final_output_dir),
         "category": category_name if category_name else "Uncategorized",
         "width": width,
         "height": height,
@@ -1767,6 +2186,30 @@ def generate_level_assets(
         f"Đã lưu báo cáo Debug: {debug_report_out_path} "
         f"(grade={quality_report['quality_grade']}, score={quality_report['quality_score']})"
     )
+
+    gate_failures = evaluate_quality_gate(quality_report)
+    if gate_failures and not allow_low_quality:
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        raise LevelQualityGateError(
+            "Level '{level_id}' không đạt chất lượng tối thiểu ({reasons}). "
+            "Asset KHÔNG được ghi vào '{final_dir}' (thư mục cũ nếu có vẫn giữ nguyên). "
+            "Dùng --allow-low-quality nếu cần ghi ra để debug.".format(
+                level_id=generated_id or os.path.basename(final_output_dir),
+                reasons=", ".join(gate_failures),
+                final_dir=final_output_dir,
+            )
+        )
+
+    if os.path.isdir(final_output_dir):
+        shutil.rmtree(final_output_dir)
+    shutil.move(staging_dir, final_output_dir)
+
+    if gate_failures:
+        print(
+            "CẢNH BÁO: level không đạt hard gate chất lượng "
+            f"({', '.join(gate_failures)}) nhưng vẫn được ghi vì --allow-low-quality."
+        )
+    print(f"Đã ghi asset vào: {final_output_dir}")
     print("=== Hoàn tất sinh Asset! ===")
 
 
@@ -1868,11 +2311,11 @@ def create_parser():
     )
     parser.add_argument(
         "--preprocess-profile",
-        choices=["standard", "thin-line", "manga", "mandala", "poster", "auto"],
-        default="standard",
+        choices=["standard", "thin-line", "manga", "mandala", "source-line", "poster", "auto"],
+        default="auto",
         help=(
-            "Profile xử lý line trước flood-fill. Mặc định standard giữ hành vi cũ; "
-            "auto thử nhiều threshold/close radius và chọn candidate tốt nhất theo metric vùng."
+            "Profile xử lý line trước flood-fill. Mặc định auto thử nhiều threshold/close radius "
+            "để giữ cả nét xám/anti-alias; standard giữ hành vi cũ."
         ),
     )
     parser.add_argument(
@@ -1889,6 +2332,15 @@ def create_parser():
         type=float,
         default=0.65,
         help="Độ mạnh tối đa của detail.png khi blend lại với flat fill, trong khoảng 0..1.",
+    )
+    parser.add_argument(
+        "--allow-low-quality",
+        action="store_true",
+        help=(
+            "Cho phép ghi asset ra output_dir dù không đạt hard gate chất lượng "
+            "(quality_grade D/F, largest_region_pct > 55%%, hoặc giant_region_count > 0). "
+            "Mặc định generation sẽ raise lỗi và không ghi asset. Chỉ dùng để debug."
+        ),
     )
 
     subparsers = parser.add_subparsers(dest="mode", required=True)
@@ -1943,6 +2395,18 @@ def create_parser():
     batch_source_category.add_argument(
         "--target-category",
         help="Tên category đích trong assets. Mặc định dùng tên folder nguồn.",
+    )
+    batch_source_category.add_argument(
+        "--only-ids",
+        help=(
+            "Chỉ regenerate các ID này trong category nguồn (phẩy phân cách), ví dụ 02,03,04. "
+            "Bỏ qua sẽ xử lý toàn bộ category."
+        ),
+    )
+    batch_source_category.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Cho phép ghi đè lên level đã tồn tại trong assets (dùng khi regenerate level hỏng).",
     )
 
     return parser
@@ -2083,6 +2547,7 @@ def run_batch(args):
             preprocess_profile=args.preprocess_profile,
             region_color_method=args.region_color_method,
             detail_alpha=args.detail_alpha,
+            allow_low_quality=args.allow_low_quality,
         )
         processed_count += 1
 
@@ -2140,6 +2605,7 @@ def run_batch_single_category(args):
             preprocess_profile=args.preprocess_profile,
             region_color_method=args.region_color_method,
             detail_alpha=args.detail_alpha,
+            allow_low_quality=args.allow_low_quality,
         )
         processed_count += 1
 
@@ -2156,6 +2622,11 @@ def run_batch_source_category(args):
     source_category = os.path.basename(os.path.normpath(input_category_directory))
     target_category = args.target_category or source_category
 
+    only_ids = getattr(args, "only_ids", None)
+    if only_ids:
+        wanted_ids = {item.strip() for item in only_ids.split(",") if item.strip()}
+        levels_to_process = [level for level in levels_to_process if level["name"] in wanted_ids]
+
     print(
         f"=== BẮT ĐẦU IMPORT CATEGORY NGUỒN: {source_category} "
         f"-> CATEGORY ĐÍCH: {target_category} ==="
@@ -2163,15 +2634,17 @@ def run_batch_source_category(args):
     print(f"Tìm thấy tổng cộng {len(levels_to_process)} tác phẩm hợp lệ.")
 
     processed_count = 0
+    overwrite = getattr(args, "overwrite", False)
 
     for level in levels_to_process:
         generated_id = level["name"]
         level_out_dir = os.path.join(output_root, target_category, generated_id)
 
-        if os.path.exists(level_out_dir):
+        if os.path.exists(level_out_dir) and not overwrite:
             raise FileExistsError(
                 f"Thư mục đích đã tồn tại: {level_out_dir}. "
-                "Hãy xóa/sửa folder cũ hoặc dùng --target-category khác."
+                "Hãy xóa/sửa folder cũ, dùng --target-category khác, hoặc --overwrite nếu "
+                "đang cố tình regenerate level hỏng."
             )
 
         print(
@@ -2204,6 +2677,7 @@ def run_batch_source_category(args):
             preprocess_profile=args.preprocess_profile,
             region_color_method=args.region_color_method,
             detail_alpha=args.detail_alpha,
+            allow_low_quality=args.allow_low_quality,
         )
         processed_count += 1
 
@@ -2245,6 +2719,7 @@ def run_single(args):
         preprocess_profile=args.preprocess_profile,
         region_color_method=args.region_color_method,
         detail_alpha=args.detail_alpha,
+        allow_low_quality=args.allow_low_quality,
     )
 
 

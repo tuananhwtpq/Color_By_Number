@@ -98,6 +98,14 @@ class AssetLevelRepositoryImpl(
             ).use { BitmapFactory.decodeStream(it) }
                 ?: error("Failed to decode line bitmap for $category/$levelId")
 
+            val levelPath = "$category/$levelId"
+            val displayLineBitmap = decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.debugSourceLine,
+                fallbackBasePath = "$levelPath/line"
+            ) ?: lineBitmap
+
             val maskBitmap = AssetImageResolver.openResolvedAsset(
                 assetManager,
                 "$category/$levelId/mask"
@@ -111,7 +119,6 @@ class AssetLevelRepositoryImpl(
                 )
             } ?: error("Failed to decode mask bitmap for $category/$levelId")
 
-            val levelPath = "$category/$levelId"
             val detailBitmap = decodeOptionalConfiguredBitmap(
                 assetManager = assetManager,
                 levelPath = levelPath,
@@ -130,6 +137,7 @@ class AssetLevelRepositoryImpl(
             LevelBundle(
                 config = config,
                 lineBitmap = lineBitmap,
+                displayLineBitmap = displayLineBitmap,
                 maskBitmap = maskBitmap,
                 detailBitmap = detailBitmap,
                 regions = regions

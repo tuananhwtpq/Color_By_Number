@@ -72,11 +72,18 @@ class LevelAdapter(
                 .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                 .into(holder.ivThumbnail)
         } else {
-            // Chưa tô gì cả, load line.webp trước rồi fallback sang định dạng cũ
-            val path = AssetImageResolver.toAndroidAssetUri(
-                context.assets,
-                "${level.category}/${level.id}/line"
-            )
+            // Chưa tô gì cả, ưu tiên line gốc để thumbnail sắc nét hơn.
+            val levelPath = "${level.category}/${level.id}"
+            val configuredLine = level.assets?.debugSourceLine ?: level.assets?.line
+            val path = if (!configuredLine.isNullOrBlank()) {
+                "file:///android_asset/$levelPath/$configuredLine"
+            } else {
+                runCatching {
+                    AssetImageResolver.toAndroidAssetUri(context.assets, "$levelPath/debug_source_line")
+                }.getOrElse {
+                    AssetImageResolver.toAndroidAssetUri(context.assets, "$levelPath/line")
+                }
+            }
             Glide.with(context)
                 .load(path)
                 .into(holder.ivThumbnail)

@@ -23,6 +23,7 @@ data class PaintRenderData(
     val category: String,
     val levelId: String,
     val lineBitmap: Bitmap,
+    val displayLineBitmap: Bitmap,
     val maskBitmap: Bitmap,
     val detailBitmap: Bitmap?,
     val regions: List<RegionData>,
