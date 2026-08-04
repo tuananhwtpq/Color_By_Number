@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "stats": {
+    "total_regions": 438,
+    "unique_numbers": 49,
+    "estimated_difficulty": 10,
+    "small_regions_count": 64,
+    "giant_regions_count": 0
+  },
+  "generation_params": {
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 120,
+    "hide_small_label_threshold": 100,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 48,
+    "tiny_merge_min_side": 6,
+    "small_region_merge_mode": "shared_boundary_adjacency",
+    "small_color_absorb_mode": "shared_boundary_adjacency",
+    "tiny_region_merge_mode": "shared_boundary_adjacency",
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "tiny_merge_rejected_non_adjacent": 0,
+    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_giant_target": 0,
+    "tiny_merge_profile": "medium",
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "region_color_method": "median",
+    "category_profile": "medium",
+    "target_unique_colors": 64,
+    "preprocess_profile": "auto",
+    "selected_preprocessing": {
+      "profile": "manga",
+      "brightness_threshold": 170,
+      "line_close_radius": 2,
+      "score": 92,
+      "evaluation_mode": "pre_generation_proxy_post_merge",
+      "candidate_proxy_score": 92,
+      "candidate_proxy_grade": "B",
+      "candidate_playable_score": 100,
+      "quality_score": 92,
+      "quality_grade": "B",
+      "fail_reasons": [],
+      "warnings": [
+        {
+          "code": "TINY_REGION_DENSITY_WARNING",
+          "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+          "value": {
+            "tiny_lt_100_pct": 60.3,
+            "tiny_lt_200_pct": 82.1,
+            "hidden_label_pct": 0,
+            "median_region_area": 76.0
+          },
+          "threshold": {
+            "tiny_lt_100_pct": 45,
+            "tiny_lt_200_pct": 60,
+            "hidden_label_pct": 80
+          }
+        }
+      ],
+      "total_regions": 458,
+      "largest_region_pct": 2.79,
+      "top_3_region_pct": 7.36,
+      "playable_region_count": 82,
+      "giant_region_count": 0,
+      "single_tap_completion_risk": "none",
+      "playable_score": 100,
+      "tiny_region_count_lt_50": 151,
+      "preview_mae": null,
+      "preview_mae_reason": "not_available_before_full_generation",
+      "raw_total_regions": 458,
+      "candidate_count": 17,
+      "candidate_rescored_count": 6,
+      "candidate_top": [
+        {
+          "profile": "manga",
+          "brightness_threshold": 170,
+          "line_close_radius": 2,
+          "score": 92,
+          "evaluation_mode": "pre_generation_proxy_post_merge",
+          "candidate_proxy_score": 92,
+          "candidate_proxy_grade": "B",
+          "candidate_playable_score": 100,
+          "quality_score": 92,
+          "quality_grade": "B",
+          "fail_reasons": [],
+          "warnings": [
+            {
+              "code": "TINY_REGION_DENSITY_WARNING",
+              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+              "value": {
+                "tiny_lt_100_pct": 60.3,
+                "tiny_lt_200_pct": 82.1,
+                "hidden_label_pct": 0,
+                "median_region_area": 76.0
+              },
+              "threshold": {
+                "tiny_lt_100_pct": 45,
+                "tiny_lt_200_pct": 60,
+                "hidden_label_pct": 80
+              }
+            }
+          ],
+          "total_regions": 458,
+          "largest_region_pct": 2.79,
+          "top_3_region_pct": 7.36,
+          "playable_region_count": 82,
+          "giant_region_count": 0,
+          "single_tap_completion_risk": "none",
+          "playable_score": 100,
+          "tiny_region_count_lt_50": 151,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation",
+          "raw_total_regions": 458
+        },
+        {
+          "profile": "mandala",
+          "brightness_threshold": 110,
+          "line_close_radius": 1,
+          "score": 84,
+          "evaluation_mode": "pre_generation_proxy_post_merge",
+          "candidate_proxy_score": 84,
+          "candidate_proxy_grade": "B",
+          "candidate_playable_score": 100,
+          "quality_score": 84,
+          "quality_grade": "B",
+          "fail_reasons": [],
+          "warnings": [
+            {
+              "code": "MANY_TINY_REGIONS",
+              "message": "Có nhiều vùng rất nhỏ dưới 50px so với profile medium; user có thể khó tap hoặc khó đọc số.",
+              "value": 464,
+              "threshold": 232
+            },
+            {
+              "code": "TINY_REGION_DENSITY_WARNING",
+              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+              "value": {
+                "tiny_lt_100_pct": 81.8,
+                "tiny_lt_200_pct": 89.3,
+                "hidden_label_pct": 0,
+                "median_region_area": 21.0
+              },
+              "threshold": {
+                "tiny_lt_100_pct": 45,
+                "tiny_lt_200_pct": 60,
+                "hidden_label_pct": 80
+              }
+            }
+          ],
+          "total_regions": 664,
+          "largest_region_pct": 20.06,
+          "top_3_region_pct": 39.77,
+          "playable_region_count": 71,
+          "giant_region_count": 0,
+          "single_tap_completion_risk": "none",
+          "playable_score": 100,
+          "tiny_region_count_lt_50": 464,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation",
+          "raw_total_regions": 664
+        },
+        {
+          "profile": "poster",
+          "brightness_threshold": 110,
+          "line_close_radius": 1,
+          "score": 84,
+          "evaluation_mode": "pre_generation_proxy_post_merge",
+          "candidate_proxy_score": 84,
+          "candidate_proxy_grade": "B",
+          "candidate_playable_score": 100,
+          "quality_score": 84,
+          "quality_grade": "B",
+          "fail_reasons": [],
+          "warnings": [
+            {
+              "code": "MANY_TINY_REGIONS",
+              "message": "Có nhiều vùng rất nhỏ dưới 50px so với profile medium; user có thể khó tap hoặc khó đọc số.",
+              "value": 464,
+              "threshold": 232
+            },
+            {
+              "code": "TINY_REGION_DENSITY_WARNING",
+              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+              "value": {
+                "tiny_lt_100_pct": 81.8,
+                "tiny_lt_200_pct": 89.3,
+                "hidden_label_pct": 0,
+                "median_region_area": 21.0
+              },
+              "threshold": {
+                "tiny_lt_100_pct": 45,
+                "tiny_lt_200_pct": 60,
+                "hidden_label_pct": 80
+              }
+            }
+          ],
+          "total_regions": 664,
+          "largest_region_pct": 20.06,
+          "top_3_region_pct": 39.77,
+          "playable_region_count": 71,
+          "giant_region_count": 0,
+          "single_tap_completion_risk": "none",
+          "playable_score": 100,
+          "tiny_region_count_lt_50": 464,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation",
+          "raw_total_regions": 664
+        }
+      ]
+    },
+    "has_detail": true,
+    "detail_mode": "reference_lerp_rgba",
+    "detail_alpha": 0.65
+  },
+  "warnings": [
+    {
+      "code": "EDGE_LABEL_ANCHOR",
+      "message": "Một số label anchor nằm sát mép ảnh.",
+      "region_ids": [
+        1
+      ]
+    }
+  ],
+  "quality_grade": "A",
+  "quality_score": 100,
+  "fail_reasons": [],
+  "metrics": {
+    "total_regions": 438,
+    "unique_numbers": 49,
+    "tiny_region_count_lt_50": 0,
+    "tiny_region_count_lt_200": 162,
+    "mask_config_mismatch_count": 0,
+    "mask_missing_config_colors": [],
+    "config_missing_mask_colors": [],
+    "unexpected_mask_colors": [],
+    "duplicate_mask_colors": [],
+    "duplicate_region_palette_mask_colors": [],
+    "region_area_mismatch_count": 0,
+    "region_area_mismatches": [],
+    "largest_region_pct": 3.18,
+    "max_region_pct": 3.18,
+    "top_3_region_pct": 8.42,
+    "max_color_pct": 10.23,
+    "top_3_color_pct": 21.09,
+    "tiny_region_count_lt_100": 43,
+    "tiny_region_pct_lt_50": 0.0,
+    "tiny_region_pct_lt_100": 9.8,
+    "tiny_region_pct_lt_200": 37.0,
+    "config_hidden_label_count": 51,
+    "config_hidden_label_pct": 11.6,
+    "estimated_hidden_label_count": 263,
+    "estimated_hidden_label_pct": 60.0,
+    "hidden_label_count": 263,
+    "hidden_label_pct": 60.0,
+    "label_min_screen_radius_px": 25,
+    "median_region_area": 258.0,
+    "p10_region_area": 101,
+    "p25_region_area": 156,
+    "region_density_by_canvas_size": 1670.84,
+    "tiny_region_by_number_lt_100": {
+      "11": 1,
+      "18": 1,
+      "33": 1,
+      "34": 2,
+      "36": 1,
+      "40": 3,
+      "41": 1,
+      "42": 1,
+      "43": 1,
+      "45": 8,
+      "46": 2,
+      "47": 10,
+      "48": 5,
+      "49": 5,
+      "9": 1
+    },
+    "untouchable_region_count": 56,
+    "min_touch_target_at_default_zoom": 12.66,
+    "playable_region_count": 276,
+    "giant_region_count": 0,
+    "background_region_candidate": false,
+    "playability_profile": "medium",
+    "single_tap_completion_risk": "none",
+    "playable_score": 100,
+    "line_dark_pct": 63.71,
+    "line_ink_pct": 63.71,
+    "reference_missing": false,
+    "reference_required": false,
+    "preview_mae": 25.82,
+    "color_mae": 25.82,
+    "preview_similarity_score": 89.87,
+    "shading_preservation_score": 90.48,
+    "has_detail": true
+  },
+  "recommendation": {
+    "action": "KEEP",
+    "reasons": [
+      "KEEP"
+    ],
+    "design_focus": []
+  }
+}

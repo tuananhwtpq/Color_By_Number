@@ -12,8 +12,10 @@ if [[ $# -lt 1 ]]; then
   echo "     bash tools/import_category_from_data.sh Data/Animals"
   echo "  2) Import 1 category vao category khac trong assets:"
   echo "     bash tools/import_category_from_data.sh Data/Animals --target-category AnimalsNew"
-  echo "  3) Import 1 category kem tuy chinh generator:"
-  echo "     bash tools/import_category_from_data.sh Data/Animals --line-close-radius 1 --small-region-attach-distance 12"
+  echo "  3) Regenerate category, bo qua level loi va chay tiep:"
+  echo "     bash tools/import_category_from_data.sh Data/Animals --overwrite --continue-on-error"
+  echo "  4) Ghi ca level khong dat quality gate de debug:"
+  echo "     bash tools/import_category_from_data.sh Data/Animals --overwrite --allow-low-quality"
   echo
   echo "Cách dùng:"
   echo "  bash tools/import_category_from_data.sh <SourceCategoryFolder> [--target-category <TargetCategory>] [generator options...]"
@@ -25,9 +27,49 @@ if [[ $# -lt 1 ]]; then
   echo "Ví dụ copy vào terminal Android Studio:"
   echo "  bash tools/import_category_from_data.sh Data/Animals"
   echo "  bash tools/import_category_from_data.sh Data/Animals --target-category AnimalsNew"
-  echo "  bash tools/import_category_from_data.sh Data/Animals --line-close-radius 1 --small-region-attach-distance 12"
+  echo "  bash tools/import_category_from_data.sh Data/Animals --overwrite --continue-on-error"
+  echo "  bash tools/import_category_from_data.sh Data/Animals --overwrite --allow-low-quality"
   exit 1
 fi
 
+SOURCE_CATEGORY="$1"
+shift
+
+GLOBAL_ARGS=()
+SUBCOMMAND_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --target-category|--only-ids)
+      OPTION_NAME="$1"
+      SUBCOMMAND_ARGS+=("$OPTION_NAME")
+      shift
+      if [[ $# -eq 0 ]]; then
+        echo "Thiếu giá trị cho option $OPTION_NAME" >&2
+        exit 2
+      fi
+      SUBCOMMAND_ARGS+=("$1")
+      ;;
+    --overwrite|--continue-on-error)
+      SUBCOMMAND_ARGS+=("$1")
+      ;;
+    *)
+      GLOBAL_ARGS+=("$1")
+      if [[ $# -gt 1 && "$2" != --* ]]; then
+        GLOBAL_ARGS+=("$2")
+        shift
+      fi
+      ;;
+  esac
+  shift
+done
+
 cd "$PROJECT_ROOT"
-python3 "$GENERATOR" batch-source-category "$@"
+COMMAND=(python3 "$GENERATOR")
+if [[ ${#GLOBAL_ARGS[@]} -gt 0 ]]; then
+  COMMAND+=("${GLOBAL_ARGS[@]}")
+fi
+COMMAND+=(batch-source-category "$SOURCE_CATEGORY")
+if [[ ${#SUBCOMMAND_ARGS[@]} -gt 0 ]]; then
+  COMMAND+=("${SUBCOMMAND_ARGS[@]}")
+fi
+"${COMMAND[@]}"

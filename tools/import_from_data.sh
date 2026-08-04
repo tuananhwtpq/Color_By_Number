@@ -34,7 +34,12 @@ if [[ $# -lt 2 ]]; then
   echo "  bash tools/import_from_data.sh from-existing Cartoons/Sonic Animals \"Sonic Blue\" --line-close-radius 1"
   echo "command dùng để đánh giá chất lượng Assets hiện tại"
   echo "python3 tools/validate_assets.py app/src/main/assets --data-root Data --write-debug-report"
+  echo "Command dùng để chạy tiếp lúc duyệt nếu assets lỗi"
+  echo "bash tools/import_category_from_data.sh "Data/Fairy Tail" --overwrite --continue-on-error"
+  echo "Command dùng để thêm data nếu như assets vẫn lỗi: "
+  echo "bash tools/import_category_from_data.sh "Data/Fairy Tail" --overwrite --allow-low-quality --continue-on-error"
   exit 1
+
 fi
 
 if [[ "$1" == "from-existing" ]]; then

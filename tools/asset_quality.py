@@ -17,6 +17,29 @@ PLAYABLE_REGION_MIN_AREA = 200
 DEFAULT_VIEW_SIZE = (1080, 1080)
 ANDROID_LABEL_MIN_SCREEN_RADIUS_PX = 25
 
+# Độ phân giải ảnh nguồn phổ biến nhất hiện có trong Data/ — các ngưỡng vùng nhỏ trong
+# GENERATION_PROFILE_DEFAULTS (generate_level.py) vốn được tinh chỉnh dựa trên ảnh cỡ này.
+REFERENCE_CANVAS_SIZE = 1024
+
+
+def canvas_fit_scale(canvas_width, canvas_height, view_width=DEFAULT_VIEW_SIZE[0], view_height=DEFAULT_VIEW_SIZE[1]):
+    canvas_width = max(1, int(canvas_width or 0))
+    canvas_height = max(1, int(canvas_height or 0))
+    return min(view_width / canvas_width, view_height / canvas_height)
+
+
+def screen_size_scale_factor(canvas_width, canvas_height, reference_size=REFERENCE_CANVAS_SIZE):
+    """Tỉ lệ hiệu chỉnh ngưỡng pixel thô để giữ đúng kích thước hiển thị thật trên màn hình,
+    dùng lại chính công thức fit_scale ở analyze_region_playability(). Ảnh nguồn phân giải
+    càng cao hơn REFERENCE_CANVAS_SIZE thì cùng 1 vùng pixel càng hiển thị nhỏ hơn trên màn
+    hình thật — hệ số > 1 nghĩa là cần nhân ngưỡng pixel thô lên tương ứng để bù lại.
+    """
+    canvas_scale = canvas_fit_scale(canvas_width, canvas_height)
+    if canvas_scale <= 0:
+        return 1.0
+    reference_scale = canvas_fit_scale(reference_size, reference_size)
+    return reference_scale / canvas_scale
+
 
 def rgb_to_int(rgb):
     return (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]

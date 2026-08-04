@@ -8,7 +8,7 @@ from unittest import mock
 
 from PIL import Image, ImageDraw
 
-from tools.asset_quality import evaluate_level_dir, measure_preview_mae
+from tools.asset_quality import evaluate_level_dir, measure_preview_mae, screen_size_scale_factor
 from tools.generate_level import (
     LevelQualityGateError,
     absorb_small_region_colors,
@@ -18,12 +18,14 @@ from tools.generate_level import (
     get_representative_color,
     merge_small_attached_regions,
     merge_tiny_regions_into_neighbors,
+    reclaim_non_ink_pixels_into_regions,
     resolve_generation_profile,
     resolve_generation_profile_settings,
     resolve_target_unique_colors,
     score_preprocessing_candidate,
     select_preprocessing_candidate,
     split_remaining_giant_regions,
+    run_batch_source_category,
 )
 
 
@@ -83,6 +85,40 @@ class GenerateLevelCliTest(unittest.TestCase):
         )
         self.assertEqual(12, overridden["target_unique_colors"])
         self.assertEqual(99, overridden["min_region_area"])
+
+    def test_tiny_region_thresholds_scale_with_canvas_resolution(self):
+        # Ảnh nguồn ở đúng REFERENCE_CANVAS_SIZE (1024) phải giữ nguyên hành vi cũ tuyệt
+        # đối (không đổi ngưỡng) — đây là cam kết không phá vỡ ảnh 1024px hiện có.
+        self.assertEqual(1.0, screen_size_scale_factor(1024, 1024))
+        baseline = resolve_generation_profile_settings("medium")
+        at_reference_size = resolve_generation_profile_settings(
+            "medium", screen_scale=screen_size_scale_factor(1024, 1024)
+        )
+        self.assertEqual(baseline, at_reference_size)
+
+        # Ảnh 1536px (có thật trong Data/) phải có ngưỡng lớn hơn theo đúng tỉ lệ bình
+        # phương/tuyến tính, không phải giữ nguyên số pixel thô của ảnh 1024px.
+        scale_1536 = screen_size_scale_factor(1536, 1536)
+        self.assertAlmostEqual(1.5, scale_1536)
+        scaled = resolve_generation_profile_settings("medium", screen_scale=scale_1536)
+        self.assertEqual(
+            round(baseline["tiny_merge_min_side"] * 1.5), scaled["tiny_merge_min_side"]
+        )
+        self.assertEqual(
+            round(baseline["tiny_merge_min_area"] * 1.5 * 1.5), scaled["tiny_merge_min_area"]
+        )
+
+        # Override CLI tường minh luôn thắng, không bị auto-scale theo resolution đè lên.
+        explicit_override = resolve_generation_profile_settings(
+            "medium", screen_scale=scale_1536, overrides={"tiny_merge_min_side": 6}
+        )
+        self.assertEqual(6, explicit_override["tiny_merge_min_side"])
+
+        # Ảnh nhỏ hơn mốc tham chiếu không được phép làm ngưỡng NHỎ hơn profile default.
+        smaller = resolve_generation_profile_settings(
+            "medium", screen_scale=screen_size_scale_factor(512, 512)
+        )
+        self.assertEqual(baseline, smaller)
 
     def test_profile_vocabulary_accepts_existing_and_playability_names(self):
         parser = create_parser()
@@ -846,6 +882,37 @@ class GenerateLevelCliTest(unittest.TestCase):
             report = json.loads((output_dir / "debug_report.json").read_text())
             self.assertEqual("D", report["quality_grade"])
 
+    def test_batch_source_category_can_continue_after_level_quality_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            input_category = tmp_dir / "Data" / "Batch"
+            output_root = tmp_dir / "assets"
+            for level_id in ["01", "02"]:
+                level_dir = input_category / level_id
+                level_dir.mkdir(parents=True)
+                Image.new("RGB", (4, 4), "white").save(level_dir / "line.png")
+                Image.new("RGB", (4, 4), "white").save(level_dir / "color.png")
+
+            args = create_parser().parse_args(
+                [
+                    "--output-root",
+                    str(output_root),
+                    "batch-source-category",
+                    str(input_category),
+                    "--continue-on-error",
+                ]
+            )
+
+            with mock.patch(
+                "tools.generate_level.generate_level_assets",
+                side_effect=[LevelQualityGateError("bad quality"), None],
+            ) as generate_mock:
+                run_batch_source_category(args)
+
+            self.assertEqual(2, generate_mock.call_count)
+            self.assertEqual("01", generate_mock.call_args_list[0].kwargs["generated_id"])
+            self.assertEqual("02", generate_mock.call_args_list[1].kwargs["generated_id"])
+
     def test_split_remaining_giant_regions_recovers_color_patches_after_merge(self):
         width, height = 20, 10
         ref = Image.new("RGB", (width, height))
@@ -877,6 +944,67 @@ class GenerateLevelCliTest(unittest.TestCase):
         colors = {info["target_color"] for info in updated_infos}
         self.assertTrue(any(color[0] > color[2] for color in colors))
         self.assertTrue(any(color[2] > color[0] for color in colors))
+
+    def test_reclaim_gives_back_paper_pixels_but_never_real_ink(self):
+        # Bố cục 1 hàng: [vùng A][giấy trắng bị close filter ăn][nét mực thật][giấy][vùng B].
+        # Chỉ pixel giấy (sáng hơn ngưỡng) mới được trả về vùng liền kề; nét mực phải giữ
+        # nguyên làm ranh giới, nếu không 2 vùng sẽ bị nối liền qua nét vẽ.
+        width, height = 7, 1
+        threshold = 170
+        brightness = [30, 250, 250, 40, 250, 250, 30]
+        source_gray = Image.new("L", (width, height))
+        source_gray.putdata(brightness)
+
+        region_a = [(0, 0)]
+        region_b = [(6, 0)]
+        regions, reclaimed = reclaim_non_ink_pixels_into_regions(
+            regions=[region_a, region_b],
+            width=width,
+            height=height,
+            source_gray=source_gray,
+            brightness_threshold=threshold,
+        )
+
+        self.assertEqual(4, reclaimed)
+        self.assertEqual({(0, 0), (1, 0), (2, 0)}, set(regions[0]))
+        self.assertEqual({(6, 0), (5, 0), (4, 0)}, set(regions[1]))
+        # Pixel mực ở giữa (x=3) không được gán cho vùng nào.
+        self.assertNotIn((3, 0), set(regions[0]) | set(regions[1]))
+
+    def test_reclaim_also_recovers_paper_pockets_fully_enclosed_by_ink(self):
+        # [vùng][mực][giấy bị bao kín][mực] — túi giấy ở x=2 không có hàng xóm nào thuộc
+        # vùng nào, lượt lan qua-giấy không với tới; phải được lượt 2 (xuyên nét mực) thu hồi,
+        # nếu không nó sẽ là chấm trắng nằm lọt giữa nét vẽ trên preview.
+        width, height = 4, 1
+        source_gray = Image.new("L", (width, height))
+        source_gray.putdata([250, 40, 250, 40])
+
+        regions, reclaimed = reclaim_non_ink_pixels_into_regions(
+            regions=[[(0, 0)]],
+            width=width,
+            height=height,
+            source_gray=source_gray,
+            brightness_threshold=170,
+        )
+
+        self.assertEqual(1, reclaimed)
+        self.assertEqual({(0, 0), (2, 0)}, set(regions[0]))
+        # Nét mực vẫn không bao giờ bị nuốt vào vùng.
+        self.assertNotIn((1, 0), set(regions[0]))
+        self.assertNotIn((3, 0), set(regions[0]))
+
+    def test_reclaim_is_noop_when_every_pixel_already_belongs_to_a_region(self):
+        source_gray = Image.new("L", (3, 1))
+        source_gray.putdata([250, 250, 250])
+        regions, reclaimed = reclaim_non_ink_pixels_into_regions(
+            regions=[[(0, 0), (1, 0), (2, 0)]],
+            width=3,
+            height=1,
+            source_gray=source_gray,
+            brightness_threshold=170,
+        )
+        self.assertEqual(0, reclaimed)
+        self.assertEqual([[(0, 0), (1, 0), (2, 0)]], regions)
 
     def test_split_remaining_giant_regions_leaves_region_not_formed_by_merge_untouched(self):
         width, height = 20, 10

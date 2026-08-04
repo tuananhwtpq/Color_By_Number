@@ -15,6 +15,8 @@ try:
         evaluate_level_dir,
         merge_quality_report,
         score_quality,
+        screen_size_scale_factor,
+        REFERENCE_CANVAS_SIZE,
     )
     from playability_profiles import PROFILE_CHOICES, normalize_profile, profile_thresholds
 except ImportError:
@@ -23,6 +25,8 @@ except ImportError:
         evaluate_level_dir,
         merge_quality_report,
         score_quality,
+        screen_size_scale_factor,
+        REFERENCE_CANVAS_SIZE,
     )
     from tools.playability_profiles import PROFILE_CHOICES, normalize_profile, profile_thresholds
 
@@ -129,8 +133,27 @@ def resolve_target_unique_colors(category_name, requested_profile=None, explicit
     return profile, GENERATION_PROFILE_DEFAULTS[profile]["target_unique_colors"]
 
 
-def resolve_generation_profile_settings(profile, explicit_target=None, overrides=None):
+# Các khoá ngưỡng "vùng nhỏ" theo pixel thô, cần hiệu chỉnh theo độ phân giải ảnh nguồn
+# thực tế (screen_scale) để giữ đúng kích thước hiển thị trên màn hình — side-based nhân
+# 1 lần theo scale, area-based nhân bình phương (vì area ~ side^2).
+SCREEN_SCALE_SIDE_KEYS = ("tiny_region_side_threshold", "tiny_merge_min_side")
+SCREEN_SCALE_AREA_KEYS = ("min_region_area", "hide_small_label_threshold", "tiny_merge_min_area")
+
+
+def resolve_generation_profile_settings(profile, explicit_target=None, overrides=None, screen_scale=1.0):
     settings = dict(GENERATION_PROFILE_DEFAULTS[resolve_generation_profile(profile)])
+
+    # screen_scale > 1 nghĩa là ảnh nguồn phân giải cao hơn REFERENCE_CANVAS_SIZE (mốc mà
+    # các profile default phía trên được tinh chỉnh dựa trên) — chỉ nhân lên (không bao giờ
+    # thu nhỏ), và chỉ áp dụng cho giá trị lấy từ profile default, không đụng tới override
+    # CLI tường minh (áp dụng bên dưới, luôn ghi đè sau cùng).
+    effective_scale = max(1.0, screen_scale or 1.0)
+    if effective_scale > 1.0:
+        for key in SCREEN_SCALE_SIDE_KEYS:
+            settings[key] = int(round(settings[key] * effective_scale))
+        for key in SCREEN_SCALE_AREA_KEYS:
+            settings[key] = int(round(settings[key] * effective_scale * effective_scale))
+
     if explicit_target is not None:
         settings["target_unique_colors"] = max(2, explicit_target)
     for key, value in (overrides or {}).items():
@@ -414,6 +437,14 @@ def select_preprocessing_candidate(candidates):
     )
 
 
+# preprocess_profile="auto" thử ~17 candidate. Chấm điểm post-merge (mô phỏng
+# merge_tiny_regions_into_neighbors + merge_small_attached_regions) tốn kém hơn flood-fill
+# thô rất nhiều — với line art vỡ thành hàng nghìn mảnh vụn (vd ảnh nét mảnh/đứt quãng),
+# chi phí này nhân với ~17 candidate khiến 1 lần generate rất chậm. Chỉ rescoring cho 1
+# shortlist các candidate hứa hẹn nhất theo điểm rẻ (raw flood-fill), thay vì toàn bộ.
+POST_MERGE_CANDIDATE_SHORTLIST_SIZE = 6
+
+
 def select_binary_fill_map(
     line_art_path,
     brightness_threshold,
@@ -425,7 +456,7 @@ def select_binary_fill_map(
 ):
     line_img = Image.open(line_art_path).convert("RGB")
     gray = line_img.convert("L")
-    candidates = []
+    cheap_candidates = []
     for candidate in build_preprocessing_candidates(
         preprocess_profile=preprocess_profile,
         brightness_threshold=brightness_threshold,
@@ -438,25 +469,53 @@ def select_binary_fill_map(
             mode="L",
         )
         binary = close_small_line_gaps(binary, candidate["line_close_radius"])
-        candidate_report = {
+        cheap_report = score_preprocessing_candidate(binary, playability_profile=playability_profile)
+        cheap_candidates.append({
             **candidate,
-            **score_preprocessing_candidate(
-                binary,
-                playability_profile=playability_profile,
-                ref_img=ref_img,
-                merge_settings=merge_settings,
-            ),
+            **cheap_report,
+            "raw_total_regions": cheap_report["total_regions"],
             "binary": binary,
-        }
-        candidates.append(candidate_report)
+        })
 
-    selected = select_preprocessing_candidate(candidates)
+    use_post_merge_scoring = ref_img is not None and merge_settings is not None
+    if use_post_merge_scoring:
+        # Winner chỉ được chọn trong nhóm ĐÃ rescoring post-merge — không bao giờ để 1
+        # candidate ngoài shortlist "thắng" nhờ điểm rẻ bị lạc quan giả (đây chính là bug
+        # đã fix ở estimate_post_merge_region_stats: flood-fill thô trông tốt vì tạo nhiều
+        # mảnh vụn nhỏ, nhưng bước gộp phía sau lại dồn cục chúng thành 1 vùng khổng lồ).
+        shortlist = sorted(
+            cheap_candidates,
+            key=lambda item: (
+                item.get("playable_score", 0),
+                item.get("quality_score", item.get("score", 0)),
+                -abs(item.get("largest_region_pct", 0) - 35.0),
+            ),
+            reverse=True,
+        )[:POST_MERGE_CANDIDATE_SHORTLIST_SIZE]
+        scored_candidates = [
+            {
+                **candidate,
+                **score_preprocessing_candidate(
+                    candidate["binary"],
+                    playability_profile=playability_profile,
+                    ref_img=ref_img,
+                    merge_settings=merge_settings,
+                ),
+                "raw_total_regions": candidate["raw_total_regions"],
+            }
+            for candidate in shortlist
+        ]
+    else:
+        scored_candidates = cheap_candidates
+
+    selected = select_preprocessing_candidate(scored_candidates)
     selected_report = {key: value for key, value in selected.items() if key != "binary"}
-    selected_report["candidate_count"] = len(candidates)
+    selected_report["candidate_count"] = len(cheap_candidates)
+    selected_report["candidate_rescored_count"] = len(scored_candidates)
     selected_report["candidate_top"] = [
         {key: value for key, value in candidate.items() if key != "binary"}
         for candidate in sorted(
-            candidates,
+            scored_candidates,
             key=lambda item: (
                 item.get("playable_score", item.get("candidate_playable_score", 0)),
                 item["quality_score"],
@@ -518,6 +577,88 @@ def extract_regions(binary_img):
                 regions.append(region)
 
     return regions
+
+
+def reclaim_non_ink_pixels_into_regions(regions, width, height, source_gray, brightness_threshold):
+    """Trả các pixel KHÔNG phải nét mực về cho vùng liền kề gần nhất.
+
+    close_small_line_gaps() (MinFilter+MaxFilter) hi sinh một dải pixel giấy trắng để vá khe
+    hở line art khi xác định ranh giới vùng — đúng mục đích, nhưng hệ quả là các pixel đó
+    không thuộc vùng nào. Chúng giữ nguyên màu trắng trong make_flat_colored_image() và chỉ
+    bị apply_line_overlay() nhân với độ sáng gốc (~243/255), nên hiện ra thành VỆT TRẮNG dọc
+    ranh giới trên preview_colored.png, debug_regions.png và full-preview trong app.
+
+    Sau khi ranh giới đã được chốt, pixel nào có độ sáng gốc > ngưỡng nhị phân (tức là giấy,
+    không phải mực) sẽ được BFS đa nguồn gán về vùng gần nhất. Nét mực thật (<= ngưỡng) giữ
+    nguyên là nét, không bị tô lấn.
+    """
+    owner = [-1] * (width * height)
+    queue = deque()
+    for region_idx, region in enumerate(regions):
+        for x, y in region:
+            index = y * width + x
+            owner[index] = region_idx
+            queue.append((x, y))
+
+    gray_pixels = source_gray.load()
+    reclaimed = [[] for _ in regions]
+
+    def is_ink(x, y):
+        return gray_pixels[x, y] <= brightness_threshold
+
+    # Lượt 1 — chỉ lan qua giấy: xử lý dải pixel bị bào mòn dọc ranh giới, chiếm đa số.
+    while queue:
+        cx, cy = queue.popleft()
+        region_idx = owner[cy * width + cx]
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nx = cx + dx
+            ny = cy + dy
+            if not (0 <= nx < width and 0 <= ny < height):
+                continue
+            n_index = ny * width + nx
+            if owner[n_index] != -1 or is_ink(nx, ny):
+                continue
+            owner[n_index] = region_idx
+            reclaimed[region_idx].append((nx, ny))
+            queue.append((nx, ny))
+
+    # Lượt 2 — các "túi" giấy bị nét mực bao kín hoàn toàn: không có hàng xóm nào thuộc vùng
+    # nào nên lượt 1 không với tới. Lan tiếp XUYÊN QUA nét mực để tìm vùng gần nhất, nhưng
+    # chỉ GÁN pixel giấy; nét mực vẫn giữ nguyên là ranh giới, không bị tô lấn.
+    has_unreached_paper = any(
+        owner[y * width + x] == -1 and not is_ink(x, y)
+        for y in range(height)
+        for x in range(width)
+    )
+    if has_unreached_paper:
+        route = list(owner)
+        queue = deque(
+            (index % width, index // width)
+            for index, region_idx in enumerate(owner)
+            if region_idx != -1
+        )
+        while queue:
+            cx, cy = queue.popleft()
+            region_idx = route[cy * width + cx]
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                nx = cx + dx
+                ny = cy + dy
+                if not (0 <= nx < width and 0 <= ny < height):
+                    continue
+                n_index = ny * width + nx
+                if route[n_index] != -1:
+                    continue
+                route[n_index] = region_idx
+                if not is_ink(nx, ny):
+                    owner[n_index] = region_idx
+                    reclaimed[region_idx].append((nx, ny))
+                queue.append((nx, ny))
+
+    reclaimed_count = sum(len(points) for points in reclaimed)
+    if reclaimed_count:
+        for region_idx, points in enumerate(reclaimed):
+            regions[region_idx].extend(points)
+    return regions, reclaimed_count
 
 
 def get_region_bbox(region):
@@ -1172,6 +1313,15 @@ def merge_tiny_regions_into_neighbors(
     rejected_color_distance_count = 0
     rejected_giant_target_count = 0
 
+    # 1 lượt (pass) = 1 lần build point_index, xử lý TOÀN BỘ micro_indices hiện có thay vì
+    # chỉ gộp 1 cặp rồi rebuild lại từ đầu. Vùng "small" đã gộp được TOMBSTONE (đánh dấu,
+    # không pop() ngay) để tránh lệch index trong cùng lượt; vùng "target" đã hấp thụ 1 vùng
+    # nhỏ trong lượt này bị FREEZE (không dùng làm target hay small thêm trong lượt này) để
+    # mọi candidate còn lại trong lượt luôn phản ánh đúng state tại thời điểm build
+    # point_index — tránh phải suy luận về state lồng nhau giữa nhiều lần gộp liên tiếp.
+    # Điều này giảm số lần rebuild point_index (quét toàn bộ pixel) từ O(số lần gộp) xuống
+    # O(số lượt) — với ảnh vỡ thành hàng nghìn mảnh vụn, số lượt thường chỉ vài chục thay vì
+    # hàng nghìn lần rebuild.
     while True:
         point_index = build_region_point_index(region_infos)
         micro_indices = sorted(
@@ -1181,9 +1331,12 @@ def merge_tiny_regions_into_neighbors(
         if not micro_indices:
             break
 
+        tombstoned = set()
+        frozen_targets = set()
         merged_any = False
+
         for small_idx in micro_indices:
-            if small_idx >= len(region_infos):
+            if small_idx in tombstoned or small_idx in frozen_targets:
                 continue
             small_info = region_infos[small_idx]
             if not small_info.get("is_micro_region"):
@@ -1198,6 +1351,11 @@ def merge_tiny_regions_into_neighbors(
             if not adjacent_counts:
                 rejected_non_adjacent_count += 1
             for candidate_idx, shared_boundary_count in adjacent_counts.items():
+                if candidate_idx in tombstoned or candidate_idx in frozen_targets:
+                    # Đã bị động tới trong cùng lượt này (đã gộp đi hoặc đã hấp thụ 1 vùng
+                    # khác) — dữ liệu area/target_color không còn khớp với point_index chụp
+                    # tại đầu lượt. Để lượt sau xử lý tiếp cho nhất quán.
+                    continue
                 candidate_info = region_infos[candidate_idx]
                 if candidate_info["area"] <= small_info["area"]:
                     continue
@@ -1240,7 +1398,17 @@ def merge_tiny_regions_into_neighbors(
             merge_region_info_into_parent(
                 region_infos[target_idx], small_info, skip_label_anchor=skip_label_anchor
             )
-            region_infos.pop(small_idx)
+            tombstoned.add(small_idx)
+            frozen_targets.add(target_idx)
+            merged_tiny_regions_count += 1
+            if forced_merge and best_candidate_idx is None:
+                forced_tiny_region_merges_count += 1
+            merged_any = True
+
+        if tombstoned:
+            region_infos = [
+                info for idx, info in enumerate(region_infos) if idx not in tombstoned
+            ]
             classify_region_infos(
                 region_infos=region_infos,
                 min_region_area=min_region_area,
@@ -1249,11 +1417,6 @@ def merge_tiny_regions_into_neighbors(
                 tiny_merge_min_area=tiny_merge_min_area,
                 tiny_merge_min_side=tiny_merge_min_side,
             )
-            merged_tiny_regions_count += 1
-            if forced_merge and best_candidate_idx is None:
-                forced_tiny_region_merges_count += 1
-            merged_any = True
-            break
 
         if not merged_any:
             break
@@ -1344,6 +1507,9 @@ def merge_small_attached_regions(
 
     merged_count = 0
 
+    # Xử lý theo lượt/pass giống merge_tiny_regions_into_neighbors: 1 lần build point_index
+    # xử lý toàn bộ small_indices hiện có, dùng tombstone + frozen_targets thay vì
+    # pop()-rồi-rebuild sau mỗi 1 lần gộp — tránh O(số lần gộp) lần quét lại toàn bộ pixel.
     while True:
         point_index = build_region_point_index(region_infos)
         small_indices = sorted(
@@ -1358,9 +1524,12 @@ def merge_small_attached_regions(
         if not small_indices:
             break
 
+        tombstoned = set()
+        frozen_targets = set()
         merged_any = False
+
         for small_idx in small_indices:
-            if small_idx >= len(region_infos):
+            if small_idx in tombstoned or small_idx in frozen_targets:
                 continue
             small_info = region_infos[small_idx]
             small_or_tiny = (
@@ -1375,6 +1544,8 @@ def merge_small_attached_regions(
             adjacent_counts = find_adjacent_region_indices(small_idx, region_infos, point_index)
 
             for large_idx, shared_boundary_count in adjacent_counts.items():
+                if large_idx in tombstoned or large_idx in frozen_targets:
+                    continue
                 large_info = region_infos[large_idx]
                 if large_info["area"] <= small_info["area"]:
                     continue
@@ -1398,7 +1569,15 @@ def merge_small_attached_regions(
             merge_region_info_into_parent(
                 region_infos[best_candidate_idx], small_info, skip_label_anchor=skip_label_anchor
             )
-            region_infos.pop(small_idx)
+            tombstoned.add(small_idx)
+            frozen_targets.add(best_candidate_idx)
+            merged_count += 1
+            merged_any = True
+
+        if tombstoned:
+            region_infos = [
+                info for idx, info in enumerate(region_infos) if idx not in tombstoned
+            ]
             classify_region_infos(
                 region_infos=region_infos,
                 min_region_area=min_region_area,
@@ -1407,9 +1586,6 @@ def merge_small_attached_regions(
                 tiny_merge_min_area=tiny_merge_min_area,
                 tiny_merge_min_side=tiny_merge_min_side,
             )
-            merged_count += 1
-            merged_any = True
-            break
 
         if not merged_any:
             break
@@ -1670,6 +1846,19 @@ def generate_level_assets(
         requested_profile=category_profile,
         explicit_target=target_unique_colors,
     )
+    # Đọc size ảnh trước (thao tác rẻ, PIL không decode hết pixel chỉ để lấy .size) để
+    # hiệu chỉnh ngưỡng vùng nhỏ theo đúng kích thước hiển thị thật trên màn hình — ảnh
+    # nguồn phân giải càng cao hơn REFERENCE_CANVAS_SIZE thì ngưỡng pixel thô càng cần lớn
+    # hơn để tương ứng cùng 1 kích thước vật lý trên điện thoại.
+    with Image.open(line_art_path) as probe_img:
+        probe_width, probe_height = probe_img.size
+    screen_scale = screen_size_scale_factor(probe_width, probe_height)
+    if screen_scale > 1.01:
+        print(
+            f"Ảnh nguồn {probe_width}x{probe_height} lớn hơn mốc tham chiếu "
+            f"{REFERENCE_CANVAS_SIZE}px — nhân ngưỡng vùng nhỏ lên x{screen_scale:.2f} "
+            "để giữ đúng kích thước hiển thị trên màn hình."
+        )
     profile_settings = resolve_generation_profile_settings(
         resolved_profile,
         explicit_target=target_unique_colors,
@@ -1681,6 +1870,7 @@ def generate_level_assets(
             "tiny_merge_min_side": tiny_merge_min_side,
             "tiny_merge_policy": tiny_merge_policy,
         },
+        screen_scale=screen_scale,
     )
     resolved_target_unique_colors = profile_settings["target_unique_colors"]
     min_region_area = profile_settings["min_region_area"]
@@ -1755,6 +1945,21 @@ def generate_level_assets(
     regions = extract_regions(binary_img)
     raw_region_count = len(regions)
     print(f"Tìm thấy {raw_region_count} vùng mảng màu riêng biệt.")
+
+    # Thu hồi các pixel giấy trắng bị close_small_line_gaps hi sinh, nếu không chúng sẽ
+    # thành vệt trắng dọc ranh giới trên preview và trong app.
+    regions, reclaimed_pixel_count = reclaim_non_ink_pixels_into_regions(
+        regions=regions,
+        width=width,
+        height=height,
+        source_gray=source_line_img.convert("L"),
+        brightness_threshold=selected_preprocessing["brightness_threshold"],
+    )
+    if reclaimed_pixel_count:
+        print(
+            f"Đã thu hồi {reclaimed_pixel_count} pixel không phải nét mực về vùng liền kề "
+            f"({reclaimed_pixel_count * 100.0 / max(1, width * height):.2f}% ảnh)."
+        )
 
     print("Đang lấy màu tham chiếu và metadata cho từng vùng...")
     region_infos = []
@@ -2408,6 +2613,14 @@ def create_parser():
         action="store_true",
         help="Cho phép ghi đè lên level đã tồn tại trong assets (dùng khi regenerate level hỏng).",
     )
+    batch_source_category.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help=(
+            "Không dừng cả category khi một level lỗi hoặc không đạt quality gate; "
+            "ghi nhận level lỗi rồi tiếp tục xử lý các ID còn lại."
+        ),
+    )
 
     return parser
 
@@ -2634,57 +2847,79 @@ def run_batch_source_category(args):
     print(f"Tìm thấy tổng cộng {len(levels_to_process)} tác phẩm hợp lệ.")
 
     processed_count = 0
+    failed_levels = []
+    skipped_existing_levels = []
     overwrite = getattr(args, "overwrite", False)
+    continue_on_error = getattr(args, "continue_on_error", False)
 
     for level in levels_to_process:
         generated_id = level["name"]
         level_out_dir = os.path.join(output_root, target_category, generated_id)
 
         if os.path.exists(level_out_dir) and not overwrite:
-            raise FileExistsError(
+            message = (
                 f"Thư mục đích đã tồn tại: {level_out_dir}. "
                 "Hãy xóa/sửa folder cũ, dùng --target-category khác, hoặc --overwrite nếu "
                 "đang cố tình regenerate level hỏng."
             )
+            if continue_on_error:
+                print(f"BỎ QUA ID {generated_id}: {message}")
+                skipped_existing_levels.append(generated_id)
+                continue
+            raise FileExistsError(message)
 
         print(
             f"\n[XỬ LÝ - ID: {generated_id}] "
             f"Source: {source_category}/{level['name']} -> Category: {target_category}"
         )
-        generate_level_assets(
-            level["line_path"],
-            level["ref_path"],
-            level_out_dir,
-            category_name=target_category,
-            data_name=generated_id,
-            generated_id=generated_id,
-            brightness_threshold=args.brightness_threshold,
-            color_merge_threshold=args.merge_threshold,
-            min_region_area=args.min_region_area,
-            line_close_radius=args.line_close_radius,
-            hide_small_label_threshold=args.hide_small_label_threshold,
-            small_region_attach_distance=args.small_region_attach_distance,
-            tiny_region_side_threshold=args.tiny_region_side_threshold,
-            tiny_merge_min_area=args.tiny_merge_min_area,
-            tiny_merge_min_side=args.tiny_merge_min_side,
-            tiny_merge_attach_distance=args.tiny_merge_attach_distance,
-            tiny_merge_color_threshold=args.tiny_merge_color_threshold,
-            tiny_merge_policy=args.tiny_merge_policy,
-            target_unique_colors=args.target_unique_colors,
-            category_profile=args.category_profile,
-            quantize_method=args.quantize_method,
-            adaptive_palette=not args.disable_adaptive_palette,
-            preprocess_profile=args.preprocess_profile,
-            region_color_method=args.region_color_method,
-            detail_alpha=args.detail_alpha,
-            allow_low_quality=args.allow_low_quality,
-        )
-        processed_count += 1
+        try:
+            generate_level_assets(
+                level["line_path"],
+                level["ref_path"],
+                level_out_dir,
+                category_name=target_category,
+                data_name=generated_id,
+                generated_id=generated_id,
+                brightness_threshold=args.brightness_threshold,
+                color_merge_threshold=args.merge_threshold,
+                min_region_area=args.min_region_area,
+                line_close_radius=args.line_close_radius,
+                hide_small_label_threshold=args.hide_small_label_threshold,
+                small_region_attach_distance=args.small_region_attach_distance,
+                tiny_region_side_threshold=args.tiny_region_side_threshold,
+                tiny_merge_min_area=args.tiny_merge_min_area,
+                tiny_merge_min_side=args.tiny_merge_min_side,
+                tiny_merge_attach_distance=args.tiny_merge_attach_distance,
+                tiny_merge_color_threshold=args.tiny_merge_color_threshold,
+                tiny_merge_policy=args.tiny_merge_policy,
+                target_unique_colors=args.target_unique_colors,
+                category_profile=args.category_profile,
+                quantize_method=args.quantize_method,
+                adaptive_palette=not args.disable_adaptive_palette,
+                preprocess_profile=args.preprocess_profile,
+                region_color_method=args.region_color_method,
+                detail_alpha=args.detail_alpha,
+                allow_low_quality=args.allow_low_quality,
+            )
+            processed_count += 1
+        except Exception as error:
+            if not continue_on_error:
+                raise
+            failed_levels.append((generated_id, str(error)))
+            print(f"LỖI ID {generated_id}: {error}")
+            print("Tiếp tục xử lý level kế tiếp vì --continue-on-error.")
 
     print(
-        f"\n=== HOÀN TẤT IMPORT CATEGORY! Đã tạo thành công {processed_count} tác phẩm vào "
-        f"'{target_category}'. ==="
+        f"\n=== HOÀN TẤT IMPORT CATEGORY! Thành công {processed_count}, "
+        f"bỏ qua đã tồn tại {len(skipped_existing_levels)}, lỗi {len(failed_levels)} "
+        f"trong '{target_category}'. ==="
     )
+    if skipped_existing_levels:
+        print("ID đã tồn tại bị bỏ qua: " + ", ".join(skipped_existing_levels))
+    if failed_levels:
+        print("ID lỗi:")
+        for level_id, error in failed_levels:
+            print(f"  - {level_id}: {error}")
 
 
 def run_single(args):

@@ -1,0 +1,4541 @@
+{
+  "schema_version": 2,
+  "id": "07",
+  "name": "07",
+  "category": "Animal",
+  "width": 512,
+  "height": 512,
+  "assets": {
+    "line": "line.png",
+    "mask": "mask.png",
+    "preview": "preview_colored.png",
+    "detail": "detail.png",
+    "debug_regions": "debug_regions.png",
+    "debug_report": "debug_report.json",
+    "debug_source_line": "debug_source_line.png",
+    "debug_preview_flat": "debug_preview_flat.png"
+  },
+  "palette": [
+    {
+      "number": 1,
+      "target_color": "#333526",
+      "region_count": 2,
+      "total_area": 336
+    },
+    {
+      "number": 2,
+      "target_color": "#2c392b",
+      "region_count": 1,
+      "total_area": 433
+    },
+    {
+      "number": 3,
+      "target_color": "#443f2c",
+      "region_count": 1,
+      "total_area": 119
+    },
+    {
+      "number": 4,
+      "target_color": "#254f2c",
+      "region_count": 2,
+      "total_area": 2162
+    },
+    {
+      "number": 5,
+      "target_color": "#1a5664",
+      "region_count": 1,
+      "total_area": 1085
+    },
+    {
+      "number": 6,
+      "target_color": "#564a2c",
+      "region_count": 1,
+      "total_area": 187
+    },
+    {
+      "number": 7,
+      "target_color": "#2e5c30",
+      "region_count": 1,
+      "total_area": 6703
+    },
+    {
+      "number": 8,
+      "target_color": "#6d4e32",
+      "region_count": 1,
+      "total_area": 284
+    },
+    {
+      "number": 9,
+      "target_color": "#27616c",
+      "region_count": 1,
+      "total_area": 836
+    },
+    {
+      "number": 10,
+      "target_color": "#346336",
+      "region_count": 4,
+      "total_area": 3218
+    },
+    {
+      "number": 11,
+      "target_color": "#356958",
+      "region_count": 4,
+      "total_area": 1866
+    },
+    {
+      "number": 12,
+      "target_color": "#8b5c37",
+      "region_count": 1,
+      "total_area": 49
+    },
+    {
+      "number": 13,
+      "target_color": "#4c7530",
+      "region_count": 1,
+      "total_area": 4176
+    },
+    {
+      "number": 14,
+      "target_color": "#507944",
+      "region_count": 2,
+      "total_area": 294
+    },
+    {
+      "number": 15,
+      "target_color": "#417a6c",
+      "region_count": 1,
+      "total_area": 175
+    },
+    {
+      "number": 16,
+      "target_color": "#9d6446",
+      "region_count": 1,
+      "total_area": 857
+    },
+    {
+      "number": 17,
+      "target_color": "#587e33",
+      "region_count": 3,
+      "total_area": 521
+    },
+    {
+      "number": 18,
+      "target_color": "#55814e",
+      "region_count": 4,
+      "total_area": 608
+    },
+    {
+      "number": 19,
+      "target_color": "#817854",
+      "region_count": 1,
+      "total_area": 104
+    },
+    {
+      "number": 20,
+      "target_color": "#4d8574",
+      "region_count": 1,
+      "total_area": 586
+    },
+    {
+      "number": 21,
+      "target_color": "#628839",
+      "region_count": 1,
+      "total_area": 404
+    },
+    {
+      "number": 22,
+      "target_color": "#70892a",
+      "region_count": 2,
+      "total_area": 62
+    },
+    {
+      "number": 23,
+      "target_color": "#a87832",
+      "region_count": 1,
+      "total_area": 15701
+    },
+    {
+      "number": 24,
+      "target_color": "#718c37",
+      "region_count": 3,
+      "total_area": 844
+    },
+    {
+      "number": 25,
+      "target_color": "#2995b6",
+      "region_count": 1,
+      "total_area": 48
+    },
+    {
+      "number": 26,
+      "target_color": "#2e9aba",
+      "region_count": 1,
+      "total_area": 58
+    },
+    {
+      "number": 27,
+      "target_color": "#ac804f",
+      "region_count": 1,
+      "total_area": 113
+    },
+    {
+      "number": 28,
+      "target_color": "#bb802d",
+      "region_count": 1,
+      "total_area": 75
+    },
+    {
+      "number": 29,
+      "target_color": "#7d932f",
+      "region_count": 7,
+      "total_area": 9125
+    },
+    {
+      "number": 30,
+      "target_color": "#8b8c6a",
+      "region_count": 1,
+      "total_area": 187
+    },
+    {
+      "number": 31,
+      "target_color": "#b88340",
+      "region_count": 1,
+      "total_area": 5723
+    },
+    {
+      "number": 32,
+      "target_color": "#ba8b21",
+      "region_count": 1,
+      "total_area": 99
+    },
+    {
+      "number": 33,
+      "target_color": "#899a2f",
+      "region_count": 3,
+      "total_area": 3011
+    },
+    {
+      "number": 34,
+      "target_color": "#41a3bd",
+      "region_count": 1,
+      "total_area": 41990
+    },
+    {
+      "number": 35,
+      "target_color": "#c78d3a",
+      "region_count": 1,
+      "total_area": 3682
+    },
+    {
+      "number": 36,
+      "target_color": "#c59325",
+      "region_count": 1,
+      "total_area": 232
+    },
+    {
+      "number": 37,
+      "target_color": "#bb963a",
+      "region_count": 1,
+      "total_area": 51
+    },
+    {
+      "number": 38,
+      "target_color": "#969c7c",
+      "region_count": 1,
+      "total_area": 1972
+    },
+    {
+      "number": 39,
+      "target_color": "#98a339",
+      "region_count": 2,
+      "total_area": 30404
+    },
+    {
+      "number": 40,
+      "target_color": "#c19672",
+      "region_count": 1,
+      "total_area": 187
+    },
+    {
+      "number": 41,
+      "target_color": "#da915e",
+      "region_count": 1,
+      "total_area": 1217
+    },
+    {
+      "number": 42,
+      "target_color": "#97a18a",
+      "region_count": 1,
+      "total_area": 295
+    },
+    {
+      "number": 43,
+      "target_color": "#ce9672",
+      "region_count": 1,
+      "total_area": 279
+    },
+    {
+      "number": 44,
+      "target_color": "#9ca94b",
+      "region_count": 1,
+      "total_area": 2843
+    },
+    {
+      "number": 45,
+      "target_color": "#99a888",
+      "region_count": 2,
+      "total_area": 380
+    },
+    {
+      "number": 46,
+      "target_color": "#e29f4c",
+      "region_count": 6,
+      "total_area": 32064
+    },
+    {
+      "number": 47,
+      "target_color": "#afac8e",
+      "region_count": 8,
+      "total_area": 15587
+    },
+    {
+      "number": 48,
+      "target_color": "#a6ae9c",
+      "region_count": 1,
+      "total_area": 1544
+    },
+    {
+      "number": 49,
+      "target_color": "#76bac0",
+      "region_count": 2,
+      "total_area": 3662
+    },
+    {
+      "number": 50,
+      "target_color": "#e4a755",
+      "region_count": 1,
+      "total_area": 151
+    },
+    {
+      "number": 51,
+      "target_color": "#97c3c7",
+      "region_count": 1,
+      "total_area": 55
+    },
+    {
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "region_count": 9,
+      "total_area": 19602
+    },
+    {
+      "number": 53,
+      "target_color": "#ebbb89",
+      "region_count": 2,
+      "total_area": 2386
+    },
+    {
+      "number": 54,
+      "target_color": "#d9c38c",
+      "region_count": 1,
+      "total_area": 87
+    },
+    {
+      "number": 55,
+      "target_color": "#e0c684",
+      "region_count": 2,
+      "total_area": 289
+    },
+    {
+      "number": 56,
+      "target_color": "#e0cb96",
+      "region_count": 1,
+      "total_area": 23
+    },
+    {
+      "number": 57,
+      "target_color": "#e1cea4",
+      "region_count": 1,
+      "total_area": 40
+    },
+    {
+      "number": 58,
+      "target_color": "#d8d4be",
+      "region_count": 1,
+      "total_area": 118
+    },
+    {
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "region_count": 7,
+      "total_area": 15422
+    },
+    {
+      "number": 60,
+      "target_color": "#e3d5b3",
+      "region_count": 1,
+      "total_area": 742
+    }
+  ],
+  "region_palette": [
+    {
+      "number": 52,
+      "mask_color": "#000001",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 25,
+      "mask_color": "#000002",
+      "target_color": "#2995b6"
+    },
+    {
+      "number": 34,
+      "mask_color": "#000003",
+      "target_color": "#41a3bd"
+    },
+    {
+      "number": 52,
+      "mask_color": "#000004",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 26,
+      "mask_color": "#000005",
+      "target_color": "#2e9aba"
+    },
+    {
+      "number": 58,
+      "mask_color": "#000006",
+      "target_color": "#d8d4be"
+    },
+    {
+      "number": 46,
+      "mask_color": "#000007",
+      "target_color": "#e29f4c"
+    },
+    {
+      "number": 31,
+      "mask_color": "#000008",
+      "target_color": "#b88340"
+    },
+    {
+      "number": 52,
+      "mask_color": "#000009",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 51,
+      "mask_color": "#00000a",
+      "target_color": "#97c3c7"
+    },
+    {
+      "number": 53,
+      "mask_color": "#00000b",
+      "target_color": "#ebbb89"
+    },
+    {
+      "number": 52,
+      "mask_color": "#00000c",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 52,
+      "mask_color": "#00000d",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 60,
+      "mask_color": "#00000e",
+      "target_color": "#e3d5b3"
+    },
+    {
+      "number": 52,
+      "mask_color": "#00000f",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 59,
+      "mask_color": "#000010",
+      "target_color": "#ecd2a7"
+    },
+    {
+      "number": 43,
+      "mask_color": "#000011",
+      "target_color": "#ce9672"
+    },
+    {
+      "number": 40,
+      "mask_color": "#000012",
+      "target_color": "#c19672"
+    },
+    {
+      "number": 52,
+      "mask_color": "#000013",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 18,
+      "mask_color": "#000014",
+      "target_color": "#55814e"
+    },
+    {
+      "number": 18,
+      "mask_color": "#000015",
+      "target_color": "#55814e"
+    },
+    {
+      "number": 11,
+      "mask_color": "#000016",
+      "target_color": "#356958"
+    },
+    {
+      "number": 53,
+      "mask_color": "#000017",
+      "target_color": "#ebbb89"
+    },
+    {
+      "number": 46,
+      "mask_color": "#000018",
+      "target_color": "#e29f4c"
+    },
+    {
+      "number": 49,
+      "mask_color": "#000019",
+      "target_color": "#76bac0"
+    },
+    {
+      "number": 11,
+      "mask_color": "#00001a",
+      "target_color": "#356958"
+    },
+    {
+      "number": 18,
+      "mask_color": "#00001b",
+      "target_color": "#55814e"
+    },
+    {
+      "number": 49,
+      "mask_color": "#00001c",
+      "target_color": "#76bac0"
+    },
+    {
+      "number": 52,
+      "mask_color": "#00001d",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 11,
+      "mask_color": "#00001e",
+      "target_color": "#356958"
+    },
+    {
+      "number": 46,
+      "mask_color": "#00001f",
+      "target_color": "#e29f4c"
+    },
+    {
+      "number": 47,
+      "mask_color": "#000020",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 28,
+      "mask_color": "#000021",
+      "target_color": "#bb802d"
+    },
+    {
+      "number": 44,
+      "mask_color": "#000022",
+      "target_color": "#9ca94b"
+    },
+    {
+      "number": 52,
+      "mask_color": "#000023",
+      "target_color": "#a8c7c1"
+    },
+    {
+      "number": 18,
+      "mask_color": "#000024",
+      "target_color": "#55814e"
+    },
+    {
+      "number": 35,
+      "mask_color": "#000025",
+      "target_color": "#c78d3a"
+    },
+    {
+      "number": 11,
+      "mask_color": "#000026",
+      "target_color": "#356958"
+    },
+    {
+      "number": 15,
+      "mask_color": "#000027",
+      "target_color": "#417a6c"
+    },
+    {
+      "number": 14,
+      "mask_color": "#000028",
+      "target_color": "#507944"
+    },
+    {
+      "number": 20,
+      "mask_color": "#000029",
+      "target_color": "#4d8574"
+    },
+    {
+      "number": 47,
+      "mask_color": "#00002a",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 27,
+      "mask_color": "#00002b",
+      "target_color": "#ac804f"
+    },
+    {
+      "number": 8,
+      "mask_color": "#00002c",
+      "target_color": "#6d4e32"
+    },
+    {
+      "number": 14,
+      "mask_color": "#00002d",
+      "target_color": "#507944"
+    },
+    {
+      "number": 50,
+      "mask_color": "#00002e",
+      "target_color": "#e4a755"
+    },
+    {
+      "number": 39,
+      "mask_color": "#00002f",
+      "target_color": "#98a339"
+    },
+    {
+      "number": 55,
+      "mask_color": "#000030",
+      "target_color": "#e0c684"
+    },
+    {
+      "number": 2,
+      "mask_color": "#000031",
+      "target_color": "#2c392b"
+    },
+    {
+      "number": 39,
+      "mask_color": "#000032",
+      "target_color": "#98a339"
+    },
+    {
+      "number": 19,
+      "mask_color": "#000033",
+      "target_color": "#817854"
+    },
+    {
+      "number": 3,
+      "mask_color": "#000034",
+      "target_color": "#443f2c"
+    },
+    {
+      "number": 48,
+      "mask_color": "#000035",
+      "target_color": "#a6ae9c"
+    },
+    {
+      "number": 1,
+      "mask_color": "#000036",
+      "target_color": "#333526"
+    },
+    {
+      "number": 23,
+      "mask_color": "#000037",
+      "target_color": "#a87832"
+    },
+    {
+      "number": 42,
+      "mask_color": "#000038",
+      "target_color": "#97a18a"
+    },
+    {
+      "number": 24,
+      "mask_color": "#000039",
+      "target_color": "#718c37"
+    },
+    {
+      "number": 1,
+      "mask_color": "#00003a",
+      "target_color": "#333526"
+    },
+    {
+      "number": 16,
+      "mask_color": "#00003b",
+      "target_color": "#9d6446"
+    },
+    {
+      "number": 12,
+      "mask_color": "#00003c",
+      "target_color": "#8b5c37"
+    },
+    {
+      "number": 6,
+      "mask_color": "#00003d",
+      "target_color": "#564a2c"
+    },
+    {
+      "number": 41,
+      "mask_color": "#00003e",
+      "target_color": "#da915e"
+    },
+    {
+      "number": 46,
+      "mask_color": "#00003f",
+      "target_color": "#e29f4c"
+    },
+    {
+      "number": 29,
+      "mask_color": "#000040",
+      "target_color": "#7d932f"
+    },
+    {
+      "number": 5,
+      "mask_color": "#000041",
+      "target_color": "#1a5664"
+    },
+    {
+      "number": 9,
+      "mask_color": "#000042",
+      "target_color": "#27616c"
+    },
+    {
+      "number": 47,
+      "mask_color": "#000043",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 29,
+      "mask_color": "#000044",
+      "target_color": "#7d932f"
+    },
+    {
+      "number": 30,
+      "mask_color": "#000045",
+      "target_color": "#8b8c6a"
+    },
+    {
+      "number": 59,
+      "mask_color": "#000046",
+      "target_color": "#ecd2a7"
+    },
+    {
+      "number": 47,
+      "mask_color": "#000047",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 47,
+      "mask_color": "#000048",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 59,
+      "mask_color": "#000049",
+      "target_color": "#ecd2a7"
+    },
+    {
+      "number": 55,
+      "mask_color": "#00004a",
+      "target_color": "#e0c684"
+    },
+    {
+      "number": 21,
+      "mask_color": "#00004b",
+      "target_color": "#628839"
+    },
+    {
+      "number": 46,
+      "mask_color": "#00004c",
+      "target_color": "#e29f4c"
+    },
+    {
+      "number": 24,
+      "mask_color": "#00004d",
+      "target_color": "#718c37"
+    },
+    {
+      "number": 38,
+      "mask_color": "#00004e",
+      "target_color": "#969c7c"
+    },
+    {
+      "number": 33,
+      "mask_color": "#00004f",
+      "target_color": "#899a2f"
+    },
+    {
+      "number": 54,
+      "mask_color": "#000050",
+      "target_color": "#d9c38c"
+    },
+    {
+      "number": 59,
+      "mask_color": "#000051",
+      "target_color": "#ecd2a7"
+    },
+    {
+      "number": 29,
+      "mask_color": "#000052",
+      "target_color": "#7d932f"
+    },
+    {
+      "number": 47,
+      "mask_color": "#000053",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 10,
+      "mask_color": "#000054",
+      "target_color": "#346336"
+    },
+    {
+      "number": 46,
+      "mask_color": "#000055",
+      "target_color": "#e29f4c"
+    },
+    {
+      "number": 17,
+      "mask_color": "#000056",
+      "target_color": "#587e33"
+    },
+    {
+      "number": 17,
+      "mask_color": "#000057",
+      "target_color": "#587e33"
+    },
+    {
+      "number": 29,
+      "mask_color": "#000058",
+      "target_color": "#7d932f"
+    },
+    {
+      "number": 29,
+      "mask_color": "#000059",
+      "target_color": "#7d932f"
+    },
+    {
+      "number": 7,
+      "mask_color": "#00005a",
+      "target_color": "#2e5c30"
+    },
+    {
+      "number": 47,
+      "mask_color": "#00005b",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 59,
+      "mask_color": "#00005c",
+      "target_color": "#ecd2a7"
+    },
+    {
+      "number": 47,
+      "mask_color": "#00005d",
+      "target_color": "#afac8e"
+    },
+    {
+      "number": 33,
+      "mask_color": "#00005e",
+      "target_color": "#899a2f"
+    },
+    {
+      "number": 45,
+      "mask_color": "#00005f",
+      "target_color": "#99a888"
+    },
+    {
+      "number": 33,
+      "mask_color": "#000060",
+      "target_color": "#899a2f"
+    },
+    {
+      "number": 45,
+      "mask_color": "#000061",
+      "target_color": "#99a888"
+    },
+    {
+      "number": 37,
+      "mask_color": "#000062",
+      "target_color": "#bb963a"
+    },
+    {
+      "number": 59,
+      "mask_color": "#000063",
+      "target_color": "#ecd2a7"
+    },
+    {
+      "number": 29,
+      "mask_color": "#000064",
+      "target_color": "#7d932f"
+    },
+    {
+      "number": 24,
+      "mask_color": "#000065",
+      "target_color": "#718c37"
+    },
+    {
+      "number": 13,
+      "mask_color": "#000066",
+      "target_color": "#4c7530"
+    },
+    {
+      "number": 4,
+      "mask_color": "#000067",
+      "target_color": "#254f2c"
+    },
+    {
+      "number": 10,
+      "mask_color": "#000068",
+      "target_color": "#346336"
+    },
+    {
+      "number": 4,
+      "mask_color": "#000069",
+      "target_color": "#254f2c"
+    },
+    {
+      "number": 36,
+      "mask_color": "#00006a",
+      "target_color": "#c59325"
+    },
+    {
+      "number": 32,
+      "mask_color": "#00006b",
+      "target_color": "#ba8b21"
+    },
+    {
+      "number": 10,
+      "mask_color": "#00006c",
+      "target_color": "#346336"
+    },
+    {
+      "number": 10,
+      "mask_color": "#00006d",
+      "target_color": "#346336"
+    },
+    {
+      "number": 17,
+      "mask_color": "#00006e",
+      "target_color": "#587e33"
+    },
+    {
+      "number": 29,
+      "mask_color": "#00006f",
+      "target_color": "#7d932f"
+    },
+    {
+      "number": 59,
+      "mask_color": "#000070",
+      "target_color": "#ecd2a7"
+    },
+    {
+      "number": 57,
+      "mask_color": "#000071",
+      "target_color": "#e1cea4"
+    },
+    {
+      "number": 22,
+      "mask_color": "#000072",
+      "target_color": "#70892a"
+    },
+    {
+      "number": 22,
+      "mask_color": "#000073",
+      "target_color": "#70892a"
+    },
+    {
+      "number": 56,
+      "mask_color": "#000074",
+      "target_color": "#e0cb96"
+    }
+  ],
+  "regions": [
+    {
+      "id": 1,
+      "mask_color": "#000001",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#afc9c1",
+      "area": 5895,
+      "bbox": {
+        "left": 0,
+        "top": 0,
+        "right": 106,
+        "bottom": 75
+      },
+      "centroid": {
+        "x": 44.864970313825275,
+        "y": 37.62459711620017
+      },
+      "label_anchor": {
+        "x": 9.0,
+        "y": 60.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 2,
+      "mask_color": "#000002",
+      "number": 25,
+      "target_color": "#2995b6",
+      "fill_color": "#2995b6",
+      "representative_color": "#2995b6",
+      "area": 48,
+      "bbox": {
+        "left": 49,
+        "top": 0,
+        "right": 59,
+        "bottom": 7
+      },
+      "centroid": {
+        "x": 52.916666666666664,
+        "y": 2.4791666666666665
+      },
+      "label_anchor": {
+        "x": 53.0,
+        "y": 2.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 3,
+      "mask_color": "#000003",
+      "number": 34,
+      "target_color": "#41a3bd",
+      "fill_color": "#41a3bd",
+      "representative_color": "#41a3bd",
+      "area": 41990,
+      "bbox": {
+        "left": 0,
+        "top": 0,
+        "right": 511,
+        "bottom": 196
+      },
+      "centroid": {
+        "x": 234.56865920457253,
+        "y": 73.66325315551322
+      },
+      "label_anchor": {
+        "x": 173.0,
+        "y": 41.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 4,
+      "mask_color": "#000004",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#a7c7c1",
+      "area": 8640,
+      "bbox": {
+        "left": 320,
+        "top": 0,
+        "right": 511,
+        "bottom": 62
+      },
+      "centroid": {
+        "x": 431.24837962962965,
+        "y": 29.46377314814815
+      },
+      "label_anchor": {
+        "x": 430.0,
+        "y": 44.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 5,
+      "mask_color": "#000005",
+      "number": 26,
+      "target_color": "#2e9aba",
+      "fill_color": "#2e9aba",
+      "representative_color": "#2e9aba",
+      "area": 58,
+      "bbox": {
+        "left": 482,
+        "top": 0,
+        "right": 493,
+        "bottom": 8
+      },
+      "centroid": {
+        "x": 487.6034482758621,
+        "y": 3.0344827586206895
+      },
+      "label_anchor": {
+        "x": 487.0,
+        "y": 3.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 6,
+      "mask_color": "#000006",
+      "number": 58,
+      "target_color": "#d8d4be",
+      "fill_color": "#d8d4be",
+      "representative_color": "#d8d4be",
+      "area": 118,
+      "bbox": {
+        "left": 13,
+        "top": 23,
+        "right": 25,
+        "bottom": 39
+      },
+      "centroid": {
+        "x": 20.23728813559322,
+        "y": 30.296610169491526
+      },
+      "label_anchor": {
+        "x": 20.0,
+        "y": 27.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": true,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 7,
+      "mask_color": "#000007",
+      "number": 46,
+      "target_color": "#e29f4c",
+      "fill_color": "#e29f4c",
+      "representative_color": "#e2a04d",
+      "area": 24841,
+      "bbox": {
+        "left": 196,
+        "top": 48,
+        "right": 449,
+        "bottom": 327
+      },
+      "centroid": {
+        "x": 335.155589549535,
+        "y": 186.17322168994806
+      },
+      "label_anchor": {
+        "x": 359.0,
+        "y": 131.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 8,
+      "mask_color": "#000008",
+      "number": 31,
+      "target_color": "#b88340",
+      "fill_color": "#b88340",
+      "representative_color": "#b88340",
+      "area": 5723,
+      "bbox": {
+        "left": 180,
+        "top": 56,
+        "right": 263,
+        "bottom": 220
+      },
+      "centroid": {
+        "x": 214.4974663637952,
+        "y": 137.82037392975712
+      },
+      "label_anchor": {
+        "x": 209.0,
+        "y": 100.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 9,
+      "mask_color": "#000009",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#aac9c1",
+      "area": 147,
+      "bbox": {
+        "left": 96,
+        "top": 59,
+        "right": 118,
+        "bottom": 68
+      },
+      "centroid": {
+        "x": 106.6734693877551,
+        "y": 63.55102040816327
+      },
+      "label_anchor": {
+        "x": 105.0,
+        "y": 63.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 10,
+      "mask_color": "#00000a",
+      "number": 51,
+      "target_color": "#97c3c7",
+      "fill_color": "#97c3c7",
+      "representative_color": "#97c3c7",
+      "area": 55,
+      "bbox": {
+        "left": 344,
+        "top": 77,
+        "right": 355,
+        "bottom": 82
+      },
+      "centroid": {
+        "x": 349.6545454545454,
+        "y": 79.49090909090908
+      },
+      "label_anchor": {
+        "x": 350.0,
+        "y": 80.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 11,
+      "mask_color": "#00000b",
+      "number": 53,
+      "target_color": "#ebbb89",
+      "fill_color": "#ebbb89",
+      "representative_color": "#ebbb89",
+      "area": 2219,
+      "bbox": {
+        "left": 386,
+        "top": 83,
+        "right": 436,
+        "bottom": 169
+      },
+      "centroid": {
+        "x": 415.47318611987384,
+        "y": 120.05452906714736
+      },
+      "label_anchor": {
+        "x": 424.0,
+        "y": 120.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 12,
+      "mask_color": "#00000c",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#9fc4c3",
+      "area": 349,
+      "bbox": {
+        "left": 0,
+        "top": 93,
+        "right": 31,
+        "bottom": 111
+      },
+      "centroid": {
+        "x": 11.068767908309455,
+        "y": 103.59312320916905
+      },
+      "label_anchor": {
+        "x": 9.0,
+        "y": 107.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 13,
+      "mask_color": "#00000d",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#a1c6c1",
+      "area": 1246,
+      "bbox": {
+        "left": 449,
+        "top": 105,
+        "right": 511,
+        "bottom": 150
+      },
+      "centroid": {
+        "x": 491.64446227929375,
+        "y": 130.6669341894061
+      },
+      "label_anchor": {
+        "x": 480.0,
+        "y": 141.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 14,
+      "mask_color": "#00000e",
+      "number": 60,
+      "target_color": "#e3d5b3",
+      "fill_color": "#e3d5b3",
+      "representative_color": "#e3d5b3",
+      "area": 742,
+      "bbox": {
+        "left": 93,
+        "top": 112,
+        "right": 128,
+        "bottom": 148
+      },
+      "centroid": {
+        "x": 108.42048517520216,
+        "y": 130.21293800539084
+      },
+      "label_anchor": {
+        "x": 108.0,
+        "y": 136.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 15,
+      "mask_color": "#00000f",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#a0c5c0",
+      "area": 2753,
+      "bbox": {
+        "left": 27,
+        "top": 114,
+        "right": 124,
+        "bottom": 175
+      },
+      "centroid": {
+        "x": 75.72539048310934,
+        "y": 151.4972756992372
+      },
+      "label_anchor": {
+        "x": 90.0,
+        "y": 160.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 16,
+      "mask_color": "#000010",
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "fill_color": "#ecd2a7",
+      "representative_color": "#edd3a8",
+      "area": 1500,
+      "bbox": {
+        "left": 108,
+        "top": 134,
+        "right": 157,
+        "bottom": 199
+      },
+      "centroid": {
+        "x": 131.314,
+        "y": 167.35933333333332
+      },
+      "label_anchor": {
+        "x": 134.0,
+        "y": 160.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 17,
+      "mask_color": "#000011",
+      "number": 43,
+      "target_color": "#ce9672",
+      "fill_color": "#ce9672",
+      "representative_color": "#ce9672",
+      "area": 279,
+      "bbox": {
+        "left": 391,
+        "top": 136,
+        "right": 412,
+        "bottom": 162
+      },
+      "centroid": {
+        "x": 402.0501792114695,
+        "y": 147.6236559139785
+      },
+      "label_anchor": {
+        "x": 400.0,
+        "y": 149.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 18,
+      "mask_color": "#000012",
+      "number": 40,
+      "target_color": "#c19672",
+      "fill_color": "#c19672",
+      "representative_color": "#c19672",
+      "area": 187,
+      "bbox": {
+        "left": 202,
+        "top": 139,
+        "right": 219,
+        "bottom": 157
+      },
+      "centroid": {
+        "x": 210.0909090909091,
+        "y": 148.05882352941177
+      },
+      "label_anchor": {
+        "x": 211.0,
+        "y": 149.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 19,
+      "mask_color": "#000013",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#b5cbbf",
+      "area": 409,
+      "bbox": {
+        "left": 0,
+        "top": 144,
+        "right": 27,
+        "bottom": 165
+      },
+      "centroid": {
+        "x": 12.405867970660147,
+        "y": 155.1515892420538
+      },
+      "label_anchor": {
+        "x": 13.0,
+        "y": 152.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 20,
+      "mask_color": "#000014",
+      "number": 18,
+      "target_color": "#55814e",
+      "fill_color": "#55814e",
+      "representative_color": "#588048",
+      "area": 92,
+      "bbox": {
+        "left": 488,
+        "top": 143,
+        "right": 501,
+        "bottom": 153
+      },
+      "centroid": {
+        "x": 494.67391304347825,
+        "y": 147.3804347826087
+      },
+      "label_anchor": {
+        "x": 495.0,
+        "y": 148.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 21,
+      "mask_color": "#000015",
+      "number": 18,
+      "target_color": "#55814e",
+      "fill_color": "#55814e",
+      "representative_color": "#568050",
+      "area": 224,
+      "bbox": {
+        "left": 495,
+        "top": 146,
+        "right": 511,
+        "bottom": 167
+      },
+      "centroid": {
+        "x": 504.70089285714283,
+        "y": 156.29464285714286
+      },
+      "label_anchor": {
+        "x": 506.0,
+        "y": 151.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 22,
+      "mask_color": "#000016",
+      "number": 11,
+      "target_color": "#356958",
+      "fill_color": "#356958",
+      "representative_color": "#326957",
+      "area": 604,
+      "bbox": {
+        "left": 475,
+        "top": 149,
+        "right": 511,
+        "bottom": 183
+      },
+      "centroid": {
+        "x": 491.47682119205297,
+        "y": 167.04635761589404
+      },
+      "label_anchor": {
+        "x": 487.0,
+        "y": 166.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 2
+      }
+    },
+    {
+      "id": 23,
+      "mask_color": "#000017",
+      "number": 53,
+      "target_color": "#ebbb89",
+      "fill_color": "#ebbb89",
+      "representative_color": "#ebc284",
+      "area": 167,
+      "bbox": {
+        "left": 339,
+        "top": 155,
+        "right": 356,
+        "bottom": 170
+      },
+      "centroid": {
+        "x": 347.20958083832335,
+        "y": 161.88023952095807
+      },
+      "label_anchor": {
+        "x": 349.0,
+        "y": 162.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 24,
+      "mask_color": "#000018",
+      "number": 46,
+      "target_color": "#e29f4c",
+      "fill_color": "#e29f4c",
+      "representative_color": "#e19d49",
+      "area": 380,
+      "bbox": {
+        "left": 404,
+        "top": 156,
+        "right": 429,
+        "bottom": 180
+      },
+      "centroid": {
+        "x": 417.4842105263158,
+        "y": 169.05263157894737
+      },
+      "label_anchor": {
+        "x": 414.0,
+        "y": 171.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 25,
+      "mask_color": "#000019",
+      "number": 49,
+      "target_color": "#76bac0",
+      "fill_color": "#76bac0",
+      "representative_color": "#74b9c0",
+      "area": 2662,
+      "bbox": {
+        "left": 0,
+        "top": 162,
+        "right": 100,
+        "bottom": 207
+      },
+      "centroid": {
+        "x": 48.669797145003756,
+        "y": 183.63711495116453
+      },
+      "label_anchor": {
+        "x": 38.0,
+        "y": 178.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 26,
+      "mask_color": "#00001a",
+      "number": 11,
+      "target_color": "#356958",
+      "fill_color": "#356958",
+      "representative_color": "#366a5a",
+      "area": 806,
+      "bbox": {
+        "left": 417,
+        "top": 164,
+        "right": 466,
+        "bottom": 203
+      },
+      "centroid": {
+        "x": 442.7034739454094,
+        "y": 186.1228287841191
+      },
+      "label_anchor": {
+        "x": 445.0,
+        "y": 187.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 27,
+      "mask_color": "#00001b",
+      "number": 18,
+      "target_color": "#55814e",
+      "fill_color": "#55814e",
+      "representative_color": "#547f4d",
+      "area": 170,
+      "bbox": {
+        "left": 450,
+        "top": 163,
+        "right": 471,
+        "bottom": 178
+      },
+      "centroid": {
+        "x": 460.8941176470588,
+        "y": 170.36470588235295
+      },
+      "label_anchor": {
+        "x": 463.0,
+        "y": 172.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 28,
+      "mask_color": "#00001c",
+      "number": 49,
+      "target_color": "#76bac0",
+      "fill_color": "#76bac0",
+      "representative_color": "#7dbdbf",
+      "area": 1000,
+      "bbox": {
+        "left": 161,
+        "top": 172,
+        "right": 198,
+        "bottom": 230
+      },
+      "centroid": {
+        "x": 178.467,
+        "y": 196.303
+      },
+      "label_anchor": {
+        "x": 182.0,
+        "y": 184.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 29,
+      "mask_color": "#00001d",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#adc9bf",
+      "area": 53,
+      "bbox": {
+        "left": 166,
+        "top": 175,
+        "right": 182,
+        "bottom": 180
+      },
+      "centroid": {
+        "x": 172.49056603773585,
+        "y": 177.1320754716981
+      },
+      "label_anchor": {
+        "x": 172.0,
+        "y": 178.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 30,
+      "mask_color": "#00001e",
+      "number": 11,
+      "target_color": "#356958",
+      "fill_color": "#356958",
+      "representative_color": "#346758",
+      "area": 241,
+      "bbox": {
+        "left": 464,
+        "top": 175,
+        "right": 495,
+        "bottom": 190
+      },
+      "centroid": {
+        "x": 478.88796680497927,
+        "y": 182.58921161825725
+      },
+      "label_anchor": {
+        "x": 473.0,
+        "y": 183.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 31,
+      "mask_color": "#00001f",
+      "number": 46,
+      "target_color": "#e29f4c",
+      "fill_color": "#e29f4c",
+      "representative_color": "#df9b48",
+      "area": 1790,
+      "bbox": {
+        "left": 122,
+        "top": 174,
+        "right": 170,
+        "bottom": 237
+      },
+      "centroid": {
+        "x": 146.4240223463687,
+        "y": 209.48603351955308
+      },
+      "label_anchor": {
+        "x": 141.0,
+        "y": 210.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 32,
+      "mask_color": "#000020",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#b2b191",
+      "area": 473,
+      "bbox": {
+        "left": 93,
+        "top": 167,
+        "right": 113,
+        "bottom": 223
+      },
+      "centroid": {
+        "x": 103.89217758985201,
+        "y": 195.77801268498942
+      },
+      "label_anchor": {
+        "x": 100.0,
+        "y": 193.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 33,
+      "mask_color": "#000021",
+      "number": 28,
+      "target_color": "#bb802d",
+      "fill_color": "#bb802d",
+      "representative_color": "#bb802d",
+      "area": 75,
+      "bbox": {
+        "left": 409,
+        "top": 179,
+        "right": 420,
+        "bottom": 190
+      },
+      "centroid": {
+        "x": 413.85333333333335,
+        "y": 183.48
+      },
+      "label_anchor": {
+        "x": 413.0,
+        "y": 184.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 34,
+      "mask_color": "#000022",
+      "number": 44,
+      "target_color": "#9ca94b",
+      "fill_color": "#9ca94b",
+      "representative_color": "#9ca94b",
+      "area": 2843,
+      "bbox": {
+        "left": 415,
+        "top": 180,
+        "right": 511,
+        "bottom": 232
+      },
+      "centroid": {
+        "x": 466.8804080196975,
+        "y": 209.13823425958495
+      },
+      "label_anchor": {
+        "x": 464.0,
+        "y": 215.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 2
+      }
+    },
+    {
+      "id": 35,
+      "mask_color": "#000023",
+      "number": 52,
+      "target_color": "#a8c7c1",
+      "fill_color": "#a8c7c1",
+      "representative_color": "#a2c9c1",
+      "area": 110,
+      "bbox": {
+        "left": 51,
+        "top": 185,
+        "right": 86,
+        "bottom": 191
+      },
+      "centroid": {
+        "x": 68.11818181818182,
+        "y": 188.07272727272726
+      },
+      "label_anchor": {
+        "x": 65.0,
+        "y": 186.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 36,
+      "mask_color": "#000024",
+      "number": 18,
+      "target_color": "#55814e",
+      "fill_color": "#55814e",
+      "representative_color": "#568349",
+      "area": 122,
+      "bbox": {
+        "left": 0,
+        "top": 188,
+        "right": 15,
+        "bottom": 199
+      },
+      "centroid": {
+        "x": 7.959016393442623,
+        "y": 192.80327868852459
+      },
+      "label_anchor": {
+        "x": 9.0,
+        "y": 193.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 37,
+      "mask_color": "#000025",
+      "number": 35,
+      "target_color": "#c78d3a",
+      "fill_color": "#c78d3a",
+      "representative_color": "#c78d3a",
+      "area": 3682,
+      "bbox": {
+        "left": 94,
+        "top": 183,
+        "right": 181,
+        "bottom": 299
+      },
+      "centroid": {
+        "x": 131.60727865290602,
+        "y": 245.29033134166215
+      },
+      "label_anchor": {
+        "x": 119.0,
+        "y": 241.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 38,
+      "mask_color": "#000026",
+      "number": 11,
+      "target_color": "#356958",
+      "fill_color": "#356958",
+      "representative_color": "#366852",
+      "area": 215,
+      "bbox": {
+        "left": 0,
+        "top": 193,
+        "right": 16,
+        "bottom": 217
+      },
+      "centroid": {
+        "x": 5.288372093023256,
+        "y": 207.26511627906976
+      },
+      "label_anchor": {
+        "x": 3.0,
+        "y": 206.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 39,
+      "mask_color": "#000027",
+      "number": 15,
+      "target_color": "#417a6c",
+      "fill_color": "#417a6c",
+      "representative_color": "#417a6c",
+      "area": 175,
+      "bbox": {
+        "left": 20,
+        "top": 196,
+        "right": 38,
+        "bottom": 211
+      },
+      "centroid": {
+        "x": 28.49142857142857,
+        "y": 202.93142857142857
+      },
+      "label_anchor": {
+        "x": 27.0,
+        "y": 203.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 40,
+      "mask_color": "#000028",
+      "number": 14,
+      "target_color": "#507944",
+      "fill_color": "#507944",
+      "representative_color": "#4d7a44",
+      "area": 206,
+      "bbox": {
+        "left": 10,
+        "top": 197,
+        "right": 31,
+        "bottom": 219
+      },
+      "centroid": {
+        "x": 18.71359223300971,
+        "y": 208.5728155339806
+      },
+      "label_anchor": {
+        "x": 14.0,
+        "y": 203.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 41,
+      "mask_color": "#000029",
+      "number": 20,
+      "target_color": "#4d8574",
+      "fill_color": "#4d8574",
+      "representative_color": "#4d8574",
+      "area": 586,
+      "bbox": {
+        "left": 40,
+        "top": 199,
+        "right": 93,
+        "bottom": 229
+      },
+      "centroid": {
+        "x": 73.64163822525597,
+        "y": 213.25085324232083
+      },
+      "label_anchor": {
+        "x": 74.0,
+        "y": 210.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 42,
+      "mask_color": "#00002a",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#b1ae91",
+      "area": 6890,
+      "bbox": {
+        "left": 181,
+        "top": 203,
+        "right": 352,
+        "bottom": 335
+      },
+      "centroid": {
+        "x": 234.86168359941945,
+        "y": 270.644412191582
+      },
+      "label_anchor": {
+        "x": 201.0,
+        "y": 251.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 43,
+      "mask_color": "#00002b",
+      "number": 27,
+      "target_color": "#ac804f",
+      "fill_color": "#ac804f",
+      "representative_color": "#ac804f",
+      "area": 113,
+      "bbox": {
+        "left": 30,
+        "top": 205,
+        "right": 51,
+        "bottom": 214
+      },
+      "centroid": {
+        "x": 39.51327433628319,
+        "y": 209.141592920354
+      },
+      "label_anchor": {
+        "x": 41.0,
+        "y": 210.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": true,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 44,
+      "mask_color": "#00002c",
+      "number": 8,
+      "target_color": "#6d4e32",
+      "fill_color": "#6d4e32",
+      "representative_color": "#6d4e32",
+      "area": 284,
+      "bbox": {
+        "left": 341,
+        "top": 186,
+        "right": 366,
+        "bottom": 216
+      },
+      "centroid": {
+        "x": 353.2112676056338,
+        "y": 200.76760563380282
+      },
+      "label_anchor": {
+        "x": 345.0,
+        "y": 209.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 45,
+      "mask_color": "#00002d",
+      "number": 14,
+      "target_color": "#507944",
+      "fill_color": "#507944",
+      "representative_color": "#567845",
+      "area": 88,
+      "bbox": {
+        "left": 30,
+        "top": 214,
+        "right": 49,
+        "bottom": 222
+      },
+      "centroid": {
+        "x": 38.875,
+        "y": 218.02272727272728
+      },
+      "label_anchor": {
+        "x": 35.0,
+        "y": 219.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 46,
+      "mask_color": "#00002e",
+      "number": 50,
+      "target_color": "#e4a755",
+      "fill_color": "#e4a755",
+      "representative_color": "#e4a755",
+      "area": 151,
+      "bbox": {
+        "left": 339,
+        "top": 212,
+        "right": 360,
+        "bottom": 227
+      },
+      "centroid": {
+        "x": 349.50993377483445,
+        "y": 220.64900662251657
+      },
+      "label_anchor": {
+        "x": 350.0,
+        "y": 220.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 47,
+      "mask_color": "#00002f",
+      "number": 39,
+      "target_color": "#98a339",
+      "fill_color": "#98a339",
+      "representative_color": "#98a33b",
+      "area": 15235,
+      "bbox": {
+        "left": 0,
+        "top": 217,
+        "right": 110,
+        "bottom": 428
+      },
+      "centroid": {
+        "x": 44.3749917952084,
+        "y": 310.0358385297013
+      },
+      "label_anchor": {
+        "x": 4.0,
+        "y": 282.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 48,
+      "mask_color": "#000030",
+      "number": 55,
+      "target_color": "#e0c684",
+      "fill_color": "#e0c684",
+      "representative_color": "#e0c485",
+      "area": 199,
+      "bbox": {
+        "left": 43,
+        "top": 207,
+        "right": 71,
+        "bottom": 225
+      },
+      "centroid": {
+        "x": 54.91959798994975,
+        "y": 216.39698492462313
+      },
+      "label_anchor": {
+        "x": 52.0,
+        "y": 218.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 49,
+      "mask_color": "#000031",
+      "number": 2,
+      "target_color": "#2c392b",
+      "fill_color": "#2c392b",
+      "representative_color": "#2c392b",
+      "area": 433,
+      "bbox": {
+        "left": 279,
+        "top": 223,
+        "right": 310,
+        "bottom": 255
+      },
+      "centroid": {
+        "x": 291.7690531177829,
+        "y": 236.61431870669745
+      },
+      "label_anchor": {
+        "x": 294.0,
+        "y": 235.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 50,
+      "mask_color": "#000032",
+      "number": 39,
+      "target_color": "#98a339",
+      "fill_color": "#98a339",
+      "representative_color": "#98a437",
+      "area": 15169,
+      "bbox": {
+        "left": 392,
+        "top": 222,
+        "right": 511,
+        "bottom": 408
+      },
+      "centroid": {
+        "x": 459.86399894521725,
+        "y": 310.52482035730765
+      },
+      "label_anchor": {
+        "x": 472.0,
+        "y": 351.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 51,
+      "mask_color": "#000033",
+      "number": 19,
+      "target_color": "#817854",
+      "fill_color": "#817854",
+      "representative_color": "#817854",
+      "area": 104,
+      "bbox": {
+        "left": 295,
+        "top": 227,
+        "right": 315,
+        "bottom": 233
+      },
+      "centroid": {
+        "x": 305.24038461538464,
+        "y": 229.7596153846154
+      },
+      "label_anchor": {
+        "x": 305.0,
+        "y": 229.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 52,
+      "mask_color": "#000034",
+      "number": 3,
+      "target_color": "#443f2c",
+      "fill_color": "#443f2c",
+      "representative_color": "#443f2c",
+      "area": 119,
+      "bbox": {
+        "left": 310,
+        "top": 224,
+        "right": 321,
+        "bottom": 244
+      },
+      "centroid": {
+        "x": 316.65546218487395,
+        "y": 234.9327731092437
+      },
+      "label_anchor": {
+        "x": 317.0,
+        "y": 236.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": true,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 53,
+      "mask_color": "#000035",
+      "number": 48,
+      "target_color": "#a6ae9c",
+      "fill_color": "#a6ae9c",
+      "representative_color": "#a6ae9c",
+      "area": 1544,
+      "bbox": {
+        "left": 233,
+        "top": 225,
+        "right": 297,
+        "bottom": 275
+      },
+      "centroid": {
+        "x": 264.66321243523316,
+        "y": 254.17681347150258
+      },
+      "label_anchor": {
+        "x": 255.0,
+        "y": 259.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 54,
+      "mask_color": "#000036",
+      "number": 1,
+      "target_color": "#333526",
+      "fill_color": "#333526",
+      "representative_color": "#323426",
+      "area": 191,
+      "bbox": {
+        "left": 300,
+        "top": 234,
+        "right": 316,
+        "bottom": 256
+      },
+      "centroid": {
+        "x": 304.9842931937173,
+        "y": 245.7068062827225
+      },
+      "label_anchor": {
+        "x": 304.0,
+        "y": 250.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 2
+      }
+    },
+    {
+      "id": 55,
+      "mask_color": "#000037",
+      "number": 23,
+      "target_color": "#a87832",
+      "fill_color": "#a87832",
+      "representative_color": "#a87832",
+      "area": 15701,
+      "bbox": {
+        "left": 75,
+        "top": 254,
+        "right": 230,
+        "bottom": 468
+      },
+      "centroid": {
+        "x": 149.51404369148463,
+        "y": 348.670212088402
+      },
+      "label_anchor": {
+        "x": 149.0,
+        "y": 333.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 56,
+      "mask_color": "#000038",
+      "number": 42,
+      "target_color": "#97a18a",
+      "fill_color": "#97a18a",
+      "representative_color": "#97a18a",
+      "area": 295,
+      "bbox": {
+        "left": 299,
+        "top": 251,
+        "right": 329,
+        "bottom": 282
+      },
+      "centroid": {
+        "x": 311.16610169491526,
+        "y": 265.3322033898305
+      },
+      "label_anchor": {
+        "x": 309.0,
+        "y": 259.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 57,
+      "mask_color": "#000039",
+      "number": 24,
+      "target_color": "#718c37",
+      "fill_color": "#718c37",
+      "representative_color": "#6c8c3d",
+      "area": 64,
+      "bbox": {
+        "left": 478,
+        "top": 258,
+        "right": 494,
+        "bottom": 263
+      },
+      "centroid": {
+        "x": 486.015625,
+        "y": 260.96875
+      },
+      "label_anchor": {
+        "x": 487.0,
+        "y": 261.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 58,
+      "mask_color": "#00003a",
+      "number": 1,
+      "target_color": "#333526",
+      "fill_color": "#333526",
+      "representative_color": "#343627",
+      "area": 145,
+      "bbox": {
+        "left": 236,
+        "top": 255,
+        "right": 263,
+        "bottom": 290
+      },
+      "centroid": {
+        "x": 250.90344827586208,
+        "y": 274.3241379310345
+      },
+      "label_anchor": {
+        "x": 245.0,
+        "y": 271.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 59,
+      "mask_color": "#00003b",
+      "number": 16,
+      "target_color": "#9d6446",
+      "fill_color": "#9d6446",
+      "representative_color": "#9d6446",
+      "area": 857,
+      "bbox": {
+        "left": 263,
+        "top": 268,
+        "right": 329,
+        "bottom": 295
+      },
+      "centroid": {
+        "x": 294.37456242707117,
+        "y": 280.3068844807468
+      },
+      "label_anchor": {
+        "x": 290.0,
+        "y": 282.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 60,
+      "mask_color": "#00003c",
+      "number": 12,
+      "target_color": "#8b5c37",
+      "fill_color": "#8b5c37",
+      "representative_color": "#8b5c37",
+      "area": 49,
+      "bbox": {
+        "left": 255,
+        "top": 273,
+        "right": 263,
+        "bottom": 280
+      },
+      "centroid": {
+        "x": 258.1224489795918,
+        "y": 276.48979591836735
+      },
+      "label_anchor": {
+        "x": 258.0,
+        "y": 277.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 61,
+      "mask_color": "#00003d",
+      "number": 6,
+      "target_color": "#564a2c",
+      "fill_color": "#564a2c",
+      "representative_color": "#564a2c",
+      "area": 187,
+      "bbox": {
+        "left": 325,
+        "top": 260,
+        "right": 363,
+        "bottom": 295
+      },
+      "centroid": {
+        "x": 341.93582887700535,
+        "y": 280.0748663101604
+      },
+      "label_anchor": {
+        "x": 341.0,
+        "y": 283.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 62,
+      "mask_color": "#00003e",
+      "number": 41,
+      "target_color": "#da915e",
+      "fill_color": "#da915e",
+      "representative_color": "#da915e",
+      "area": 1217,
+      "bbox": {
+        "left": 267,
+        "top": 285,
+        "right": 327,
+        "bottom": 316
+      },
+      "centroid": {
+        "x": 294.8767460969597,
+        "y": 299.8997534921939
+      },
+      "label_anchor": {
+        "x": 298.0,
+        "y": 304.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 63,
+      "mask_color": "#00003f",
+      "number": 46,
+      "target_color": "#e29f4c",
+      "fill_color": "#e29f4c",
+      "representative_color": "#df9b45",
+      "area": 1438,
+      "bbox": {
+        "left": 353,
+        "top": 301,
+        "right": 395,
+        "bottom": 367
+      },
+      "centroid": {
+        "x": 376.44158553546595,
+        "y": 334.0257301808067
+      },
+      "label_anchor": {
+        "x": 370.0,
+        "y": 328.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 2
+      }
+    },
+    {
+      "id": 64,
+      "mask_color": "#000040",
+      "number": 29,
+      "target_color": "#7d932f",
+      "fill_color": "#7d932f",
+      "representative_color": "#7c9738",
+      "area": 292,
+      "bbox": {
+        "left": 411,
+        "top": 301,
+        "right": 449,
+        "bottom": 315
+      },
+      "centroid": {
+        "x": 430.81164383561645,
+        "y": 308.1232876712329
+      },
+      "label_anchor": {
+        "x": 431.0,
+        "y": 307.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 65,
+      "mask_color": "#000041",
+      "number": 5,
+      "target_color": "#1a5664",
+      "fill_color": "#1a5664",
+      "representative_color": "#1a5664",
+      "area": 1085,
+      "bbox": {
+        "left": 206,
+        "top": 297,
+        "right": 286,
+        "bottom": 351
+      },
+      "centroid": {
+        "x": 250.9705069124424,
+        "y": 330.8589861751152
+      },
+      "label_anchor": {
+        "x": 249.0,
+        "y": 339.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 66,
+      "mask_color": "#000042",
+      "number": 9,
+      "target_color": "#27616c",
+      "fill_color": "#27616c",
+      "representative_color": "#27616c",
+      "area": 836,
+      "bbox": {
+        "left": 298,
+        "top": 319,
+        "right": 366,
+        "bottom": 353
+      },
+      "centroid": {
+        "x": 327.58971291866027,
+        "y": 337.91985645933016
+      },
+      "label_anchor": {
+        "x": 336.0,
+        "y": 339.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 67,
+      "mask_color": "#000043",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#aba98b",
+      "area": 5205,
+      "bbox": {
+        "left": 221,
+        "top": 324,
+        "right": 330,
+        "bottom": 460
+      },
+      "centroid": {
+        "x": 270.43131604226704,
+        "y": 390.7669548511047
+      },
+      "label_anchor": {
+        "x": 267.0,
+        "y": 368.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 68,
+      "mask_color": "#000044",
+      "number": 29,
+      "target_color": "#7d932f",
+      "fill_color": "#7d932f",
+      "representative_color": "#779538",
+      "area": 71,
+      "bbox": {
+        "left": 405,
+        "top": 329,
+        "right": 417,
+        "bottom": 338
+      },
+      "centroid": {
+        "x": 410.9718309859155,
+        "y": 332.7887323943662
+      },
+      "label_anchor": {
+        "x": 411.0,
+        "y": 333.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 69,
+      "mask_color": "#000045",
+      "number": 30,
+      "target_color": "#8b8c6a",
+      "fill_color": "#8b8c6a",
+      "representative_color": "#8b8c6a",
+      "area": 187,
+      "bbox": {
+        "left": 288,
+        "top": 334,
+        "right": 299,
+        "bottom": 358
+      },
+      "centroid": {
+        "x": 292.2032085561497,
+        "y": 346.55080213903744
+      },
+      "label_anchor": {
+        "x": 292.0,
+        "y": 352.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 70,
+      "mask_color": "#000046",
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "fill_color": "#ecd2a7",
+      "representative_color": "#edd3a6",
+      "area": 2536,
+      "bbox": {
+        "left": 270,
+        "top": 340,
+        "right": 359,
+        "bottom": 413
+      },
+      "centroid": {
+        "x": 316.24645110410097,
+        "y": 378.2736593059937
+      },
+      "label_anchor": {
+        "x": 319.0,
+        "y": 382.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 71,
+      "mask_color": "#000047",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#b3ad8e",
+      "area": 1899,
+      "bbox": {
+        "left": 176,
+        "top": 339,
+        "right": 243,
+        "bottom": 408
+      },
+      "centroid": {
+        "x": 203.9942074776198,
+        "y": 373.1079515534492
+      },
+      "label_anchor": {
+        "x": 207.0,
+        "y": 375.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 72,
+      "mask_color": "#000048",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#c0b390",
+      "area": 121,
+      "bbox": {
+        "left": 333,
+        "top": 336,
+        "right": 352,
+        "bottom": 355
+      },
+      "centroid": {
+        "x": 340.9834710743802,
+        "y": 345.7107438016529
+      },
+      "label_anchor": {
+        "x": 338.0,
+        "y": 350.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 73,
+      "mask_color": "#000049",
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "fill_color": "#ecd2a7",
+      "representative_color": "#edd1a5",
+      "area": 1477,
+      "bbox": {
+        "left": 328,
+        "top": 348,
+        "right": 391,
+        "bottom": 401
+      },
+      "centroid": {
+        "x": 365.34461746784024,
+        "y": 378.59444820582263
+      },
+      "label_anchor": {
+        "x": 365.0,
+        "y": 376.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 74,
+      "mask_color": "#00004a",
+      "number": 55,
+      "target_color": "#e0c684",
+      "fill_color": "#e0c684",
+      "representative_color": "#e0ca83",
+      "area": 90,
+      "bbox": {
+        "left": 487,
+        "top": 366,
+        "right": 500,
+        "bottom": 377
+      },
+      "centroid": {
+        "x": 493.0444444444444,
+        "y": 370.5777777777778
+      },
+      "label_anchor": {
+        "x": 488.0,
+        "y": 370.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 75,
+      "mask_color": "#00004b",
+      "number": 21,
+      "target_color": "#628839",
+      "fill_color": "#628839",
+      "representative_color": "#628839",
+      "area": 404,
+      "bbox": {
+        "left": 403,
+        "top": 365,
+        "right": 439,
+        "bottom": 388
+      },
+      "centroid": {
+        "x": 420.6311881188119,
+        "y": 376.1831683168317
+      },
+      "label_anchor": {
+        "x": 418.0,
+        "y": 376.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 76,
+      "mask_color": "#00004c",
+      "number": 46,
+      "target_color": "#e29f4c",
+      "fill_color": "#e29f4c",
+      "representative_color": "#e09e48",
+      "area": 1681,
+      "bbox": {
+        "left": 327,
+        "top": 356,
+        "right": 395,
+        "bottom": 460
+      },
+      "centroid": {
+        "x": 372.0410469958358,
+        "y": 411.7013682331945
+      },
+      "label_anchor": {
+        "x": 373.0,
+        "y": 408.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 77,
+      "mask_color": "#00004d",
+      "number": 24,
+      "target_color": "#718c37",
+      "fill_color": "#718c37",
+      "representative_color": "#708f34",
+      "area": 50,
+      "bbox": {
+        "left": 440,
+        "top": 368,
+        "right": 446,
+        "bottom": 379
+      },
+      "centroid": {
+        "x": 442.78,
+        "y": 373.0
+      },
+      "label_anchor": {
+        "x": 442.0,
+        "y": 373.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 78,
+      "mask_color": "#00004e",
+      "number": 38,
+      "target_color": "#969c7c",
+      "fill_color": "#969c7c",
+      "representative_color": "#969c7c",
+      "area": 1972,
+      "bbox": {
+        "left": 80,
+        "top": 363,
+        "right": 139,
+        "bottom": 446
+      },
+      "centroid": {
+        "x": 107.61206896551724,
+        "y": 413.68306288032454
+      },
+      "label_anchor": {
+        "x": 120.0,
+        "y": 413.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 79,
+      "mask_color": "#00004f",
+      "number": 33,
+      "target_color": "#899a2f",
+      "fill_color": "#899a2f",
+      "representative_color": "#879a31",
+      "area": 1642,
+      "bbox": {
+        "left": 390,
+        "top": 375,
+        "right": 457,
+        "bottom": 421
+      },
+      "centroid": {
+        "x": 419.27161997563945,
+        "y": 397.96102314250913
+      },
+      "label_anchor": {
+        "x": 415.0,
+        "y": 394.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 80,
+      "mask_color": "#000050",
+      "number": 54,
+      "target_color": "#d9c38c",
+      "fill_color": "#d9c38c",
+      "representative_color": "#d9c38c",
+      "area": 87,
+      "bbox": {
+        "left": 443,
+        "top": 383,
+        "right": 456,
+        "bottom": 391
+      },
+      "centroid": {
+        "x": 449.32183908045977,
+        "y": 386.7931034482759
+      },
+      "label_anchor": {
+        "x": 449.0,
+        "y": 387.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 81,
+      "mask_color": "#000051",
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "fill_color": "#ecd2a7",
+      "representative_color": "#ebd1a7",
+      "area": 761,
+      "bbox": {
+        "left": 212,
+        "top": 382,
+        "right": 258,
+        "bottom": 425
+      },
+      "centroid": {
+        "x": 237.85939553219447,
+        "y": 399.03810775295665
+      },
+      "label_anchor": {
+        "x": 242.0,
+        "y": 393.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 82,
+      "mask_color": "#000052",
+      "number": 29,
+      "target_color": "#7d932f",
+      "fill_color": "#7d932f",
+      "representative_color": "#7c9432",
+      "area": 624,
+      "bbox": {
+        "left": 484,
+        "top": 383,
+        "right": 511,
+        "bottom": 424
+      },
+      "centroid": {
+        "x": 500.1185897435897,
+        "y": 403.07371794871796
+      },
+      "label_anchor": {
+        "x": 509.0,
+        "y": 407.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 83,
+      "mask_color": "#000053",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#bcb28d",
+      "area": 205,
+      "bbox": {
+        "left": 320,
+        "top": 387,
+        "right": 354,
+        "bottom": 412
+      },
+      "centroid": {
+        "x": 336.219512195122,
+        "y": 400.13170731707316
+      },
+      "label_anchor": {
+        "x": 334.0,
+        "y": 401.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 84,
+      "mask_color": "#000054",
+      "number": 10,
+      "target_color": "#346336",
+      "fill_color": "#346336",
+      "representative_color": "#336236",
+      "area": 2789,
+      "bbox": {
+        "left": 0,
+        "top": 388,
+        "right": 40,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 17.756185012549302,
+        "y": 454.0867694514163
+      },
+      "label_anchor": {
+        "x": 16.0,
+        "y": 479.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 85,
+      "mask_color": "#000055",
+      "number": 46,
+      "target_color": "#e29f4c",
+      "fill_color": "#e29f4c",
+      "representative_color": "#df9b43",
+      "area": 1934,
+      "bbox": {
+        "left": 187,
+        "top": 404,
+        "right": 251,
+        "bottom": 455
+      },
+      "centroid": {
+        "x": 216.17476732161325,
+        "y": 426.1256463288521
+      },
+      "label_anchor": {
+        "x": 215.0,
+        "y": 425.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 86,
+      "mask_color": "#000056",
+      "number": 17,
+      "target_color": "#587e33",
+      "fill_color": "#587e33",
+      "representative_color": "#598036",
+      "area": 168,
+      "bbox": {
+        "left": 466,
+        "top": 404,
+        "right": 479,
+        "bottom": 425
+      },
+      "centroid": {
+        "x": 473.8809523809524,
+        "y": 413.13690476190476
+      },
+      "label_anchor": {
+        "x": 475.0,
+        "y": 410.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 87,
+      "mask_color": "#000057",
+      "number": 17,
+      "target_color": "#587e33",
+      "fill_color": "#587e33",
+      "representative_color": "#587f34",
+      "area": 202,
+      "bbox": {
+        "left": 452,
+        "top": 405,
+        "right": 470,
+        "bottom": 433
+      },
+      "centroid": {
+        "x": 460.8910891089109,
+        "y": 416.6980198019802
+      },
+      "label_anchor": {
+        "x": 458.0,
+        "y": 415.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 88,
+      "mask_color": "#000058",
+      "number": 29,
+      "target_color": "#7d932f",
+      "fill_color": "#7d932f",
+      "representative_color": "#7d932e",
+      "area": 6601,
+      "bbox": {
+        "left": 315,
+        "top": 402,
+        "right": 476,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 408.023935767308,
+        "y": 458.1854264505378
+      },
+      "label_anchor": {
+        "x": 404.0,
+        "y": 451.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 89,
+      "mask_color": "#000059",
+      "number": 29,
+      "target_color": "#7d932f",
+      "fill_color": "#7d932f",
+      "representative_color": "#7c9432",
+      "area": 1342,
+      "bbox": {
+        "left": 111,
+        "top": 406,
+        "right": 160,
+        "bottom": 460
+      },
+      "centroid": {
+        "x": 136.63785394932935,
+        "y": 432.7056631892697
+      },
+      "label_anchor": {
+        "x": 136.0,
+        "y": 429.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 90,
+      "mask_color": "#00005a",
+      "number": 7,
+      "target_color": "#2e5c30",
+      "fill_color": "#2e5c30",
+      "representative_color": "#2e5c30",
+      "area": 6703,
+      "bbox": {
+        "left": 36,
+        "top": 410,
+        "right": 186,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 94.66626883485007,
+        "y": 469.3655079815008
+      },
+      "label_anchor": {
+        "x": 92.0,
+        "y": 462.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 91,
+      "mask_color": "#00005b",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#b2ad8c",
+      "area": 148,
+      "bbox": {
+        "left": 249,
+        "top": 409,
+        "right": 259,
+        "bottom": 434
+      },
+      "centroid": {
+        "x": 253.46621621621622,
+        "y": 419.7364864864865
+      },
+      "label_anchor": {
+        "x": 254.0,
+        "y": 418.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 92,
+      "mask_color": "#00005c",
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "fill_color": "#ecd2a7",
+      "representative_color": "#ebd2a7",
+      "area": 4424,
+      "bbox": {
+        "left": 293,
+        "top": 411,
+        "right": 366,
+        "bottom": 504
+      },
+      "centroid": {
+        "x": 331.0587703435805,
+        "y": 459.23146473779383
+      },
+      "label_anchor": {
+        "x": 335.0,
+        "y": 460.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 93,
+      "mask_color": "#00005d",
+      "number": 47,
+      "target_color": "#afac8e",
+      "fill_color": "#afac8e",
+      "representative_color": "#b4af8f",
+      "area": 646,
+      "bbox": {
+        "left": 285,
+        "top": 412,
+        "right": 327,
+        "bottom": 484
+      },
+      "centroid": {
+        "x": 301.4256965944272,
+        "y": 450.6470588235294
+      },
+      "label_anchor": {
+        "x": 291.0,
+        "y": 454.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 94,
+      "mask_color": "#00005e",
+      "number": 33,
+      "target_color": "#899a2f",
+      "fill_color": "#899a2f",
+      "representative_color": "#8d9b2c",
+      "area": 1236,
+      "bbox": {
+        "left": 463,
+        "top": 409,
+        "right": 511,
+        "bottom": 468
+      },
+      "centroid": {
+        "x": 494.5477346278317,
+        "y": 439.1836569579288
+      },
+      "label_anchor": {
+        "x": 504.0,
+        "y": 440.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 95,
+      "mask_color": "#00005f",
+      "number": 45,
+      "target_color": "#99a888",
+      "fill_color": "#99a888",
+      "representative_color": "#99a985",
+      "area": 176,
+      "bbox": {
+        "left": 31,
+        "top": 421,
+        "right": 51,
+        "bottom": 439
+      },
+      "centroid": {
+        "x": 41.03977272727273,
+        "y": 429.57954545454544
+      },
+      "label_anchor": {
+        "x": 42.0,
+        "y": 430.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 2
+      }
+    },
+    {
+      "id": 96,
+      "mask_color": "#000060",
+      "number": 33,
+      "target_color": "#899a2f",
+      "fill_color": "#899a2f",
+      "representative_color": "#859830",
+      "area": 133,
+      "bbox": {
+        "left": 475,
+        "top": 407,
+        "right": 485,
+        "bottom": 436
+      },
+      "centroid": {
+        "x": 480.02255639097746,
+        "y": 424.7368421052632
+      },
+      "label_anchor": {
+        "x": 481.0,
+        "y": 423.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 97,
+      "mask_color": "#000061",
+      "number": 45,
+      "target_color": "#99a888",
+      "fill_color": "#99a888",
+      "representative_color": "#99a78a",
+      "area": 204,
+      "bbox": {
+        "left": 20,
+        "top": 425,
+        "right": 44,
+        "bottom": 446
+      },
+      "centroid": {
+        "x": 29.84313725490196,
+        "y": 436.6078431372549
+      },
+      "label_anchor": {
+        "x": 30.0,
+        "y": 440.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": false,
+        "merged_region_count": 3
+      }
+    },
+    {
+      "id": 98,
+      "mask_color": "#000062",
+      "number": 37,
+      "target_color": "#bb963a",
+      "fill_color": "#bb963a",
+      "representative_color": "#bb963a",
+      "area": 51,
+      "bbox": {
+        "left": 32,
+        "top": 432,
+        "right": 40,
+        "bottom": 438
+      },
+      "centroid": {
+        "x": 36.0,
+        "y": 435.0
+      },
+      "label_anchor": {
+        "x": 36.0,
+        "y": 434.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 99,
+      "mask_color": "#000063",
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "fill_color": "#ecd2a7",
+      "representative_color": "#ebd1a6",
+      "area": 4684,
+      "bbox": {
+        "left": 183,
+        "top": 437,
+        "right": 275,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 232.900512382579,
+        "y": 478.51216908625105
+      },
+      "label_anchor": {
+        "x": 245.0,
+        "y": 465.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 100,
+      "mask_color": "#000064",
+      "number": 29,
+      "target_color": "#7d932f",
+      "fill_color": "#7d932f",
+      "representative_color": "#768c36",
+      "area": 89,
+      "bbox": {
+        "left": 157,
+        "top": 442,
+        "right": 168,
+        "bottom": 458
+      },
+      "centroid": {
+        "x": 162.0,
+        "y": 449.0
+      },
+      "label_anchor": {
+        "x": 161.0,
+        "y": 447.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 101,
+      "mask_color": "#000065",
+      "number": 24,
+      "target_color": "#718c37",
+      "fill_color": "#718c37",
+      "representative_color": "#718c36",
+      "area": 730,
+      "bbox": {
+        "left": 266,
+        "top": 453,
+        "right": 302,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 282.4698630136986,
+        "y": 482.57397260273973
+      },
+      "label_anchor": {
+        "x": 282.0,
+        "y": 484.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 102,
+      "mask_color": "#000066",
+      "number": 13,
+      "target_color": "#4c7530",
+      "fill_color": "#4c7530",
+      "representative_color": "#4c7530",
+      "area": 4176,
+      "bbox": {
+        "left": 384,
+        "top": 446,
+        "right": 511,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 458.64535440613025,
+        "y": 490.1403256704981
+      },
+      "label_anchor": {
+        "x": 465.0,
+        "y": 500.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 103,
+      "mask_color": "#000067",
+      "number": 4,
+      "target_color": "#254f2c",
+      "fill_color": "#254f2c",
+      "representative_color": "#234c29",
+      "area": 344,
+      "bbox": {
+        "left": 110,
+        "top": 468,
+        "right": 129,
+        "bottom": 504
+      },
+      "centroid": {
+        "x": 118.83430232558139,
+        "y": 483.3139534883721
+      },
+      "label_anchor": {
+        "x": 117.0,
+        "y": 481.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 104,
+      "mask_color": "#000068",
+      "number": 10,
+      "target_color": "#346336",
+      "fill_color": "#346336",
+      "representative_color": "#3a6834",
+      "area": 247,
+      "bbox": {
+        "left": 18,
+        "top": 451,
+        "right": 52,
+        "bottom": 492
+      },
+      "centroid": {
+        "x": 35.506072874493924,
+        "y": 470.05668016194335
+      },
+      "label_anchor": {
+        "x": 37.0,
+        "y": 476.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 105,
+      "mask_color": "#000069",
+      "number": 4,
+      "target_color": "#254f2c",
+      "fill_color": "#254f2c",
+      "representative_color": "#254f2c",
+      "area": 1818,
+      "bbox": {
+        "left": 117,
+        "top": 476,
+        "right": 201,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 159.04400440044003,
+        "y": 497.8905390539054
+      },
+      "label_anchor": {
+        "x": 134.0,
+        "y": 498.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 106,
+      "mask_color": "#00006a",
+      "number": 36,
+      "target_color": "#c59325",
+      "fill_color": "#c59325",
+      "representative_color": "#c59325",
+      "area": 232,
+      "bbox": {
+        "left": 0,
+        "top": 483,
+        "right": 23,
+        "bottom": 500
+      },
+      "centroid": {
+        "x": 12.137931034482758,
+        "y": 491.1336206896552
+      },
+      "label_anchor": {
+        "x": 15.0,
+        "y": 493.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 107,
+      "mask_color": "#00006b",
+      "number": 32,
+      "target_color": "#ba8b21",
+      "fill_color": "#ba8b21",
+      "representative_color": "#ba8b21",
+      "area": 99,
+      "bbox": {
+        "left": 0,
+        "top": 494,
+        "right": 14,
+        "bottom": 505
+      },
+      "centroid": {
+        "x": 7.181818181818182,
+        "y": 499.5656565656566
+      },
+      "label_anchor": {
+        "x": 7.0,
+        "y": 500.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 108,
+      "mask_color": "#00006c",
+      "number": 10,
+      "target_color": "#346336",
+      "fill_color": "#346336",
+      "representative_color": "#365f2f",
+      "area": 91,
+      "bbox": {
+        "left": 40,
+        "top": 491,
+        "right": 45,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 42.747252747252745,
+        "y": 501.34065934065933
+      },
+      "label_anchor": {
+        "x": 43.0,
+        "y": 502.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 109,
+      "mask_color": "#00006d",
+      "number": 10,
+      "target_color": "#346336",
+      "fill_color": "#346336",
+      "representative_color": "#356030",
+      "area": 91,
+      "bbox": {
+        "left": 0,
+        "top": 502,
+        "right": 13,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 5.010989010989011,
+        "y": 507.6373626373626
+      },
+      "label_anchor": {
+        "x": 5.0,
+        "y": 507.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 110,
+      "mask_color": "#00006e",
+      "number": 17,
+      "target_color": "#587e33",
+      "fill_color": "#587e33",
+      "representative_color": "#597c2f",
+      "area": 151,
+      "bbox": {
+        "left": 274,
+        "top": 500,
+        "right": 291,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 282.9006622516556,
+        "y": 506.4172185430464
+      },
+      "label_anchor": {
+        "x": 284.0,
+        "y": 507.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "touchable": true,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 111,
+      "mask_color": "#00006f",
+      "number": 29,
+      "target_color": "#7d932f",
+      "fill_color": "#7d932f",
+      "representative_color": "#7d8e2b",
+      "area": 106,
+      "bbox": {
+        "left": 299,
+        "top": 503,
+        "right": 314,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 307.0660377358491,
+        "y": 507.811320754717
+      },
+      "label_anchor": {
+        "x": 310.0,
+        "y": 510.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 112,
+      "mask_color": "#000070",
+      "number": 59,
+      "target_color": "#ecd2a7",
+      "fill_color": "#ecd2a7",
+      "representative_color": "#e7d1a7",
+      "area": 40,
+      "bbox": {
+        "left": 426,
+        "top": 505,
+        "right": 432,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 429.275,
+        "y": 508.35
+      },
+      "label_anchor": {
+        "x": 429.0,
+        "y": 509.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 113,
+      "mask_color": "#000071",
+      "number": 57,
+      "target_color": "#e1cea4",
+      "fill_color": "#e1cea4",
+      "representative_color": "#e1cea4",
+      "area": 40,
+      "bbox": {
+        "left": 413,
+        "top": 506,
+        "right": 420,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 416.075,
+        "y": 508.825
+      },
+      "label_anchor": {
+        "x": 416.0,
+        "y": 508.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 114,
+      "mask_color": "#000072",
+      "number": 22,
+      "target_color": "#70892a",
+      "fill_color": "#70892a",
+      "representative_color": "#70892b",
+      "area": 32,
+      "bbox": {
+        "left": 351,
+        "top": 505,
+        "right": 357,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 353.9375,
+        "y": 508.84375
+      },
+      "label_anchor": {
+        "x": 354.0,
+        "y": 508.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 115,
+      "mask_color": "#000073",
+      "number": 22,
+      "target_color": "#70892a",
+      "fill_color": "#70892a",
+      "representative_color": "#708a29",
+      "area": 30,
+      "bbox": {
+        "left": 365,
+        "top": 504,
+        "right": 370,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 366.8,
+        "y": 508.43333333333334
+      },
+      "label_anchor": {
+        "x": 367.0,
+        "y": 508.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    },
+    {
+      "id": 116,
+      "mask_color": "#000074",
+      "number": 56,
+      "target_color": "#e0cb96",
+      "fill_color": "#e0cb96",
+      "representative_color": "#e0cb96",
+      "area": 23,
+      "bbox": {
+        "left": 434,
+        "top": 508,
+        "right": 442,
+        "bottom": 511
+      },
+      "centroid": {
+        "x": 438.6521739130435,
+        "y": 510.0
+      },
+      "label_anchor": {
+        "x": 439.0,
+        "y": 510.0
+      },
+      "hide_number": true,
+      "quality": {
+        "is_tiny": true,
+        "is_small": true,
+        "touchable": false,
+        "merged_region_count": 1
+      }
+    }
+  ],
+  "stats": {
+    "total_regions": 116,
+    "unique_numbers": 60,
+    "estimated_difficulty": 10,
+    "small_regions_count": 29,
+    "giant_regions_count": 0
+  },
+  "estimated_difficulty": 10,
+  "total_regions": 116,
+  "unique_numbers": 60,
+  "small_regions_count": 29,
+  "skipped_noise_regions": 0,
+  "merged_small_regions_count": 6,
+  "merged_tiny_regions_count": 1,
+  "forced_tiny_region_merges_count": 0,
+  "remaining_tiny_regions_count": 5,
+  "generation": {
+    "source_mode": "line_plus_reference",
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 120,
+    "hide_small_label_threshold": 100,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 48,
+    "tiny_merge_min_side": 6,
+    "small_region_merge_mode": "shared_boundary_adjacency",
+    "small_color_absorb_mode": "shared_boundary_adjacency",
+    "tiny_region_merge_mode": "shared_boundary_adjacency",
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "tiny_merge_rejected_non_adjacent": 10,
+    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_giant_target": 0,
+    "tiny_merge_profile": "medium",
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "region_color_method": "median",
+    "category_profile": "medium",
+    "target_unique_colors": 64,
+    "preprocess_profile": "auto",
+    "selected_preprocessing": {
+      "profile": "manga",
+      "brightness_threshold": 170,
+      "line_close_radius": 2
+    },
+    "has_detail": true,
+    "detail_mode": "reference_lerp_rgba",
+    "detail_alpha": 0.65
+  },
+  "generation_params": {
+    "brightness_threshold": 120,
+    "merge_threshold": 15.0,
+    "line_close_radius": 0,
+    "min_region_area": 120,
+    "hide_small_label_threshold": 100,
+    "tiny_region_side_threshold": 10,
+    "tiny_merge_min_area": 48,
+    "tiny_merge_min_side": 6,
+    "small_region_merge_mode": "shared_boundary_adjacency",
+    "small_color_absorb_mode": "shared_boundary_adjacency",
+    "tiny_region_merge_mode": "shared_boundary_adjacency",
+    "tiny_merge_color_threshold": 22.5,
+    "tiny_merge_policy": "relaxed",
+    "tiny_merge_rejected_non_adjacent": 10,
+    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_giant_target": 0,
+    "tiny_merge_profile": "medium",
+    "adaptive_palette": true,
+    "quantize_method": "mediancut",
+    "region_color_method": "median",
+    "category_profile": "medium",
+    "target_unique_colors": 64,
+    "preprocess_profile": "auto",
+    "selected_preprocessing": {
+      "profile": "manga",
+      "brightness_threshold": 170,
+      "line_close_radius": 2
+    },
+    "has_detail": true,
+    "detail_mode": "reference_lerp_rgba",
+    "detail_alpha": 0.65
+  },
+  "category_profile": "medium",
+  "target_unique_colors": 64,
+  "initial_unique_numbers": 110,
+  "final_unique_numbers": 60,
+  "quantization_method": "mediancut",
+  "quantized_reference_color_count": 160,
+  "final_merge_threshold": 20.25,
+  "palette_reduction_passes": 2,
+  "palette_reduction_reason": "within_limit",
+  "absorbed_small_color_count": 5,
+  "compat": {
+    "region_palette_entries": true,
+    "android_source_of_truth": "regions"
+  }
+}
