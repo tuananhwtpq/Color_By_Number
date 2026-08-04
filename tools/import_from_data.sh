@@ -42,7 +42,7 @@ if [[ $# -lt 2 ]]; then
 
 fi
 
-if [[ "$1" == "from-existing" ]]; then
+if [[ "$1" == "from-existing" ]]; thenx
   if [[ $# -lt 3 ]]; then
     echo "Cách dùng:"
     echo "  bash tools/import_from_data.sh from-existing <SourceCategory/ArtworkFolder> <TargetCategory> [Display Name] [generator options...]"

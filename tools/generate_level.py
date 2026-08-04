@@ -948,6 +948,27 @@ def choose_palette_color(target_color, palette_colors):
     return min(palette_colors, key=lambda color: color_distance(color, target_color))
 
 
+def point_inscribed_radius(region_set, x, y, directions):
+    """Bán kính hình tròn lớn nhất có thể vẽ tại (x, y) mà không tràn ra khỏi region_set —
+    lấy MIN (không phải SUM) khoảng cách theo từng hướng trong directions, vì hình tròn bị
+    giới hạn bởi hướng hẹp nhất. Dùng để biết chính xác có bao nhiêu chỗ trống thật tại 1
+    điểm, thay vì suy đoán qua bounding box (sai với vùng hình lưỡi liềm/dải dài cong — bbox
+    có thể rất lớn dù "thịt" vùng tại điểm đó rất hẹp).
+    """
+    min_step = None
+    for dx, dy in directions:
+        step = 0
+        while True:
+            nx = x + dx * (step + 1)
+            ny = y + dy * (step + 1)
+            if (nx, ny) not in region_set:
+                break
+            step += 1
+        if min_step is None or step < min_step:
+            min_step = step
+    return float(min_step or 0)
+
+
 def centroid_fallback(region, centroid):
     best_point = region[0]
     best_distance = None
@@ -996,9 +1017,11 @@ def find_label_anchor(region, bbox, centroid):
 
     if best_point is None:
         fallback = centroid_fallback(region, centroid)
-        return {"x": fallback["x"], "y": fallback["y"]}
+        radius = point_inscribed_radius(region_set, int(fallback["x"]), int(fallback["y"]), directions)
+        return {"x": fallback["x"], "y": fallback["y"], "radius": radius}
 
-    return {"x": float(best_point[0]), "y": float(best_point[1])}
+    radius = point_inscribed_radius(region_set, best_point[0], best_point[1], directions)
+    return {"x": float(best_point[0]), "y": float(best_point[1]), "radius": radius}
 
 
 def estimate_difficulty(total_regions, unique_numbers, small_regions_count):

@@ -30,6 +30,20 @@ class PaintCanvasView @JvmOverloads constructor(
 
     companion object {
         private const val CANVAS_BACKGROUND_COLOR = 0xFFF3F1F3.toInt()
+
+        // Ngưỡng bán kính trên MÀN HÌNH (không phải trên bitmap) để quyết định có hiện số
+        // hay không — giữ nguyên như trước, chỉ đổi nguồn region.radius (giờ chính xác hơn).
+        private const val MIN_SCREEN_RADIUS_TO_SHOW_LABEL = 25f
+
+        // Cỡ chữ MẶC ĐỊNH khi vùng đủ lớn, tính bằng px màn hình — KHÔNG nhân thêm
+        // scaleFactor, để số giữ nguyên kích thước khi zoom ra/vào (giống app mẫu), thay vì
+        // co giãn theo zoom như trước.
+        private const val LABEL_TEXT_SIZE_PX = 30f
+
+        // Vùng nhỏ hơn mức "thoải mái" vẫn phải hiện số (nếu đã qua ngưỡng ẩn/hiện ở trên),
+        // nhưng chữ phải co lại theo đúng khoảng trống thật để không tràn ra ngoài — hệ số
+        // này nhân với bán kính an toàn trên màn hình để ra cỡ chữ tối đa cho phép.
+        private const val LABEL_SAFE_RADIUS_FACTOR = 1.3f
     }
 
     private var lineBitmap: Bitmap? = null
@@ -78,6 +92,7 @@ class PaintCanvasView @JvmOverloads constructor(
     var onRegionFilledListener: ((maskColor: Int) -> Unit)? = null
 
     private var regions: List<RegionData> = emptyList()
+    private val labelPointBuffer = FloatArray(2)
     private var completedMaskColors: Set<Int> = emptySet()
 
     private var currentValidMaskColors: Map<Int, Int> = emptyMap()
@@ -753,24 +768,29 @@ class PaintCanvasView @JvmOverloads constructor(
         }
         canvas.restore()
 
-        canvas.save()
-        canvas.concat(drawMatrix)
+        // Vẽ số ở toạ độ MÀN HÌNH (không canvas.concat(drawMatrix)) — cỡ chữ vì vậy KHÔNG bị
+        // co/phình theo scaleFactor như khi vẽ bên trong canvas đã transform. Ẩn/hiện vẫn
+        // dựa trên kích thước thật trên màn hình ở zoom hiện tại (screenRadius), giữ nguyên
+        // hành vi cũ — chỉ cỡ chữ khi hiện là cố định thay vì co theo zoom.
         for (region in regions) {
-            if (!completedMaskColors.contains(region.maskColorInt) && !region.hideNumber) {
-                val screenRadius = region.radius * scaleFactor
-                if (screenRadius >= 25f) {
-                    textPaint.textSize = Math.max(8f, Math.min(region.radius * 0.7f, 60f))
-                    val textOffset = (textPaint.descent() + textPaint.ascent()) / 2
-                    canvas.drawText(
-                        region.number.toString(),
-                        region.labelX,
-                        region.labelY - textOffset,
-                        textPaint
-                    )
-                }
-            }
+            if (completedMaskColors.contains(region.maskColorInt) || region.hideNumber) continue
+            val screenRadius = region.radius * scaleFactor
+            if (screenRadius < MIN_SCREEN_RADIUS_TO_SHOW_LABEL) continue
+
+            labelPointBuffer[0] = region.labelX
+            labelPointBuffer[1] = region.labelY
+            drawMatrix.mapPoints(labelPointBuffer)
+
+            textPaint.textSize = Math.min(LABEL_TEXT_SIZE_PX, screenRadius * LABEL_SAFE_RADIUS_FACTOR)
+                .coerceAtLeast(8f)
+            val textOffset = (textPaint.descent() + textPaint.ascent()) / 2
+            canvas.drawText(
+                region.number.toString(),
+                labelPointBuffer[0],
+                labelPointBuffer[1] - textOffset,
+                textPaint
+            )
         }
-        canvas.restore()
 
         canvas.drawBitmap(line, drawMatrix, multiplyPaint)
     }

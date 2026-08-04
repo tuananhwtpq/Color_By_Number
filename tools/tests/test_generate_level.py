@@ -14,7 +14,10 @@ from tools.generate_level import (
     absorb_small_region_colors,
     create_parser,
     evaluate_quality_gate,
+    find_label_anchor,
     generate_level_assets,
+    get_region_bbox,
+    get_region_centroid,
     get_representative_color,
     merge_small_attached_regions,
     merge_tiny_regions_into_neighbors,
@@ -1014,6 +1017,51 @@ class GenerateLevelCliTest(unittest.TestCase):
         )
         self.assertEqual(0, reclaimed)
         self.assertEqual([[(0, 0), (1, 0), (2, 0)]], regions)
+
+    def test_find_label_anchor_radius_reflects_real_space_for_solid_rectangle(self):
+        points = [(x, y) for y in range(10) for x in range(20)]
+        bbox = get_region_bbox(points)
+        centroid = get_region_centroid(points)
+
+        anchor = find_label_anchor(points, bbox, centroid)
+
+        self.assertIn("radius", anchor)
+        # Hình chữ nhật đặc 20x10: có chỗ trống thật ở giữa, radius phải phản ánh đúng —
+        # xấp xỉ nửa cạnh ngắn (5), không phải một con số vụn vặt gần 0.
+        self.assertGreaterEqual(anchor["radius"], 3)
+        self.assertLessEqual(anchor["radius"], 5)
+
+    def test_find_label_anchor_radius_stays_small_for_thin_l_shape_despite_large_bbox(self):
+        # Hình chữ L: 1 dải dọc rộng 3px (x=0..2, cao suốt) + 1 dải ngang rộng 3px
+        # (y=27..29, dài suốt) bên trong 1 bbox 30x30. Cách tính CŨ ở phía Kotlin (nửa cạnh
+        # ngắn của bbox) sẽ cho ra 15 — sai hoàn toàn, vì "thịt" thật của vùng chỉ rộng 3px.
+        vertical_strip = [(x, y) for y in range(30) for x in range(3)]
+        horizontal_strip = [(x, y) for y in range(27, 30) for x in range(30)]
+        points = list(set(vertical_strip) | set(horizontal_strip))
+        bbox = get_region_bbox(points)
+        centroid = get_region_centroid(points)
+
+        self.assertEqual(14.5, min(bbox["right"] - bbox["left"], bbox["bottom"] - bbox["top"]) / 2)
+
+        anchor = find_label_anchor(points, bbox, centroid)
+
+        # radius thật phải nhỏ (dải chỉ rộng 3px => bán kính nội tiếp tối đa ~1), khác hẳn
+        # con số 15 mà công thức bbox cũ sẽ tính nhầm.
+        self.assertLessEqual(anchor["radius"], 2)
+
+    def test_find_label_anchor_fallback_path_still_returns_a_radius(self):
+        # Vùng 1 pixel duy nhất: vòng lặp chính không tìm được điểm hợp lệ nào (min_distance
+        # tới bbox luôn < 1), phải rơi vào nhánh centroid_fallback — vẫn phải trả về radius
+        # (0, vì không có chỗ trống nào) thay vì thiếu key hoặc lỗi.
+        points = [(5, 5)]
+        bbox = get_region_bbox(points)
+        centroid = get_region_centroid(points)
+
+        anchor = find_label_anchor(points, bbox, centroid)
+
+        self.assertEqual(5.0, anchor["x"])
+        self.assertEqual(5.0, anchor["y"])
+        self.assertEqual(0.0, anchor["radius"])
 
     def test_split_remaining_giant_regions_leaves_region_not_formed_by_merge_untouched(self):
         width, height = 20, 10

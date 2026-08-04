@@ -75,7 +75,10 @@ data class RegionMetadata(
         val center = centroid ?: labelAnchor ?: return null
         val label = labelAnchor ?: center
         val box = bbox
-        val radius = if (box != null) {
+        // Ưu tiên bán kính thật đo từ Python (label_anchor.radius) — chính xác với vùng
+        // hình lưỡi liềm/dải dài cong. Chỉ đoán qua bbox khi asset build trước khi có field
+        // này (fallback cũ, giữ để không phá vỡ asset đã build sẵn).
+        val radius = label.radius ?: if (box != null) {
             (minOf(box.width(), box.height()) / 2f).coerceAtLeast(6f)
         } else {
             12f
@@ -142,5 +145,10 @@ data class BoundingBox(
 
 data class PointData(
     @SerializedName("x") val x: Float,
-    @SerializedName("y") val y: Float
+    @SerializedName("y") val y: Float,
+    // Chỉ có ở label_anchor (không có ở centroid) — bán kính hình tròn lớn nhất vẽ được
+    // tại điểm này mà không tràn ra khỏi vùng, đo thật từ Python (find_label_anchor), thay
+    // vì đoán qua bounding box (sai với vùng hình lưỡi liềm/dải dài cong). Null với asset
+    // build trước khi có field này — RegionMetadata.toRegionData() sẽ fallback về bbox.
+    @SerializedName("radius") val radius: Float? = null
 )
