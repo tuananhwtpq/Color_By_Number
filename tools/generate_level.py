@@ -1686,21 +1686,29 @@ def giant_region_split_looks_like_flat_patches(
     ref_pixels,
     min_region_area,
     max_component_color_deviation,
+    max_substantial_components=12,
 ):
     """True nếu kết quả tách trông giống các mảng màu PHẲNG thật sự bị dính vào nhau
-    (ít nhất 2 mảng "đáng kể" area >= min_region_area, và mỗi mảng gần như đồng màu nội
-    bộ), thay vì chỉ là quantization cắt ngẫu nhiên một vùng gradient/shading mượt thành
-    nhiều dải màu (mỗi dải vẫn còn biến thiên màu nội bộ đáng kể vì màu vốn liên tục).
+    (một vài mảng "đáng kể" area >= min_region_area, và mỗi mảng gần như đồng màu nội
+    bộ), thay vì chỉ là quantization cắt một vùng có nhiễu/gradient mịn (nền texture,
+    anti-alias) thành hàng trăm/nghìn mảnh rời rạc cùng match 1 số màu cuối cùng.
+
     MEDIANCUT tối thiểu hoá variance trong mỗi bucket theo thiết kế, nên chỉ nhìn
     "variance thấp" không đủ phân biệt — ngưỡng max_component_color_deviation được hiệu
     chỉnh từ dữ liệu thật (mảng màu phẳng thật ~0-5, nửa gradient bị cắt cưỡng bức ~9+).
+
+    Số lượng mảng "đáng kể" cũng phải nhỏ (dữ liệu thật: nền có nhiễu/anti-alias tách ra
+    tới 345 mảng "đáng kể" trong 1 ca lỗi đã xác nhận, trong khi 2 mảng màu phẳng thật bị
+    dính do khe hở line art chỉ tách ra đúng 2) — nếu không, hàng trăm mảnh rời rạc sẽ
+    được chấp nhận tách, rồi không bao giờ được gộp lại hết vì mỗi mảnh đã đủ lớn để vượt
+    ngưỡng "vùng nhỏ" của bước gộp phía sau, tạo hiệu ứng "vệt confetti" trên preview.
     """
     substantial = sorted(
         (points for points in components if len(points) >= min_region_area),
         key=len,
         reverse=True,
     )
-    if len(substantial) < 2:
+    if len(substantial) < 2 or len(substantial) > max_substantial_components:
         return False
     return all(
         component_average_color_deviation(ref_pixels, points) < max_component_color_deviation
@@ -1726,12 +1734,16 @@ def split_remaining_giant_regions(
     nhất (ví dụ ảnh nét vẽ gốc thật sự có khe hở lớn): sub-segment vùng đó bằng ảnh màu
     tham chiếu thay vì để nguyên 1 khối chiếm phần lớn canvas.
 
-    Chỉ áp dụng khi có bằng chứng vùng khổng lồ này đáng lẽ phải tách: hoặc nó được hình
-    thành TỪ việc gộp nhiều vùng nhỏ lại (merged_region_count > 1, đúng hệ quả bug "mảnh
-    vụn dồn cục"), hoặc kết quả tách trông giống các mảng màu phẳng thật sự (xem
-    giant_region_split_looks_like_flat_patches). Một mảng gradient mượt duy nhất từ đầu
-    (chưa từng bị gộp, và tách ra vẫn còn biến thiên màu nội bộ) không bị đụng tới để
-    không phá vỡ thiết kế detail-overlay hiện có.
+    Chỉ áp dụng khi kết quả tách trông giống các mảng màu phẳng thật sự bị dính vào nhau
+    (xem giant_region_split_looks_like_flat_patches — vài mảng lớn, mỗi mảng gần như đồng
+    màu nội bộ). Một mảng gradient/nhiễu mượt duy nhất (tách ra vẫn còn biến thiên màu nội
+    bộ, hoặc tách ra thành hàng trăm/nghìn mảnh rời rạc) không bị đụng tới, để không phá vỡ
+    thiết kế detail-overlay hiện có và không tạo hiệu ứng "vệt confetti" trên preview.
+
+    LƯU Ý: trước đây có thêm điều kiện "merged_region_count > 1" (vùng này từng được gộp
+    từ nhiều mảnh nhỏ) để coi là bằng chứng đủ tách — nhưng điều kiện đó gần như LUÔN đúng
+    với bất kỳ vùng lớn nào (vì bước dọn vùng nhỏ bình thường, hợp lệ cũng làm tăng
+    merged_region_count), nên nó vô hiệu hoá luôn bước kiểm tra an toàn phía dưới. Đã bỏ.
     """
     ref_pixels = ref_img.load()
     updated_infos = []
@@ -1751,7 +1763,7 @@ def split_remaining_giant_regions(
             updated_infos.append(info)
             continue
 
-        should_split = info.get("merged_region_count", 1) > 1 or giant_region_split_looks_like_flat_patches(
+        should_split = giant_region_split_looks_like_flat_patches(
             components, ref_pixels, min_region_area, max_component_color_deviation
         )
         if not should_split:
@@ -1805,9 +1817,13 @@ def evaluate_quality_gate(quality_report):
     if largest_region_pct > 55:
         reasons.append(f"largest_region_pct={largest_region_pct}>55")
 
-    giant_region_count = metrics.get("giant_region_count") or 0
-    if giant_region_count > 0:
-        reasons.append(f"giant_region_count={giant_region_count}>0")
+    # KHÔNG dùng giant_region_count làm điều kiện chặn: nó đếm số vùng > 50% diện tích
+    # (asset_quality.py) — một ngưỡng cứng, không đồng bộ với ngưỡng 55% ở trên. Vì chỉ có
+    # thể có tối đa 1 vùng > 50% diện tích cùng lúc, tín hiệu này chỉ thêm 1 dải 50-55% bị
+    # chặn oan mà largest_region_pct > 55 chưa bắt — đã xác nhận bằng dữ liệu thật: toàn bộ
+    # ca "giant_region_count=1" nhưng largest_region_pct <= 55 đều là level grade B/74-82đ
+    # hợp lệ, không phải lỗi. Giữ lại giant_region_count trong debug_report để tham khảo,
+    # chỉ bỏ khỏi hard gate.
 
     return reasons
 

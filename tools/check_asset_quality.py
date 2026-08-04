@@ -35,12 +35,22 @@ def scan_asset_quality(assets_root):
             report = json.load(input_file)
         reasons = evaluate_quality_gate(report)
         if reasons:
+            metrics = report.get("metrics", {})
             violations.append(
                 {
                     "level": level_name_from_report_path(assets_root, report_path),
                     "path": report_path,
                     "quality_grade": report.get("quality_grade"),
                     "reasons": reasons,
+                    # Vùng lớn không phải lúc nào cũng là lỗi thuật toán/line art — có thể
+                    # là nền phẳng hoạ sĩ vẽ có chủ đích (đo bằng độ lệch chuẩn màu tham
+                    # chiếu thật, xem measure_giant_region_legitimacy trong asset_quality.py).
+                    # Field này chỉ có khi debug_report.json được sinh SAU fix — báo cáo cũ
+                    # (build trước đó) sẽ có giá trị None, không suy diễn được.
+                    "giant_region_legitimacy": metrics.get("giant_region_legitimacy"),
+                    "giant_region_reference_color_std": metrics.get(
+                        "giant_region_reference_color_std"
+                    ),
                 }
             )
     return report_paths, violations
@@ -66,12 +76,31 @@ def main():
     print(f"Đã quét {len(report_paths)} debug_report.json trong '{args.assets_root}'.")
 
     if violations:
+        flat_bg = [v for v in violations if v["giant_region_legitimacy"] == "intentional_flat_background"]
+        needs_fix = [v for v in violations if v not in flat_bg]
+
         print(f"\nPHÁT HIỆN {len(violations)} LEVEL KHÔNG ĐẠT HARD GATE:")
-        for violation in violations:
+        if needs_fix:
+            print(f"\n  [CẦN XEM LẠI THUẬT TOÁN/LINE ART — {len(needs_fix)} level]")
+            for violation in needs_fix:
+                print(
+                    f"    - {violation['level']} (grade={violation['quality_grade']}): "
+                    f"{', '.join(violation['reasons'])}"
+                )
+        if flat_bg:
             print(
-                f"  - {violation['level']} (grade={violation['quality_grade']}): "
-                f"{', '.join(violation['reasons'])}"
+                f"\n  [NỀN PHẲNG CÓ CHỦ ĐÍCH, không phải lỗi thuật toán — {len(flat_bg)} level]"
             )
+            print(
+                "    (độ lệch chuẩn màu tham chiếu thấp, hoạ sĩ vẽ 1 màu phẳng — "
+                "cân nhắc chấp nhận, hoặc nhờ designer thêm chi tiết/hoạ tiết nền)"
+            )
+            for violation in flat_bg:
+                print(
+                    f"    - {violation['level']} (grade={violation['quality_grade']}, "
+                    f"std={violation['giant_region_reference_color_std']}): "
+                    f"{', '.join(violation['reasons'])}"
+                )
         return 1
 
     print("Tất cả level đều đạt hard gate chất lượng.")

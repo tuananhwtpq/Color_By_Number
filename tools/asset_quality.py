@@ -970,13 +970,30 @@ def build_recommendation(report):
         "PLAYABLE_SCORE_TOO_LOW",
         "DOMINANT_COLOR_AREA",
     }
+    giant_region_codes = {
+        "GIANT_REGION",
+        "GIANT_REGION_WARNING",
+        "GIANT_REGION_SEVERE_WARNING",
+    }
 
-    if gameplay_auto_codes & all_codes:
-        reasons.append("REGENERATE_AUTO")
-        design_focus.append("line")
-    if gameplay_fix_codes & all_codes and "DESIGN_FIX_LINE" not in reasons:
-        reasons.append("DESIGN_FIX_LINE")
-        design_focus.append("line")
+    # Vùng lớn không phải lúc nào cũng là lỗi line art/thuật toán — có thể là nền phẳng hoạ
+    # sĩ vẽ có chủ đích (đo bằng độ lệch chuẩn màu thật, xem measure_giant_region_legitimacy).
+    # Chỉ khi KHÔNG có bằng chứng "nền phẳng có chủ đích" mới quy về DESIGN_FIX_LINE/
+    # REGENERATE_AUTO như cũ; nếu có, đây là quyết định chấp nhận ảnh, không phải lỗi cần sửa.
+    giant_region_only = (all_codes & giant_region_codes) and not (
+        (gameplay_auto_codes | gameplay_fix_codes) - giant_region_codes
+    ) & all_codes
+    if giant_region_only and report.get("metrics", {}).get("giant_region_legitimacy") == (
+        "intentional_flat_background"
+    ):
+        reasons.append("ACCEPT_FLAT_BACKGROUND")
+    else:
+        if gameplay_auto_codes & all_codes:
+            reasons.append("REGENERATE_AUTO")
+            design_focus.append("line")
+        if gameplay_fix_codes & all_codes and "DESIGN_FIX_LINE" not in reasons:
+            reasons.append("DESIGN_FIX_LINE")
+            design_focus.append("line")
 
     if "PREVIEW_MAE_HIGH" in all_codes or "PREVIEW_MAE_TOO_HIGH" in all_codes:
         reasons.append("DESIGN_FIX_COLOR")
@@ -1020,6 +1037,85 @@ def build_recommendation(report):
     }
 
 
+# Ngưỡng độ lệch chuẩn màu (mỗi kênh) để coi vùng khổng lồ là "nền phẳng có chủ đích" của
+# hoạ sĩ — hiệu chỉnh từ dữ liệu thật: Manga/08 (nền phẳng đã xác nhận, không sửa được
+# bằng thuật toán) std~(5.9,7.6,5.2); Foods/03 (nền trời, cùng kết luận) std~(1.4,1.6,3.1).
+GIANT_REGION_FLAT_BACKGROUND_STD_THRESHOLD = 10.0
+
+
+def measure_giant_region_legitimacy(
+    config,
+    reference_path,
+    mask_path,
+    giant_pct_threshold=55.0,
+    std_threshold=GIANT_REGION_FLAT_BACKGROUND_STD_THRESHOLD,
+    sample_stride=2,
+):
+    """Vùng chiếm phần lớn canvas không phải lúc nào cũng là lỗi — có thể là nền phẳng
+    hoạ sĩ vẽ có chủ đích (sky, background trơn), hoặc là hệ quả line art bị hở khiến 2
+    mảng đáng lẽ tách biệt bị dính làm một. Hai trường hợp cần xử lý khác nhau (chấp nhận
+    ảnh vs sửa thuật toán/nhờ designer vá line art), nên đo thêm độ lệch chuẩn màu THẬT của
+    vùng đó trên ảnh tham chiếu gốc để phân biệt, thay vì chỉ nhìn % diện tích.
+
+    std thấp (< std_threshold mỗi kênh) → nền phẳng thật, không có nội dung nào bị mất.
+    std cao → vùng còn biến thiên màu thật, rất có thể là dấu hiệu tách nhầm/line art hở.
+    """
+    regions = config.get("regions", [])
+    if not regions or not reference_path or not os.path.exists(reference_path):
+        return {
+            "giant_region_legitimacy": None,
+            "giant_region_reference_color_std": None,
+        }
+
+    giant = max(regions, key=lambda region: int(region.get("area", 0) or 0))
+    total_pixels = max(1, int(config.get("width", 0)) * int(config.get("height", 0)))
+    giant_pct = int(giant.get("area", 0) or 0) * 100.0 / total_pixels
+    if giant_pct <= giant_pct_threshold or not os.path.exists(mask_path):
+        return {
+            "giant_region_legitimacy": None,
+            "giant_region_reference_color_std": None,
+        }
+
+    target_rgb = parse_hex_color(giant.get("mask_color"))
+    if target_rgb is None:
+        return {
+            "giant_region_legitimacy": None,
+            "giant_region_reference_color_std": None,
+        }
+
+    with Image.open(mask_path).convert("RGB") as mask_img, Image.open(reference_path).convert(
+        "RGB"
+    ) as ref_img:
+        mask_pixels = mask_img.load()
+        ref_pixels = ref_img.load()
+        mw, mh = mask_img.size
+        rw, rh = ref_img.size
+        scale_x, scale_y = rw / max(1, mw), rh / max(1, mh)
+        samples = []
+        for y in range(0, mh, sample_stride):
+            for x in range(0, mw, sample_stride):
+                if mask_pixels[x, y] == target_rgb:
+                    rx = min(rw - 1, int(x * scale_x))
+                    ry = min(rh - 1, int(y * scale_y))
+                    samples.append(ref_pixels[rx, ry])
+
+    if not samples:
+        return {
+            "giant_region_legitimacy": None,
+            "giant_region_reference_color_std": None,
+        }
+
+    channel_std = [
+        statistics.pstdev(channel_values)
+        for channel_values in zip(*samples)
+    ]
+    is_flat = all(value < std_threshold for value in channel_std)
+    return {
+        "giant_region_legitimacy": "intentional_flat_background" if is_flat else "needs_review",
+        "giant_region_reference_color_std": [round(value, 1) for value in channel_std],
+    }
+
+
 def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     config_path = os.path.join(level_dir, "config.json")
     config = load_json(config_path)
@@ -1041,6 +1137,7 @@ def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     )
     detail_path = resolve_asset_path(level_dir, config, "detail", "detail.png")
     metrics["has_detail"] = os.path.exists(detail_path)
+    metrics.update(measure_giant_region_legitimacy(config, reference_path, mask_path))
 
     quality = score_quality(metrics)
     report = {

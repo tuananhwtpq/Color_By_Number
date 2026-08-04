@@ -10,6 +10,7 @@ from tools.asset_quality import (
     build_recommendation,
     calculate_gameplay_metrics,
     evaluate_level_dir,
+    measure_giant_region_legitimacy,
     measure_luminance_preservation_score,
     measure_preview_similarity_score,
     normalize_profile,
@@ -592,6 +593,114 @@ class AssetQualityTest(unittest.TestCase):
         self.assertEqual("REVIEW_VISUAL", recommendation["action"])
         self.assertIn("DESIGN_FIX_COLOR", recommendation["reasons"])
         self.assertIn("color_alignment", recommendation["design_focus"])
+
+    def test_giant_region_legitimacy_flat_background_vs_needs_review(self):
+        # Canvas 10x10: vùng khổng lồ (id=1, mask trắng) chiếm 80 px (80%) — vượt ngưỡng
+        # giant_pct_threshold mặc định 55%. Vùng còn lại (id=2, mask đen) chỉ để có 2 mask
+        # color phân biệt, không liên quan phép đo.
+        width, height = 10, 10
+        config = {
+            "width": width,
+            "height": height,
+            "regions": [
+                {"id": 1, "mask_color": "#ffffff", "area": 80},
+                {"id": 2, "mask_color": "#000000", "area": 20},
+            ],
+        }
+        mask = Image.new("RGB", (width, height), (0, 0, 0))
+        mask_pixels = mask.load()
+        for y in range(8):
+            for x in range(width):
+                mask_pixels[x, y] = (255, 255, 255)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mask_path = os.path.join(tmp, "mask.png")
+            mask.save(mask_path)
+
+            # Ca 1: nền phẳng thật — tham chiếu gần như 1 màu duy nhất trong vùng khổng lồ.
+            flat_ref_path = os.path.join(tmp, "flat_ref.png")
+            flat_ref = Image.new("RGB", (width, height), (250, 30, 30))
+            flat_ref.save(flat_ref_path)
+
+            flat_result = measure_giant_region_legitimacy(config, flat_ref_path, mask_path)
+            self.assertEqual("intentional_flat_background", flat_result["giant_region_legitimacy"])
+            self.assertLess(max(flat_result["giant_region_reference_color_std"]), 10.0)
+
+            # Ca 2: cùng hình dạng vùng khổng lồ, nhưng nửa trái/nửa phải trong đó có màu
+            # khác hẳn nhau thật (biến thiên cao) — dấu hiệu có nội dung thật bị dính vào
+            # nhau, không phải nền phẳng.
+            varied_ref_path = os.path.join(tmp, "varied_ref.png")
+            varied_ref = Image.new("RGB", (width, height))
+            varied_pixels = varied_ref.load()
+            for y in range(height):
+                for x in range(width):
+                    varied_pixels[x, y] = (240, 20, 20) if x < width // 2 else (10, 20, 240)
+            varied_ref.save(varied_ref_path)
+
+            varied_result = measure_giant_region_legitimacy(config, varied_ref_path, mask_path)
+            self.assertEqual("needs_review", varied_result["giant_region_legitimacy"])
+            self.assertGreater(max(varied_result["giant_region_reference_color_std"]), 10.0)
+
+    def test_giant_region_legitimacy_skips_when_region_not_giant(self):
+        # 3 vùng chia đều (40/30/30 theo hàng) — vùng lớn nhất (40%) vẫn dưới ngưỡng giant
+        # mặc định (55%), nên hàm phải bỏ qua hoàn toàn, không đo std.
+        width, height = 10, 10
+        config = {
+            "width": width,
+            "height": height,
+            "regions": [
+                {"id": 1, "mask_color": "#ffffff", "area": 40},
+                {"id": 2, "mask_color": "#000000", "area": 30},
+                {"id": 3, "mask_color": "#ff0000", "area": 30},
+            ],
+        }
+        mask = Image.new("RGB", (width, height), (0, 0, 0))
+        mask_pixels = mask.load()
+        for y in range(4):
+            for x in range(width):
+                mask_pixels[x, y] = (255, 255, 255)
+        for y in range(7, height):
+            for x in range(width):
+                mask_pixels[x, y] = (255, 0, 0)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mask_path = os.path.join(tmp, "mask.png")
+            mask.save(mask_path)
+            ref_path = os.path.join(tmp, "ref.png")
+            Image.new("RGB", (width, height), (250, 30, 30)).save(ref_path)
+
+            result = measure_giant_region_legitimacy(config, ref_path, mask_path)
+            self.assertIsNone(result["giant_region_legitimacy"])
+            self.assertIsNone(result["giant_region_reference_color_std"])
+
+    def test_recommendation_accepts_flat_background_when_it_is_the_sole_issue(self):
+        recommendation = build_recommendation(
+            {
+                "quality_grade": "C",
+                "warnings": [{"code": "GIANT_REGION_WARNING"}],
+                "fail_reasons": [],
+                "metrics": {"giant_region_legitimacy": "intentional_flat_background"},
+            }
+        )
+        self.assertIn("ACCEPT_FLAT_BACKGROUND", recommendation["reasons"])
+        self.assertNotIn("REGENERATE_AUTO", recommendation["reasons"])
+
+    def test_recommendation_still_flags_when_other_issues_coexist_with_flat_background(self):
+        # Nền phẳng có chủ đích KHÔNG che giấu các vấn đề khác thật sự tồn tại (ở đây:
+        # quá nhiều vùng nhỏ) — vẫn phải khuyến nghị xem lại như bình thường.
+        recommendation = build_recommendation(
+            {
+                "quality_grade": "C",
+                "warnings": [
+                    {"code": "GIANT_REGION_WARNING"},
+                    {"code": "TINY_REGION_DENSITY_WARNING"},
+                ],
+                "fail_reasons": [],
+                "metrics": {"giant_region_legitimacy": "intentional_flat_background"},
+            }
+        )
+        self.assertIn("REGENERATE_AUTO", recommendation["reasons"])
+        self.assertNotIn("ACCEPT_FLAT_BACKGROUND", recommendation["reasons"])
 
 
 if __name__ == "__main__":

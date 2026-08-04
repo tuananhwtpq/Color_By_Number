@@ -824,7 +824,7 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(0, merged_report["tiny_region_count_lt_50"])
         self.assertGreater(merged_report["largest_region_pct"], raw_report["largest_region_pct"])
 
-    def test_evaluate_quality_gate_flags_grade_largest_pct_and_giant_count(self):
+    def test_evaluate_quality_gate_flags_grade_and_largest_pct(self):
         ok_report = {
             "quality_grade": "B",
             "metrics": {"largest_region_pct": 40, "giant_region_count": 0},
@@ -836,7 +836,16 @@ class GenerateLevelCliTest(unittest.TestCase):
             "metrics": {"largest_region_pct": 80, "giant_region_count": 2},
         }
         reasons = evaluate_quality_gate(bad_report)
-        self.assertEqual(3, len(reasons))
+        self.assertEqual(2, len(reasons))
+
+    def test_evaluate_quality_gate_does_not_block_on_giant_region_count_alone(self):
+        # giant_region_count dùng ngưỡng cứng 50% (asset_quality.py), không đồng bộ với
+        # ngưỡng 55% của gate — 1 vùng chiếm 51-55% là hợp lệ (B grade), không được chặn.
+        report = {
+            "quality_grade": "B",
+            "metrics": {"largest_region_pct": 54.4, "giant_region_count": 1},
+        }
+        self.assertEqual([], evaluate_quality_gate(report))
 
     def test_hard_gate_raises_and_does_not_write_low_quality_asset(self):
         with tempfile.TemporaryDirectory() as tmp:
