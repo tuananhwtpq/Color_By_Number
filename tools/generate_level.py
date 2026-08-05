@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from collections import Counter, deque
 
-from PIL import Image, ImageFilter
+from PIL import Image, ImageChops, ImageFilter
 from PIL import ImageDraw
 
 try:
@@ -16,6 +16,7 @@ try:
         merge_quality_report,
         score_quality,
         screen_size_scale_factor,
+        canvas_fit_scale,
         REFERENCE_CANVAS_SIZE,
     )
     from playability_profiles import PROFILE_CHOICES, normalize_profile, profile_thresholds
@@ -26,6 +27,7 @@ except ImportError:
         merge_quality_report,
         score_quality,
         screen_size_scale_factor,
+        canvas_fit_scale,
         REFERENCE_CANVAS_SIZE,
     )
     from tools.playability_profiles import PROFILE_CHOICES, normalize_profile, profile_thresholds
@@ -217,6 +219,103 @@ def close_small_line_gaps(binary_img, close_radius):
     return binary_img.filter(ImageFilter.MinFilter(size=size)).filter(
         ImageFilter.MaxFilter(size=size)
     )
+
+
+DEFAULT_INK_RECOVERY_RADIUS = 1
+DEFAULT_INK_MIN_CHROMA_VALUE = 60
+DEFAULT_INK_MIN_CHROMA_SPREAD = 18
+
+
+def build_chromatic_mask(
+    ref_img,
+    min_chroma_value=DEFAULT_INK_MIN_CHROMA_VALUE,
+    min_chroma_spread=DEFAULT_INK_MIN_CHROMA_SPREAD,
+):
+    """Mask 255 tại pixel mà ảnh màu tham chiếu có MÀU THẬT, 0 tại pixel đen/xám trung tính.
+
+    Dùng để phân biệt hai loại pixel mực đen trong line art vốn đang bị đối xử như nhau:
+    nét viền thật (bên dưới color.png cũng gần đen/trung tính) và mảng tô đặc như tóc, áo
+    (bên dưới color.png là màu có sắc). Chỉ loại thứ hai mới đáng được khôi phục thành
+    vùng tô được. Toàn bộ tính bằng phép ảnh của PIL để giữ tốc độ khi chạy data lớn.
+    """
+    red, green, blue = ref_img.convert("RGB").split()
+    brightest = ImageChops.lighter(ImageChops.lighter(red, green), blue)
+    darkest = ImageChops.darker(ImageChops.darker(red, green), blue)
+    chroma_spread = ImageChops.subtract(brightest, darkest)
+    bright_enough = brightest.point(
+        lambda value: 255 if value > min_chroma_value else 0, mode="L"
+    )
+    saturated_enough = chroma_spread.point(
+        lambda value: 255 if value > min_chroma_spread else 0, mode="L"
+    )
+    # multiply hoạt động như phép AND vì hai mask chỉ có giá trị 0 hoặc 255.
+    return ImageChops.multiply(bright_enough, saturated_enough)
+
+
+def build_ink_mask(binary_img):
+    return binary_img.point(lambda value: 255 if value == 0 else 0, mode="L")
+
+
+def count_mask_pixels(mask_img):
+    return mask_img.histogram()[255]
+
+
+def measure_lost_color_pct(binary_img, chromatic_mask):
+    """Phần trăm canvas đang bị coi là nét vẽ NHƯNG ảnh gốc có màu thật ở đó.
+
+    Đây là phần màu bị pipeline vứt đi: pixel không thuộc vùng tô nào nên không có số,
+    không có detail, và bị render thành đen. Càng thấp càng trung thực với ảnh gốc.
+    """
+    lost = ImageChops.multiply(build_ink_mask(binary_img), chromatic_mask)
+    total_pixels = max(1, binary_img.width * binary_img.height)
+    return round(count_mask_pixels(lost) * 100.0 / total_pixels, 2)
+
+
+def recover_solid_ink_fills(
+    binary_img,
+    ref_img=None,
+    chromatic_mask=None,
+    ink_core_radius=DEFAULT_INK_RECOVERY_RADIUS,
+    min_chroma_value=DEFAULT_INK_MIN_CHROMA_VALUE,
+    min_chroma_spread=DEFAULT_INK_MIN_CHROMA_SPREAD,
+):
+    """Khôi phục các mảng mực đen ĐẶC trong line art thành vùng tô được.
+
+    Nhiều line art tô hẳn mảng tối (tóc, áo) thành mực đen đặc thay vì chỉ vẽ nét viền.
+    Bước nhị phân hoá coi mọi pixel đen là nét vẽ, nên các mảng đó không bao giờ thuộc
+    vùng tô nào -> không có số, không có detail -> app render ra đen tuyền, mất sạch màu
+    thật của ảnh gốc (ví dụ tóc tím than thành đen). Không ngưỡng sáng nào tách được hai
+    loại này vì trong line art chúng có cùng giá trị 0; thông tin phân biệt chỉ nằm ở ảnh
+    màu tham chiếu.
+
+    Điều kiện khôi phục: (1) đủ dày — sống sót phép co ảnh, nên nét mảnh bị loại;
+    (2) ảnh gốc bên dưới có màu thật — nên nét viền tối trung tính được giữ nguyên.
+
+    Chỉ CO ảnh chứ không giãn lại, nên quanh mỗi mảng khôi phục luôn còn ít nhất một viền
+    mực dày `ink_core_radius` — vừa giữ vai trò tường ngăn để các vùng hai bên không bị
+    dính vào nhau, vừa trở thành nét viền tự nhiên cho mảng vừa khôi phục.
+
+    Trả về (binary mới, số pixel đã khôi phục).
+    """
+    if ink_core_radius < 1:
+        return binary_img, 0
+    if chromatic_mask is None:
+        if ref_img is None:
+            return binary_img, 0
+        chromatic_mask = build_chromatic_mask(
+            ref_img,
+            min_chroma_value=min_chroma_value,
+            min_chroma_spread=min_chroma_spread,
+        )
+
+    ink_core = build_ink_mask(binary_img).filter(
+        ImageFilter.MinFilter(ink_core_radius * 2 + 1)
+    )
+    recovered = ImageChops.multiply(ink_core, chromatic_mask)
+    recovered_pixel_count = count_mask_pixels(recovered)
+    if recovered_pixel_count == 0:
+        return binary_img, 0
+    return ImageChops.lighter(binary_img, recovered), recovered_pixel_count
 
 
 def load_binary_fill_map(line_art_path, brightness_threshold, line_close_radius):
@@ -425,16 +524,27 @@ def score_preprocessing_candidate(
     }
 
 
-def select_preprocessing_candidate(candidates):
-    return max(
-        candidates,
-        key=lambda item: (
-            item.get("playable_score", item.get("candidate_playable_score", 0)),
-            item.get("quality_score", item.get("score", 0)),
-            -abs(item.get("largest_region_pct", 0) - 35.0),
-            item.get("total_regions", 0),
-        ),
+def preprocessing_candidate_sort_key(item):
+    """Thứ tự ưu tiên khi chọn candidate tiền xử lý.
+
+    Gameplay (playable_score, quality_score) vẫn quyết định trước — đây là ràng buộc để
+    không phá lại việc chống vùng khổng lồ. `lost_color_pct` xen vào ngay sau đó: giữa các
+    candidate tương đương về gameplay, chọn cái vứt đi ÍT màu thật của ảnh gốc nhất. Trước
+    đây khâu chấm điểm hoàn toàn mù về màu nên hay chọn bản đồ vùng nuốt mất cả mảng màu.
+    """
+    lost_color_pct = item.get("lost_color_pct")
+    return (
+        item.get("playable_score", item.get("candidate_playable_score", 0)),
+        item.get("quality_score", item.get("score", 0)),
+        # None nghĩa là không đo được (không có ảnh tham chiếu) -> không thưởng/phạt.
+        -(lost_color_pct if lost_color_pct is not None else 0.0),
+        -abs(item.get("largest_region_pct", 0) - 35.0),
+        item.get("total_regions", 0),
     )
+
+
+def select_preprocessing_candidate(candidates):
+    return max(candidates, key=preprocessing_candidate_sort_key)
 
 
 # preprocess_profile="auto" thử ~17 candidate. Chấm điểm post-merge (mô phỏng
@@ -453,9 +563,30 @@ def select_binary_fill_map(
     playability_profile="standard",
     ref_img=None,
     merge_settings=None,
+    ink_core_radius=DEFAULT_INK_RECOVERY_RADIUS,
+    min_chroma_value=DEFAULT_INK_MIN_CHROMA_VALUE,
+    min_chroma_spread=DEFAULT_INK_MIN_CHROMA_SPREAD,
 ):
     line_img = Image.open(line_art_path).convert("RGB")
     gray = line_img.convert("L")
+    # Kiểm tra ngay tại đây, trước mọi phép ảnh kết hợp line + reference: các phép này đòi
+    # hai ảnh cùng kích thước, nếu không sẽ ném lỗi PIL khó hiểu. Khi chạy batch data lớn,
+    # cặp ảnh lệch kích thước là lỗi input thường gặp nên cần báo rõ ràng.
+    if ref_img is not None and ref_img.size != line_img.size:
+        raise ValueError(
+            "Kích thước của ảnh nét vẽ và ảnh tham chiếu phải trùng khớp "
+            f"(line={line_img.size}, reference={ref_img.size})."
+        )
+    # Tính một lần rồi dùng lại cho mọi candidate; ảnh gốc không đổi giữa các candidate.
+    chromatic_mask = (
+        None
+        if ref_img is None
+        else build_chromatic_mask(
+            ref_img,
+            min_chroma_value=min_chroma_value,
+            min_chroma_spread=min_chroma_spread,
+        )
+    )
     cheap_candidates = []
     for candidate in build_preprocessing_candidates(
         preprocess_profile=preprocess_profile,
@@ -469,11 +600,25 @@ def select_binary_fill_map(
             mode="L",
         )
         binary = close_small_line_gaps(binary, candidate["line_close_radius"])
+        # Khôi phục mảng mực đặc NGAY TỪ vòng chấm điểm rẻ, để mọi candidate được đánh giá
+        # trên đúng bản đồ vùng sẽ dùng thật, và để shortlist không loại nhầm candidate chỉ
+        # vì bản chưa khôi phục của nó trông ít vùng hơn.
+        recovered_ink_pixel_count = 0
+        if chromatic_mask is not None:
+            binary, recovered_ink_pixel_count = recover_solid_ink_fills(
+                binary,
+                chromatic_mask=chromatic_mask,
+                ink_core_radius=ink_core_radius,
+            )
         cheap_report = score_preprocessing_candidate(binary, playability_profile=playability_profile)
         cheap_candidates.append({
             **candidate,
             **cheap_report,
             "raw_total_regions": cheap_report["total_regions"],
+            "recovered_ink_pixel_count": recovered_ink_pixel_count,
+            "lost_color_pct": (
+                None if chromatic_mask is None else measure_lost_color_pct(binary, chromatic_mask)
+            ),
             "binary": binary,
         })
 
@@ -485,11 +630,7 @@ def select_binary_fill_map(
         # mảnh vụn nhỏ, nhưng bước gộp phía sau lại dồn cục chúng thành 1 vùng khổng lồ).
         shortlist = sorted(
             cheap_candidates,
-            key=lambda item: (
-                item.get("playable_score", 0),
-                item.get("quality_score", item.get("score", 0)),
-                -abs(item.get("largest_region_pct", 0) - 35.0),
-            ),
+            key=preprocessing_candidate_sort_key,
             reverse=True,
         )[:POST_MERGE_CANDIDATE_SHORTLIST_SIZE]
         scored_candidates = [
@@ -516,12 +657,7 @@ def select_binary_fill_map(
         {key: value for key, value in candidate.items() if key != "binary"}
         for candidate in sorted(
             scored_candidates,
-            key=lambda item: (
-                item.get("playable_score", item.get("candidate_playable_score", 0)),
-                item["quality_score"],
-                -abs(item["largest_region_pct"] - 35.0),
-                item["total_regions"],
-            ),
+            key=preprocessing_candidate_sort_key,
             reverse=True,
         )[:3]
     ]
@@ -538,6 +674,22 @@ def make_runtime_preprocessing_report(selected_preprocessing):
 
 def make_line_output_image(binary_img):
     return binary_img.convert("RGB")
+
+
+def build_render_line_image(source_line_img, binary_img):
+    """Ảnh nét dùng để dựng detail.png và preview_colored.png.
+
+    Giữ sắc độ xám/anti-alias của nét gốc ở chỗ VẪN là mực, nhưng không bao giờ làm tối
+    pixel đã được xếp là vùng tô được. Nếu dùng thẳng ảnh nét gốc, các mảng mực đặc vừa
+    được ink recovery khôi phục (tóc, áo) sẽ bị bôi đen trở lại trên preview, và
+    make_detail_overlay_image cũng bỏ qua chúng vì tưởng là nét — khiến vùng khôi phục chỉ
+    có màu palette phẳng chứ không có màu chuẩn của ảnh gốc.
+
+    Đây cũng là mô hình đúng với app: app nhân với line.png (chính là bản đồ nhị phân), nên
+    pixel tô được không hề bị nét làm tối.
+    """
+    # lighter = max: binary=255 -> 255 (không làm tối); binary=0 -> giữ giá trị nét gốc.
+    return ImageChops.lighter(source_line_img.convert("L"), binary_img).convert("RGB")
 
 
 def extract_regions(binary_img):
@@ -948,6 +1100,15 @@ def choose_palette_color(target_color, palette_colors):
     return min(palette_colors, key=lambda color: color_distance(color, target_color))
 
 
+# Bán kính an toàn (label_anchor["radius"]) dưới ngưỡng này thì KHÔNG CÓ ZOOM NÀO trong app
+# đủ để đọc được số — khớp với PaintCanvasView.kt: MIN_SCREEN_RADIUS_TO_SHOW_LABEL=25f (px
+# màn hình tối thiểu để hiện số) / MAX_ZOOM=20f (zoom tối đa) = 1.25px, cộng biên an toàn.
+# Những vùng dưới ngưỡng này phải bị ẩn số VÀ gộp bắt buộc vào láng giềng (xem
+# force_merge_unreadable_regions) — chỉ ẩn số thôi vẫn để lại 1 vùng tap được nhưng user
+# không biết là màu/số gì.
+LABEL_UNREADABLE_RADIUS_PX = 1.5
+
+
 def point_inscribed_radius(region_set, x, y, directions):
     """Bán kính hình tròn lớn nhất có thể vẽ tại (x, y) mà không tràn ra khỏi region_set —
     lấy MIN (không phải SUM) khoảng cách theo từng hướng trong directions, vì hình tròn bị
@@ -1088,7 +1249,12 @@ def make_detail_overlay_image(
             diff = color_distance(reference, flat)
             if diff < 2.0:
                 continue
-            alpha = int(round(max_alpha * min(1.0, diff / 96.0)))
+            # Mẫu số càng lớn thì lệch màu VỪA PHẢI (không chỉ lệch cực đoan) càng ít được
+            # kéo về màu gốc — 96.0 (cũ) khiến phần lớn pixel chỉ đạt 1 phần nhỏ max_alpha dù
+            # đã lệch đáng kể. Hạ xuống 45.0 (đo thật: MAE preview_colored.png so với ảnh gốc
+            # giảm thêm so với chỉ tăng detail_alpha) để bão hoà sớm hơn, giữ preview gần màu
+            # gốc hơn ở vùng shading/gradient — không đụng ranh giới vùng/mask/line.
+            alpha = int(round(max_alpha * min(1.0, diff / 45.0)))
             if alpha <= 0:
                 continue
             detail_pixels[x, y] = (reference[0], reference[1], reference[2], alpha)
@@ -1202,14 +1368,44 @@ def update_region_classification(
     tiny_side_threshold,
     tiny_merge_min_area,
     tiny_merge_min_side,
+    unreadable_radius_px=None,
 ):
+    """unreadable_radius_px mặc định None (TẮT hoàn toàn) để giữ nguyên hành vi/test hiện có
+    ở mọi lời gọi hiện tại — bật rõ ràng (LABEL_UNREADABLE_RADIUS_PX) chỉ ở 2 chỗ: (1) lúc
+    tạo region lần đầu (để hide_number đúng ngay từ đầu), và (2) lượt gộp bắt buộc cuối cùng
+    sau split_remaining_giant_regions (để đảm bảo luôn gộp được, không chỉ ẩn số). Nếu bật ở
+    MỌI lời gọi merge trong suốt pipeline (kể cả các profile "strict" không cho fallback),
+    vùng vừa gộp xong nhưng hình dạng vẫn mảnh sẽ liên tục bị đánh dấu "cần gộp tiếp" dù
+    không có láng giềng màu hợp — gây kẹt vô ích ở những bước chưa có fallback đảm bảo.
+    """
     min_side = bbox_min_side(info["bbox"])
     info["min_side"] = min_side
     info["is_small_region"] = info["area"] < min_region_area
+
+    unreadable_even_at_max_zoom = False
+    if unreadable_radius_px is not None:
+        # radius vắng mặt (đường candidate-scoring rẻ dùng skip_label_anchor=True, không
+        # tính label_anchor thật) thì bỏ qua điều kiện này.
+        label_radius = info.get("label_anchor", {}).get("radius")
+        unreadable_even_at_max_zoom = (
+            label_radius is not None and label_radius < unreadable_radius_px
+        )
+
     info["is_tiny_display_region"] = (
-        info["area"] < tiny_area_threshold or min_side < tiny_side_threshold
+        info["area"] < tiny_area_threshold
+        or min_side < tiny_side_threshold
+        or unreadable_even_at_max_zoom
     )
-    info["is_micro_region"] = info["area"] < tiny_merge_min_area or min_side < tiny_merge_min_side
+    info["is_micro_region"] = (
+        info["area"] < tiny_merge_min_area
+        or min_side < tiny_merge_min_side
+        or unreadable_even_at_max_zoom
+    )
+
+    # hide_number tính lại MỖI LẦN từ hình dạng hiện tại (area/bbox/radius), không kế thừa
+    # kiểu AND từ trước khi gộp — nếu không, 2 vùng nhỏ bị ẩn số gộp lại thành 1 vùng đủ lớn
+    # vẫn có thể tiếp tục bị ẩn nhầm.
+    info["hide_number"] = info["is_tiny_display_region"]
     return info
 
 
@@ -1220,6 +1416,7 @@ def classify_region_infos(
     tiny_side_threshold,
     tiny_merge_min_area,
     tiny_merge_min_side,
+    unreadable_radius_px=None,
 ):
     for info in region_infos:
         update_region_classification(
@@ -1229,6 +1426,7 @@ def classify_region_infos(
             tiny_side_threshold=tiny_side_threshold,
             tiny_merge_min_area=tiny_merge_min_area,
             tiny_merge_min_side=tiny_merge_min_side,
+            unreadable_radius_px=unreadable_radius_px,
         )
     return region_infos
 
@@ -1281,7 +1479,9 @@ def merge_region_info_into_parent(parent_info, child_info, skip_label_anchor=Fal
     parent_info["bbox"] = merged_bbox
     parent_info["centroid"] = merged_centroid
     parent_info["label_anchor"] = merged_label_anchor
-    parent_info["hide_number"] = parent_info["hide_number"] and child_info["hide_number"]
+    # hide_number KHÔNG kế thừa kiểu AND từ parent/child nữa — update_region_classification()
+    # (được gọi ngay sau mỗi lượt gộp ở cả 2 nơi gọi hàm này) sẽ tính lại từ hình dạng mới,
+    # tránh việc 2 vùng nhỏ bị ẩn số gộp lại thành 1 vùng đủ lớn vẫn tiếp tục bị ẩn nhầm.
     parent_info["merged_region_count"] = parent_info.get("merged_region_count", 1) + child_info.get(
         "merged_region_count", 1
     )
@@ -1302,6 +1502,7 @@ def merge_tiny_regions_into_neighbors(
     total_pixels=None,
     return_stats=False,
     skip_label_anchor=False,
+    unreadable_radius_px=None,
 ):
     if not region_infos:
         empty_stats = {
@@ -1328,6 +1529,7 @@ def merge_tiny_regions_into_neighbors(
         tiny_side_threshold=tiny_side_threshold,
         tiny_merge_min_area=tiny_merge_min_area,
         tiny_merge_min_side=tiny_merge_min_side,
+        unreadable_radius_px=unreadable_radius_px,
     )
 
     merged_tiny_regions_count = 0
@@ -1439,6 +1641,7 @@ def merge_tiny_regions_into_neighbors(
                 tiny_side_threshold=tiny_side_threshold,
                 tiny_merge_min_area=tiny_merge_min_area,
                 tiny_merge_min_side=tiny_merge_min_side,
+                unreadable_radius_px=unreadable_radius_px,
             )
 
         if not merged_any:
@@ -1503,6 +1706,47 @@ def absorb_small_region_colors(
             absorbed_count += 1
 
     return absorbed_count
+
+
+def absorb_isolated_unreadable_regions_by_proximity(region_infos, unreadable_radius_px):
+    """Phương án CUỐI CÙNG cho vùng không đọc được số dù zoom tối đa mà bị nét vẽ bao kín
+    hoàn toàn (không có láng giềng liền kề nào — ví dụ 1 ô nhỏ trong hoạ tiết mandala, mỗi ô
+    có viền riêng). merge_tiny_regions_into_neighbors (shared-boundary adjacency, đúng thiết
+    kế để tránh gộp nhầm qua khe hở line art) không giúp được ở đây vì hoàn toàn không có
+    adjacency để dùng.
+
+    Gán trực tiếp vào vùng ĐỌC ĐƯỢC gần nhất theo khoảng cách centroid, bỏ qua yêu cầu liền
+    kề VÀ yêu cầu màu khớp — chấp nhận đổi màu hoàn toàn, vì để lại 1 ô user tap được nhưng
+    không bao giờ biết là gì luôn tệ hơn. Chỉ áp dụng cho vùng ĐÃ xác nhận không đọc được số;
+    không đụng tới vùng khác.
+    """
+    survivors = []
+    isolated = []
+    for info in region_infos:
+        radius = info.get("label_anchor", {}).get("radius")
+        if radius is not None and radius < unreadable_radius_px:
+            isolated.append(info)
+        else:
+            survivors.append(info)
+
+    absorbed_count = 0
+    unresolved = []
+    for small_info in isolated:
+        if not survivors:
+            unresolved.append(small_info)
+            continue
+        cx = small_info["centroid"]["x"]
+        cy = small_info["centroid"]["y"]
+        nearest = min(
+            survivors,
+            key=lambda candidate: (
+                (candidate["centroid"]["x"] - cx) ** 2 + (candidate["centroid"]["y"] - cy) ** 2
+            ),
+        )
+        merge_region_info_into_parent(nearest, small_info)
+        absorbed_count += 1
+
+    return survivors + unresolved, absorbed_count
 
 
 def merge_small_attached_regions(
@@ -1616,6 +1860,145 @@ def merge_small_attached_regions(
     return region_infos, merged_count
 
 
+DEFAULT_MIN_TOUCH_TARGET_DP = 24.0
+DEFAULT_ASSUMED_ZOOM = 2.0
+
+
+def resolve_min_touch_bbox_side(
+    canvas_width,
+    canvas_height,
+    min_touch_dp=DEFAULT_MIN_TOUCH_TARGET_DP,
+    assumed_zoom=DEFAULT_ASSUMED_ZOOM,
+):
+    """Cạnh bbox nhỏ nhất (tính bằng pixel canvas) để một vùng còn chạm được.
+
+    Suy ngược từ chuẩn chạm 24dp của Android và tỷ lệ ảnh khi fit vào khung xem, thay vì
+    hằng số cứng — nhờ vậy data với ảnh kích thước khác nhau vẫn ra ngưỡng đúng.
+    `assumed_zoom` là mức phóng to giả định user sẽ dùng: 2.0 nghĩa là chấp nhận vùng chỉ
+    chạm được sau khi zoom 2x, đổi lại giữ được nhiều chi tiết hơn.
+    """
+    fit_scale = canvas_fit_scale(canvas_width, canvas_height)
+    effective_scale = max(1e-6, fit_scale * max(1.0, assumed_zoom))
+    return max(1, int(math.ceil(min_touch_dp / effective_scale)))
+
+
+def merge_untouchable_regions(
+    region_infos,
+    min_touch_bbox_side,
+    color_threshold,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+    profile="medium",
+    total_pixels=None,
+):
+    """Gộp các vùng quá nhỏ để chạm vào hàng xóm phù hợp nhất.
+
+    Các bước gộp trước đó xét chủ yếu theo DIỆN TÍCH và rất khắt khe về màu, nên vùng dài
+    mà hẹp (ví dụ lõi sợi tóc do ink recovery bào ra) vẫn sống sót: diện tích đủ lớn nhưng
+    bề ngang chỉ vài pixel. Với user đó là một chấm gần như vô hình, lại thường bị ẩn số,
+    biến level thành trò mò tìm điểm ảnh.
+
+    Ở đây xét theo HÌNH DẠNG (cạnh nhỏ nhất của bbox) và cho phép ngưỡng màu rộng hơn
+    nhiều. Nới màu ở bước này gần như không mất gì: detail.png mang màu chuẩn theo từng
+    pixel, nên sau khi gộp ảnh cuối vẫn hiện đúng màu ảnh gốc tại đó — chỉ thay đổi việc
+    user bấm vào số nào.
+    """
+    if not region_infos or min_touch_bbox_side <= 1:
+        return region_infos, 0
+
+    resolved_profile = resolve_generation_profile(profile)
+    thresholds = profile_thresholds(resolved_profile)
+    enforce_largest_target = total_pixels is not None
+    total_pixels = max(1, int(total_pixels or sum(info["area"] for info in region_infos) or 1))
+
+    def is_untouchable(info):
+        return bbox_min_side(info["bbox"]) < min_touch_bbox_side
+
+    # Số vùng cần gộp ở bước này rất lớn (hàng trăm), nên dựng lại point_index sau mỗi lần
+    # gộp như các bước trước sẽ quá chậm. Thay vào đó đánh dấu vùng đã gộp là None và cập
+    # nhật point_index tại chỗ cho đúng các điểm vừa đổi chủ.
+    working_infos = list(region_infos)
+    point_index = build_region_point_index(working_infos)
+    merged_count = 0
+
+    while True:
+        candidates = sorted(
+            (
+                index
+                for index, info in enumerate(working_infos)
+                if info is not None and is_untouchable(info)
+            ),
+            key=lambda index: working_infos[index]["area"],
+        )
+        if not candidates:
+            break
+
+        merged_any = False
+        for small_idx in candidates:
+            small_info = working_infos[small_idx]
+            if small_info is None or not is_untouchable(small_info):
+                continue
+
+            best_idx = None
+            best_score = None
+            fallback_idx = None
+            fallback_score = None
+            for candidate_idx, shared_boundary_count in find_adjacent_region_indices(
+                small_idx, working_infos, point_index
+            ).items():
+                candidate_info = working_infos[candidate_idx]
+                if candidate_info is None:
+                    continue
+                merged_pct = (candidate_info["area"] + small_info["area"]) * 100.0 / total_pixels
+                if enforce_largest_target and merged_pct > thresholds["max_largest_region_pct"]:
+                    continue
+
+                color_gap = color_distance(
+                    small_info["target_color"], candidate_info["target_color"]
+                )
+                # Ưu tiên hàng xóm đã chạm được: gộp vào một vùng cũng bé thì vẫn còn bé.
+                untouchable_penalty = 40.0 if is_untouchable(candidate_info) else 0.0
+                score = color_gap + untouchable_penalty - min(shared_boundary_count, 12) * 0.5
+                if color_gap <= color_threshold and (
+                    best_score is None or score < best_score
+                ):
+                    best_score = score
+                    best_idx = candidate_idx
+                if fallback_score is None or score < fallback_score:
+                    fallback_score = score
+                    fallback_idx = candidate_idx
+
+            # Vùng vô hình thì màu của nó gần như không ảnh hưởng cảm nhận, nên nếu không có
+            # hàng xóm nào đủ gần màu vẫn gộp vào hàng xóm hợp lý nhất thay vì bỏ mặc.
+            target_idx = best_idx if best_idx is not None else fallback_idx
+            if target_idx is None:
+                continue
+
+            merge_region_info_into_parent(working_infos[target_idx], small_info)
+            for point in small_info["region"]:
+                point_index[point] = target_idx
+            working_infos[small_idx] = None
+            merged_count += 1
+            merged_any = True
+
+        if not merged_any:
+            break
+
+    merged_infos = [info for info in working_infos if info is not None]
+    classify_region_infos(
+        region_infos=merged_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=tiny_area_threshold,
+        tiny_side_threshold=tiny_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+    )
+    return merged_infos, merged_count
+
+
 def split_giant_region_into_color_segments(region_info, ref_img, max_sub_colors=8):
     """Chia 1 vùng khổng lồ thành các mảng con theo màu tham chiếu (color quantization,
     tương đương k-means trong không gian màu) rồi tách connected component trong từng
@@ -1676,7 +2059,6 @@ def build_region_info_from_points(
     centroid = get_region_centroid(points)
     label_anchor = find_label_anchor(points, bbox, centroid)
     area = len(points)
-    hide_number = area < tiny_area_threshold or bbox_min_side(bbox) < tiny_side_threshold
     return update_region_classification(
         info={
             "region": points,
@@ -1686,7 +2068,6 @@ def build_region_info_from_points(
             "label_anchor": label_anchor,
             "target_color": representative_color,
             "representative_color": representative_color,
-            "hide_number": hide_number,
             "merged_region_count": 1,
         },
         min_region_area=min_region_area,
@@ -1694,6 +2075,7 @@ def build_region_info_from_points(
         tiny_side_threshold=tiny_side_threshold,
         tiny_merge_min_area=tiny_merge_min_area,
         tiny_merge_min_side=tiny_merge_min_side,
+        unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
     )
 
 
@@ -1876,8 +2258,14 @@ def generate_level_assets(
     adaptive_palette=True,
     preprocess_profile="standard",
     region_color_method="median",
-    detail_alpha=0.65,
+    detail_alpha=0.85,
     allow_low_quality=False,
+    ink_core_radius=DEFAULT_INK_RECOVERY_RADIUS,
+    ink_min_chroma_value=DEFAULT_INK_MIN_CHROMA_VALUE,
+    ink_min_chroma_spread=DEFAULT_INK_MIN_CHROMA_SPREAD,
+    min_touch_dp=DEFAULT_MIN_TOUCH_TARGET_DP,
+    assumed_zoom=DEFAULT_ASSUMED_ZOOM,
+    untouchable_merge_color_threshold=None,
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
     resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
@@ -1929,6 +2317,10 @@ def generate_level_assets(
         else max(10.0, color_merge_threshold * 1.5)
     )
     small_merge_color_threshold = max(6.0, color_merge_threshold * 0.65)
+    # Rộng hơn hẳn các bước gộp khác: vùng không chạm được thì màu của nó gần như không ảnh
+    # hưởng cảm nhận, và detail.png vẫn giữ đúng màu ảnh gốc tại đó sau khi gộp.
+    if untouchable_merge_color_threshold is None:
+        untouchable_merge_color_threshold = max(24.0, color_merge_threshold * 3.0)
 
     print(f"Đang tải ảnh tham chiếu màu: {reference_path}")
     ref_img = Image.open(reference_path).convert("RGB")
@@ -1956,6 +2348,9 @@ def generate_level_assets(
         playability_profile=resolved_profile,
         ref_img=ref_img,
         merge_settings=merge_settings_for_scoring,
+        ink_core_radius=ink_core_radius,
+        min_chroma_value=ink_min_chroma_value,
+        min_chroma_spread=ink_min_chroma_spread,
     )
     print(
         "Preprocess được chọn: "
@@ -1964,12 +2359,19 @@ def generate_level_assets(
         f"close_radius={selected_preprocessing['line_close_radius']}, "
         f"candidate_score={selected_preprocessing['score']}"
     )
+    recovered_ink_pixel_count = selected_preprocessing.get("recovered_ink_pixel_count") or 0
+    if recovered_ink_pixel_count:
+        print(
+            f"Ink recovery: đã khôi phục {recovered_ink_pixel_count} pixel mực đặc thành vùng tô "
+            f"được (còn bỏ sót {selected_preprocessing.get('lost_color_pct')}% canvas có màu thật)."
+        )
 
     if source_line_img.size != ref_img.size:
         raise ValueError("Kích thước của ảnh nét vẽ và ảnh tham chiếu phải trùng khớp.")
 
     width, height = source_line_img.size
     line_img = make_line_output_image(binary_img)
+    render_line_img = build_render_line_image(source_line_img, binary_img)
     quantized_ref_img, quantized_palette_budget, quantized_palette_count = build_quantized_reference_image(
         ref_img,
         target_unique_colors=resolved_target_unique_colors,
@@ -2019,7 +2421,6 @@ def generate_level_assets(
         bbox = get_region_bbox(region)
         centroid = get_region_centroid(region)
         label_anchor = find_label_anchor(region, bbox, centroid)
-        hide_number = area < hide_small_label_threshold or bbox_min_side(bbox) < tiny_region_side_threshold
 
         region_infos.append(
             update_region_classification(
@@ -2031,7 +2432,6 @@ def generate_level_assets(
                     "label_anchor": label_anchor,
                     "target_color": representative_color,
                     "representative_color": representative_color,
-                    "hide_number": hide_number,
                     "merged_region_count": 1,
                 },
                 min_region_area=min_region_area,
@@ -2039,6 +2439,7 @@ def generate_level_assets(
                 tiny_side_threshold=tiny_region_side_threshold,
                 tiny_merge_min_area=tiny_merge_min_area,
                 tiny_merge_min_side=tiny_merge_min_side,
+                unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
             )
         )
 
@@ -2075,6 +2476,32 @@ def generate_level_assets(
         profile=resolved_profile,
         total_pixels=width * height,
     )
+    # Chạy SAU các bước gộp theo diện tích: những gì còn sót lại ở đây là vùng dài mà hẹp,
+    # diện tích đủ lớn nên lọt qua mọi bước trước, nhưng bề ngang chỉ vài pixel.
+    min_touch_bbox_side = resolve_min_touch_bbox_side(
+        canvas_width=width,
+        canvas_height=height,
+        min_touch_dp=min_touch_dp,
+        assumed_zoom=assumed_zoom,
+    )
+    region_infos, merged_untouchable_region_count = merge_untouchable_regions(
+        region_infos=region_infos,
+        min_touch_bbox_side=min_touch_bbox_side,
+        color_threshold=untouchable_merge_color_threshold,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        profile=resolved_profile,
+        total_pixels=width * height,
+    )
+    if merged_untouchable_region_count:
+        print(
+            f"Đã gộp {merged_untouchable_region_count} vùng quá nhỏ để chạm "
+            f"(cạnh bbox < {min_touch_bbox_side}px) vào vùng lân cận."
+        )
+
     region_infos = classify_region_infos(
         region_infos=region_infos,
         min_region_area=min_region_area,
@@ -2149,6 +2576,91 @@ def generate_level_assets(
             total_pixels=width * height,
         )
         merged_small_region_count += merged_small_region_count_after_split
+
+    # Lượt gộp bắt buộc cuối cùng: vùng nào không thể đọc được số DÙ ZOOM TỐI ĐA (radius <
+    # LABEL_UNREADABLE_RADIUS_PX) phải được gộp vào láng giềng, không được để đứng riêng —
+    # để lại 1 vùng user tap được nhưng không bao giờ biết là màu/số gì luôn tệ hơn 1 màu bị
+    # gộp lệch nhẹ. Ép tiny_merge_policy="relaxed" (bật allow_fallback) BẤT KỂ profile ảnh
+    # đang dùng policy gì, để đảm bảo luôn tìm được láng giềng nếu có (profile "hard"/"strict"
+    # vẫn tôn trọng ngưỡng size/gộp bình thường ở các bước trước đó — chỉ riêng vùng không
+    # đọc được số mới bị ép gộp bất kể màu có khớp tốt hay không).
+    (
+        region_infos,
+        merged_unreadable_count,
+        forced_unreadable_count,
+        remaining_unreadable_count,
+        _unreadable_merge_stats,
+    ) = merge_tiny_regions_into_neighbors(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        attach_distance=0,
+        color_threshold=effective_tiny_merge_color_threshold,
+        tiny_merge_policy="relaxed",
+        profile=resolved_profile,
+        total_pixels=width * height,
+        return_stats=True,
+        unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
+    )
+    merged_tiny_regions_count += merged_unreadable_count
+    forced_tiny_region_merges_count += forced_unreadable_count
+    if merged_unreadable_count:
+        print(
+            f"Đã gộp bắt buộc {merged_unreadable_count} vùng không thể đọc số dù zoom tối đa "
+            f"vào láng giềng gần nhất ({forced_unreadable_count} trong số đó bị lệch màu, "
+            "chấp nhận đổi lấy việc user luôn xác định được vùng đó là gì)."
+        )
+    if remaining_unreadable_count:
+        # Không có adjacency (bị nét vẽ bao kín hoàn toàn, vd 1 ô trong hoạ tiết mandala) —
+        # phương án cuối: gán theo khoảng cách gần nhất, bỏ qua yêu cầu liền kề/màu khớp. Lặp
+        # tối đa vài lượt: vùng "survivor" vừa hấp thụ 1 ô cô lập có thể vẫn còn mảnh (hình
+        # dạng phức tạp/phân nhánh), cần thêm lượt để tìm survivor khác phù hợp hơn — dừng
+        # ngay khi không còn hấp thụ được gì thêm (hội tụ) hoặc đã hết vùng không đọc được.
+        total_absorbed_isolated_count = 0
+        for _ in range(3):
+            still_unreadable_before = sum(
+                1
+                for info in region_infos
+                if (info.get("label_anchor", {}).get("radius") or 0) < LABEL_UNREADABLE_RADIUS_PX
+            )
+            if not still_unreadable_before:
+                break
+            region_infos, absorbed_isolated_count = absorb_isolated_unreadable_regions_by_proximity(
+                region_infos=region_infos,
+                unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
+            )
+            classify_region_infos(
+                region_infos=region_infos,
+                min_region_area=min_region_area,
+                tiny_area_threshold=hide_small_label_threshold,
+                tiny_side_threshold=tiny_region_side_threshold,
+                tiny_merge_min_area=tiny_merge_min_area,
+                tiny_merge_min_side=tiny_merge_min_side,
+                unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
+            )
+            total_absorbed_isolated_count += absorbed_isolated_count
+            if not absorbed_isolated_count:
+                break
+        if total_absorbed_isolated_count:
+            print(
+                f"Đã gán {total_absorbed_isolated_count} vùng bị nét vẽ bao kín hoàn toàn "
+                "(không có láng giềng liền kề) vào vùng gần nhất theo khoảng cách, chấp nhận "
+                "đổi màu hoàn toàn để đảm bảo vùng đó luôn được xác định."
+            )
+        still_unreadable = sum(
+            1
+            for info in region_infos
+            if (info.get("label_anchor", {}).get("radius") or 0) < LABEL_UNREADABLE_RADIUS_PX
+        )
+        if still_unreadable:
+            print(
+                f"CẢNH BÁO: vẫn còn {still_unreadable} vùng không thể đọc số dù zoom tối đa "
+                "sau mọi phương án gộp (level có thể chỉ có 1 vùng duy nhất, không có gì để "
+                "gộp vào)."
+            )
 
     palette_result = build_palette_with_adaptive_merge(
         region_infos=region_infos,
@@ -2278,6 +2790,16 @@ def generate_level_assets(
         "category_profile": resolved_profile,
         "target_unique_colors": resolved_target_unique_colors,
         "preprocess_profile": preprocess_profile,
+        "min_touch_dp": min_touch_dp,
+        "assumed_zoom": assumed_zoom,
+        "min_touch_bbox_side": min_touch_bbox_side,
+        "untouchable_merge_color_threshold": untouchable_merge_color_threshold,
+        "merged_untouchable_region_count": merged_untouchable_region_count,
+        "ink_core_radius": ink_core_radius,
+        "ink_min_chroma_value": ink_min_chroma_value,
+        "ink_min_chroma_spread": ink_min_chroma_spread,
+        "recovered_ink_pixel_count": recovered_ink_pixel_count,
+        "lost_color_pct": selected_preprocessing.get("lost_color_pct"),
         "selected_preprocessing": selected_preprocessing,
         "has_detail": True,
         "detail_mode": "reference_lerp_rgba",
@@ -2319,13 +2841,13 @@ def generate_level_assets(
         mask_to_target_rgb=mask_to_target_rgb,
     )
     flat_preview_out_path = os.path.join(output_dir, "debug_preview_flat.png")
-    apply_line_overlay(flat_preview_img, source_line_img).save(flat_preview_out_path)
+    apply_line_overlay(flat_preview_img, render_line_img).save(flat_preview_out_path)
     print(f"Đã lưu ảnh Preview flat để debug: {flat_preview_out_path}")
 
     detail_img = make_detail_overlay_image(
         reference_img=ref_img,
         flat_preview_img=flat_preview_img,
-        line_img=source_line_img,
+        line_img=render_line_img,
         mask_img=mask_img,
         mask_to_target_rgb=mask_to_target_rgb,
         detail_alpha=detail_alpha,
@@ -2338,7 +2860,7 @@ def generate_level_assets(
         width=width,
         height=height,
         mask_img=mask_img,
-        line_img=source_line_img,
+        line_img=render_line_img,
         mask_to_target_rgb=mask_to_target_rgb,
         detail_img=detail_img,
     )
@@ -2574,8 +3096,63 @@ def create_parser():
     parser.add_argument(
         "--detail-alpha",
         type=float,
-        default=0.65,
+        default=0.85,
         help="Độ mạnh tối đa của detail.png khi blend lại với flat fill, trong khoảng 0..1.",
+    )
+    parser.add_argument(
+        "--min-touch-dp",
+        type=float,
+        default=DEFAULT_MIN_TOUCH_TARGET_DP,
+        help=(
+            "Kích thước chạm tối thiểu (dp) để một vùng được coi là bấm được. Vùng nhỏ hơn sẽ "
+            "bị gộp vào lân cận thay vì để user mò tìm chấm gần như vô hình."
+        ),
+    )
+    parser.add_argument(
+        "--assumed-zoom",
+        type=float,
+        default=DEFAULT_ASSUMED_ZOOM,
+        help=(
+            "Mức phóng to giả định user sẽ dùng khi tô. 1.0 = phải chạm được ngay ở zoom mặc "
+            "định (gộp mạnh nhất, ít vùng nhất); 2.0 = chấp nhận phải zoom 2x (giữ nhiều chi "
+            "tiết hơn)."
+        ),
+    )
+    parser.add_argument(
+        "--untouchable-merge-color-threshold",
+        type=float,
+        help=(
+            "Ngưỡng lệch màu tối đa khi gộp vùng không chạm được. Mặc định rộng hơn hẳn các "
+            "bước gộp khác vì detail.png vẫn giữ đúng màu ảnh gốc sau khi gộp."
+        ),
+    )
+    parser.add_argument(
+        "--ink-core-radius",
+        type=int,
+        default=DEFAULT_INK_RECOVERY_RADIUS,
+        help=(
+            "Bán kính co ảnh khi tách mảng mực ĐẶC (tóc, áo tô kín) khỏi nét viền mảnh, để "
+            "khôi phục chúng thành vùng tô được thay vì render ra đen tuyền. Càng lớn càng "
+            "chỉ khôi phục mảng thật dày. Đặt 0 để tắt hẳn ink recovery."
+        ),
+    )
+    parser.add_argument(
+        "--ink-min-chroma-value",
+        type=int,
+        default=DEFAULT_INK_MIN_CHROMA_VALUE,
+        help=(
+            "Kênh màu sáng nhất của ảnh gốc phải vượt ngưỡng này thì mảng mực mới được coi là "
+            "có màu thật và đáng khôi phục. Nâng lên nếu nét viền tối bị khôi phục nhầm."
+        ),
+    )
+    parser.add_argument(
+        "--ink-min-chroma-spread",
+        type=int,
+        default=DEFAULT_INK_MIN_CHROMA_SPREAD,
+        help=(
+            "Độ lệch giữa kênh sáng nhất và tối nhất của ảnh gốc phải vượt ngưỡng này thì mảng "
+            "mực mới được coi là có sắc (không phải đen/xám trung tính) và đáng khôi phục."
+        ),
     )
     parser.add_argument(
         "--allow-low-quality",
@@ -2800,6 +3377,12 @@ def run_batch(args):
             region_color_method=args.region_color_method,
             detail_alpha=args.detail_alpha,
             allow_low_quality=args.allow_low_quality,
+            ink_core_radius=args.ink_core_radius,
+            ink_min_chroma_value=args.ink_min_chroma_value,
+            ink_min_chroma_spread=args.ink_min_chroma_spread,
+        min_touch_dp=args.min_touch_dp,
+        assumed_zoom=args.assumed_zoom,
+        untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
         )
         processed_count += 1
 
@@ -2858,6 +3441,12 @@ def run_batch_single_category(args):
             region_color_method=args.region_color_method,
             detail_alpha=args.detail_alpha,
             allow_low_quality=args.allow_low_quality,
+            ink_core_radius=args.ink_core_radius,
+            ink_min_chroma_value=args.ink_min_chroma_value,
+            ink_min_chroma_spread=args.ink_min_chroma_spread,
+        min_touch_dp=args.min_touch_dp,
+        assumed_zoom=args.assumed_zoom,
+        untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
         )
         processed_count += 1
 
@@ -2939,6 +3528,12 @@ def run_batch_source_category(args):
                 region_color_method=args.region_color_method,
                 detail_alpha=args.detail_alpha,
                 allow_low_quality=args.allow_low_quality,
+                ink_core_radius=args.ink_core_radius,
+                ink_min_chroma_value=args.ink_min_chroma_value,
+                ink_min_chroma_spread=args.ink_min_chroma_spread,
+        min_touch_dp=args.min_touch_dp,
+        assumed_zoom=args.assumed_zoom,
+        untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
             )
             processed_count += 1
         except Exception as error:
@@ -2994,6 +3589,12 @@ def run_single(args):
         region_color_method=args.region_color_method,
         detail_alpha=args.detail_alpha,
         allow_low_quality=args.allow_low_quality,
+        ink_core_radius=args.ink_core_radius,
+        ink_min_chroma_value=args.ink_min_chroma_value,
+        ink_min_chroma_spread=args.ink_min_chroma_spread,
+        min_touch_dp=args.min_touch_dp,
+        assumed_zoom=args.assumed_zoom,
+        untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
     )
 
 

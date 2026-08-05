@@ -16,6 +16,7 @@ PLAYABILITY_PROFILE_THRESHOLDS = {
         "max_hidden_label_pct": 70,
         "max_region_count": 600,
         "max_largest_region_pct": 50,
+        "max_untouchable_pct": 12,
         "many_tiny_lt_50_ratio": 0.25,
     },
     "medium": {
@@ -24,6 +25,7 @@ PLAYABILITY_PROFILE_THRESHOLDS = {
         "max_hidden_label_pct": 80,
         "max_region_count": 800,
         "max_largest_region_pct": 60,
+        "max_untouchable_pct": 18,
         "many_tiny_lt_50_ratio": 0.35,
     },
     "hard": {
@@ -32,6 +34,7 @@ PLAYABILITY_PROFILE_THRESHOLDS = {
         "max_hidden_label_pct": 90,
         "max_region_count": 1200,
         "max_largest_region_pct": 70,
+        "max_untouchable_pct": 25,
         "many_tiny_lt_50_ratio": 0.50,
     },
     "mandala": {
@@ -40,6 +43,7 @@ PLAYABILITY_PROFILE_THRESHOLDS = {
         "max_hidden_label_pct": 95,
         "max_region_count": 1600,
         "max_largest_region_pct": 75,
+        "max_untouchable_pct": 35,
         "many_tiny_lt_50_ratio": 0.60,
     },
 }

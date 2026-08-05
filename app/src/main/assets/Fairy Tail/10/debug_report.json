@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "stats": {
-    "total_regions": 211,
-    "unique_numbers": 61,
+    "total_regions": 165,
+    "unique_numbers": 64,
     "estimated_difficulty": 10,
-    "small_regions_count": 7,
+    "small_regions_count": 2,
     "giant_regions_count": 0
   },
   "generation_params": {
@@ -137,14 +137,14 @@
     },
     "has_detail": true,
     "detail_mode": "reference_lerp_rgba",
-    "detail_alpha": 0.65
+    "detail_alpha": 0.85
   },
   "warnings": [
     {
       "code": "EDGE_LABEL_ANCHOR",
       "message": "Một số label anchor nằm sát mép ảnh.",
       "region_ids": [
-        180
+        141
       ]
     }
   ],
@@ -152,10 +152,10 @@
   "quality_score": 100,
   "fail_reasons": [],
   "metrics": {
-    "total_regions": 211,
-    "unique_numbers": 61,
-    "tiny_region_count_lt_50": 2,
-    "tiny_region_count_lt_200": 24,
+    "total_regions": 165,
+    "unique_numbers": 64,
+    "tiny_region_count_lt_50": 0,
+    "tiny_region_count_lt_200": 11,
     "mask_config_mismatch_count": 0,
     "mask_missing_config_colors": [],
     "config_missing_mask_colors": [],
@@ -167,33 +167,30 @@
     "largest_region_pct": 13.03,
     "max_region_pct": 13.03,
     "top_3_region_pct": 28.83,
-    "max_color_pct": 13.11,
-    "top_3_color_pct": 37.37,
-    "tiny_region_count_lt_100": 6,
-    "tiny_region_pct_lt_50": 0.9,
-    "tiny_region_pct_lt_100": 2.8,
-    "tiny_region_pct_lt_200": 11.4,
-    "config_hidden_label_count": 10,
-    "config_hidden_label_pct": 4.7,
-    "estimated_hidden_label_count": 141,
-    "estimated_hidden_label_pct": 66.8,
-    "hidden_label_count": 141,
-    "hidden_label_pct": 66.8,
+    "max_color_pct": 13.13,
+    "top_3_color_pct": 36.82,
+    "tiny_region_count_lt_100": 2,
+    "tiny_region_pct_lt_50": 0.0,
+    "tiny_region_pct_lt_100": 1.2,
+    "tiny_region_pct_lt_200": 6.7,
+    "config_hidden_label_count": 8,
+    "config_hidden_label_pct": 4.8,
+    "estimated_hidden_label_count": 101,
+    "estimated_hidden_label_pct": 61.2,
+    "hidden_label_count": 101,
+    "hidden_label_pct": 61.2,
     "label_min_screen_radius_px": 25,
-    "median_region_area": 916.0,
-    "p10_region_area": 194,
-    "p25_region_area": 441,
-    "region_density_by_canvas_size": 201.23,
+    "median_region_area": 1249.0,
+    "p10_region_area": 260,
+    "p25_region_area": 591,
+    "region_density_by_canvas_size": 157.36,
     "tiny_region_by_number_lt_100": {
-      "35": 1,
-      "41": 1,
-      "45": 1,
-      "53": 2,
-      "61": 1
+      "55": 1,
+      "64": 1
     },
-    "untouchable_region_count": 60,
-    "min_touch_target_at_default_zoom": 6.33,
-    "playable_region_count": 187,
+    "untouchable_region_count": 37,
+    "min_touch_target_at_default_zoom": 7.38,
+    "playable_region_count": 154,
     "giant_region_count": 0,
     "background_region_candidate": false,
     "playability_profile": "medium",
@@ -203,10 +200,10 @@
     "line_ink_pct": 7.09,
     "reference_missing": false,
     "reference_required": false,
-    "preview_mae": 19.69,
-    "color_mae": 19.69,
-    "preview_similarity_score": 92.28,
-    "shading_preservation_score": 92.57,
+    "preview_mae": 16.21,
+    "color_mae": 16.21,
+    "preview_similarity_score": 93.64,
+    "shading_preservation_score": 93.92,
     "has_detail": true,
     "giant_region_legitimacy": null,
     "giant_region_reference_color_std": null

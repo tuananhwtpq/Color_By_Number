@@ -396,6 +396,7 @@ def analyze_region_playability(
         "region_density_by_canvas_size": round(total_regions / (total_pixels / 1000000.0), 2),
         "tiny_region_by_number_lt_100": dict(sorted(tiny_by_number.items(), key=lambda item: str(item[0]))),
         "untouchable_region_count": untouchable_count,
+        "untouchable_region_pct": pct(untouchable_count),
         "min_touch_target_at_default_zoom": min_touch_target,
         "playable_region_count": sum(
             1 for area in region_areas if area >= playable_region_min_area
@@ -915,6 +916,31 @@ def score_quality(metrics):
         )
         score -= 8
 
+    # Vùng quá nhỏ để chạm là lỗi chơi được/không chơi được, không phải lỗi thẩm mỹ: user
+    # phải mò tìm một chấm nhỏ đến mức zoom vào vẫn không thấy, lại còn bị ẩn số. Trước đây
+    # hai chỉ số này được TÍNH nhưng không hề đưa vào chấm điểm, nên level có tới 40% vùng
+    # không chạm được vẫn ra grade A — tức grade hoàn toàn mù với vấn đề này.
+    untouchable_pct = metrics.get("untouchable_region_pct")
+    min_touch_target = metrics.get("min_touch_target_at_default_zoom")
+    if untouchable_pct is not None and untouchable_pct > thresholds["max_untouchable_pct"]:
+        issue = make_issue(
+            "UNTOUCHABLE_REGIONS",
+            "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile "
+            f"{profile}; user phải mò tìm chấm gần như vô hình.",
+            {
+                "untouchable_region_pct": untouchable_pct,
+                "min_touch_target_at_default_zoom": min_touch_target,
+            },
+            thresholds["max_untouchable_pct"],
+        )
+        # Gấp đôi ngưỡng là mức không còn cứu được bằng zoom -> tính là lỗi chặn.
+        if untouchable_pct > thresholds["max_untouchable_pct"] * 2:
+            fail_reasons.append(issue)
+            score -= 25
+        else:
+            warnings.append({**issue, "code": "UNTOUCHABLE_REGIONS_WARNING"})
+            score -= 12
+
     score = max(0, min(100, int(round(score))))
     if fail_reasons:
         grade = "D"
@@ -962,6 +988,7 @@ def build_recommendation(report):
         "TOP_COLORS_DOMINATE_WARNING",
         "PLAYABLE_SCORE_LOW",
         "TINY_REGION_DENSITY_WARNING",
+        "UNTOUCHABLE_REGIONS_WARNING",
     }
     gameplay_fix_codes = {
         "GIANT_REGION",
@@ -969,6 +996,7 @@ def build_recommendation(report):
         "SINGLE_TAP_COMPLETION_RISK",
         "PLAYABLE_SCORE_TOO_LOW",
         "DOMINANT_COLOR_AREA",
+        "UNTOUCHABLE_REGIONS",
     }
     giant_region_codes = {
         "GIANT_REGION",

@@ -8,12 +8,23 @@ from unittest import mock
 
 from PIL import Image, ImageDraw
 
-from tools.asset_quality import evaluate_level_dir, measure_preview_mae, screen_size_scale_factor
+from tools.asset_quality import (
+    evaluate_level_dir,
+    measure_preview_mae,
+    score_quality,
+    screen_size_scale_factor,
+)
 from tools.generate_level import (
     LevelQualityGateError,
     absorb_small_region_colors,
+    build_chromatic_mask,
     create_parser,
     evaluate_quality_gate,
+    measure_lost_color_pct,
+    merge_untouchable_regions,
+    recover_solid_ink_fills,
+    resolve_min_touch_bbox_side,
+    select_binary_fill_map,
     find_label_anchor,
     generate_level_assets,
     get_region_bbox,
@@ -1085,6 +1096,328 @@ class GenerateLevelCliTest(unittest.TestCase):
 
         self.assertEqual(0, stats["giant_region_split_count"])
         self.assertEqual(1, len(updated_infos))
+
+
+class UntouchableRegionMergeTest(unittest.TestCase):
+    """Vùng dài mà hẹp lọt qua mọi bước gộp theo diện tích: diện tích đủ lớn nhưng bề ngang
+    chỉ vài pixel. Với user đó là chấm gần như vô hình, lại thường bị ẩn số.
+    """
+
+    def make_region_info(self, points, target_color, hide_number=False):
+        xs = [point[0] for point in points]
+        ys = [point[1] for point in points]
+        return {
+            "region": list(points),
+            "area": len(points),
+            "bbox": {"left": min(xs), "top": min(ys), "right": max(xs), "bottom": max(ys)},
+            "centroid": {"x": sum(xs) / len(points), "y": sum(ys) / len(points)},
+            "label_anchor": {"x": sum(xs) / len(points), "y": sum(ys) / len(points)},
+            "target_color": target_color,
+            "hide_number": hide_number,
+            "merged_region_count": 1,
+        }
+
+    def make_block(self, x0, y0, x1, y1):
+        return [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)]
+
+    def test_long_thin_sliver_is_merged_even_though_area_is_large(self):
+        # Bề ngang 2px nhưng diện tích 200 -> mọi ngưỡng theo diện tích đều bỏ qua.
+        sliver = self.make_region_info(self.make_block(10, 0, 11, 99), (200, 40, 40))
+        neighbor = self.make_region_info(self.make_block(12, 0, 60, 99), (205, 45, 45))
+
+        merged, merged_count = merge_untouchable_regions(
+            region_infos=[sliver, neighbor],
+            min_touch_bbox_side=12,
+            color_threshold=24.0,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(1, len(merged))
+        self.assertEqual(200 + 49 * 100, merged[0]["area"])
+
+    def test_touchable_region_is_left_alone(self):
+        big_a = self.make_region_info(self.make_block(0, 0, 40, 40), (200, 40, 40))
+        big_b = self.make_region_info(self.make_block(41, 0, 80, 40), (40, 40, 200))
+
+        merged, merged_count = merge_untouchable_regions(
+            region_infos=[big_a, big_b],
+            min_touch_bbox_side=12,
+            color_threshold=24.0,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+        )
+
+        self.assertEqual(0, merged_count)
+        self.assertEqual(2, len(merged))
+
+    def test_sliver_merges_even_when_no_neighbor_matches_color(self):
+        # Vùng vô hình thì màu gần như không ảnh hưởng cảm nhận, và detail.png vẫn giữ đúng
+        # màu ảnh gốc sau khi gộp -> vẫn gộp thay vì bỏ mặc một chấm không bấm được.
+        sliver = self.make_region_info(self.make_block(10, 0, 11, 99), (250, 0, 0))
+        neighbor = self.make_region_info(self.make_block(12, 0, 60, 99), (0, 0, 250))
+
+        merged, merged_count = merge_untouchable_regions(
+            region_infos=[sliver, neighbor],
+            min_touch_bbox_side=12,
+            color_threshold=1.0,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(1, len(merged))
+
+    def test_prefers_touchable_neighbor_over_another_sliver(self):
+        sliver = self.make_region_info(self.make_block(10, 0, 11, 99), (200, 40, 40))
+        other_sliver = self.make_region_info(self.make_block(8, 0, 9, 99), (201, 41, 41))
+        touchable = self.make_region_info(self.make_block(12, 0, 60, 99), (210, 50, 50))
+
+        merged, merged_count = merge_untouchable_regions(
+            region_infos=[sliver, other_sliver, touchable],
+            min_touch_bbox_side=12,
+            color_threshold=40.0,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+        )
+
+        self.assertEqual(2, merged_count)
+        self.assertEqual(1, len(merged))
+        self.assertEqual((210, 50, 50), merged[0]["target_color"])
+
+    def test_does_not_merge_into_neighbor_that_would_become_giant(self):
+        sliver = self.make_region_info(self.make_block(10, 0, 11, 9), (200, 40, 40))
+        giant = self.make_region_info(self.make_block(12, 0, 90, 89), (205, 45, 45))
+
+        merged, merged_count = merge_untouchable_regions(
+            region_infos=[sliver, giant],
+            min_touch_bbox_side=12,
+            color_threshold=40.0,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+            profile="casual",
+            total_pixels=10000,
+        )
+
+        self.assertEqual(0, merged_count)
+        self.assertEqual(2, len(merged))
+
+    def test_min_touch_bbox_side_scales_with_canvas_size(self):
+        # Ngưỡng suy ngược từ 24dp + tỷ lệ fit, không phải hằng số cứng, để data với ảnh
+        # kích thước khác nhau vẫn ra ngưỡng đúng.
+        small = resolve_min_touch_bbox_side(512, 512)
+        medium = resolve_min_touch_bbox_side(1024, 1024)
+        large = resolve_min_touch_bbox_side(2048, 2048)
+
+        self.assertLess(small, medium)
+        self.assertLess(medium, large)
+        self.assertEqual(12, medium)
+
+    def test_assumed_zoom_one_requires_bigger_regions_than_zoom_two(self):
+        no_zoom = resolve_min_touch_bbox_side(1024, 1024, assumed_zoom=1.0)
+        zoom_two = resolve_min_touch_bbox_side(1024, 1024, assumed_zoom=2.0)
+
+        self.assertGreater(no_zoom, zoom_two)
+
+
+class UntouchableRegionScoringTest(unittest.TestCase):
+    def base_metrics(self, **overrides):
+        metrics = {
+            "total_regions": 200,
+            "largest_region_pct": 20.0,
+            "playable_score": 90,
+            "playability_profile": "medium",
+            "untouchable_region_pct": 2.0,
+            "min_touch_target_at_default_zoom": 40.0,
+        }
+        metrics.update(overrides)
+        return metrics
+
+    def test_clean_level_has_no_touchability_issue(self):
+        quality = score_quality(self.base_metrics())
+
+        codes = {issue["code"] for issue in quality["warnings"] + quality["fail_reasons"]}
+        self.assertNotIn("UNTOUCHABLE_REGIONS", codes)
+        self.assertNotIn("UNTOUCHABLE_REGIONS_WARNING", codes)
+
+    def test_moderate_untouchable_ratio_warns(self):
+        quality = score_quality(self.base_metrics(untouchable_region_pct=25.0))
+
+        codes = {issue["code"] for issue in quality["warnings"]}
+        self.assertIn("UNTOUCHABLE_REGIONS_WARNING", codes)
+
+    def test_severe_untouchable_ratio_fails_the_level(self):
+        # 41% vùng không chạm được từng ra grade A vì chỉ số này bị tính rồi bỏ đó.
+        quality = score_quality(self.base_metrics(untouchable_region_pct=41.0))
+
+        codes = {issue["code"] for issue in quality["fail_reasons"]}
+        self.assertIn("UNTOUCHABLE_REGIONS", codes)
+        self.assertEqual("D", quality["quality_grade"])
+
+
+class InkFillRecoveryTest(unittest.TestCase):
+    """Line art hay tô hẳn mảng tối (tóc, áo) thành mực đen đặc thay vì chỉ vẽ nét viền.
+
+    Bước nhị phân hoá coi mọi pixel đen là nét vẽ nên các mảng đó không thuộc vùng tô nào,
+    không có số, không có detail -> app render đen tuyền, mất màu thật của ảnh gốc. Trong
+    line art hai loại này cùng giá trị 0, chỉ ảnh màu tham chiếu mới phân biệt được.
+    """
+
+    def make_scene(self, ink_box, ink_reference_color, canvas=40):
+        """binary: 255 = tô được, 0 = mực. ink_box được tô mực đặc trên nền tô được."""
+        binary = Image.new("L", (canvas, canvas), 255)
+        ImageDraw.Draw(binary).rectangle(ink_box, fill=0)
+        ref = Image.new("RGB", (canvas, canvas), (250, 240, 230))
+        ImageDraw.Draw(ref).rectangle(ink_box, fill=ink_reference_color)
+        return binary, ref
+
+    def test_solid_ink_mass_with_real_color_becomes_fillable(self):
+        # Tóc tím than: mảng dày, ảnh gốc bên dưới có sắc -> phải khôi phục.
+        binary, ref = self.make_scene((10, 10, 29, 29), (35, 23, 90))
+
+        recovered_binary, recovered_count = recover_solid_ink_fills(binary, ref_img=ref)
+
+        self.assertGreater(recovered_count, 0)
+        pixels = recovered_binary.load()
+        self.assertEqual(255, pixels[20, 20], "lõi mảng mực phải trở thành vùng tô được")
+
+    def test_neutral_dark_outline_stroke_is_kept_as_line(self):
+        # Nét viền thật: ảnh gốc bên dưới cũng đen trung tính -> phải giữ nguyên là nét.
+        binary, ref = self.make_scene((10, 10, 29, 29), (18, 18, 20))
+
+        recovered_binary, recovered_count = recover_solid_ink_fills(binary, ref_img=ref)
+
+        self.assertEqual(0, recovered_count)
+        self.assertEqual(0, recovered_binary.load()[20, 20])
+
+    def test_thin_stroke_is_kept_as_line_even_when_colorful(self):
+        # Nét mảnh 1px dù ảnh gốc có màu vẫn phải là nét — phép co ảnh loại nó.
+        binary, ref = self.make_scene((15, 5, 15, 34), (35, 23, 90))
+
+        recovered_binary, recovered_count = recover_solid_ink_fills(binary, ref_img=ref)
+
+        self.assertEqual(0, recovered_count)
+        self.assertEqual(0, recovered_binary.load()[15, 20])
+
+    def test_recovered_mass_keeps_ink_wall_so_neighbors_do_not_bridge(self):
+        # Chỉ CO chứ không giãn lại, nên quanh mảng khôi phục luôn còn viền mực ngăn cách —
+        # nếu không, vùng hai bên sẽ dính vào nhau thành một vùng khổng lồ.
+        binary, ref = self.make_scene((10, 10, 29, 29), (35, 23, 90))
+
+        recovered_binary, _ = recover_solid_ink_fills(binary, ref_img=ref, ink_core_radius=1)
+
+        pixels = recovered_binary.load()
+        border_values = [pixels[10, y] for y in range(10, 30)]
+        self.assertTrue(all(v == 0 for v in border_values), "viền mực phải còn nguyên")
+
+    def test_recovery_can_be_disabled_with_zero_radius(self):
+        binary, ref = self.make_scene((10, 10, 29, 29), (35, 23, 90))
+
+        recovered_binary, recovered_count = recover_solid_ink_fills(
+            binary, ref_img=ref, ink_core_radius=0
+        )
+
+        self.assertEqual(0, recovered_count)
+        self.assertEqual(0, recovered_binary.load()[20, 20])
+
+    def test_lost_color_pct_drops_after_recovery(self):
+        binary, ref = self.make_scene((10, 10, 29, 29), (35, 23, 90))
+        chromatic_mask = build_chromatic_mask(ref)
+
+        before = measure_lost_color_pct(binary, chromatic_mask)
+        recovered_binary, _ = recover_solid_ink_fills(binary, chromatic_mask=chromatic_mask)
+        after = measure_lost_color_pct(recovered_binary, chromatic_mask)
+
+        self.assertGreater(before, 0, "mảng mực có màu thật phải bị tính là màu đang mất")
+        self.assertLess(after, before)
+
+    def test_candidate_selection_prefers_less_lost_color_when_gameplay_ties(self):
+        candidates = [
+            {
+                "profile": "nuot-mat-mang-mau",
+                "playable_score": 80,
+                "quality_score": 90,
+                "lost_color_pct": 9.5,
+                "largest_region_pct": 35.0,
+                "total_regions": 300,
+            },
+            {
+                "profile": "giu-duoc-mau",
+                "playable_score": 80,
+                "quality_score": 90,
+                "lost_color_pct": 1.2,
+                "largest_region_pct": 35.0,
+                "total_regions": 300,
+            },
+        ]
+
+        self.assertEqual("giu-duoc-mau", select_preprocessing_candidate(candidates)["profile"])
+
+    def test_gameplay_score_still_outranks_color_fidelity(self):
+        # Ràng buộc chống vùng khổng lồ phải thắng — màu chỉ là tiêu chí phá hoà.
+        candidates = [
+            {
+                "profile": "mau-dep-nhung-gameplay-hong",
+                "playable_score": 40,
+                "quality_score": 90,
+                "lost_color_pct": 0.1,
+                "largest_region_pct": 80.0,
+                "total_regions": 12,
+            },
+            {
+                "profile": "gameplay-tot",
+                "playable_score": 95,
+                "quality_score": 90,
+                "lost_color_pct": 8.0,
+                "largest_region_pct": 30.0,
+                "total_regions": 300,
+            },
+        ]
+
+        self.assertEqual("gameplay-tot", select_preprocessing_candidate(candidates)["profile"])
+
+    def test_mismatched_image_sizes_raise_clear_error_not_pil_error(self):
+        # Chạy batch data lớn rất hay gặp cặp line/color lệch kích thước; các phép ảnh kết
+        # hợp hai ảnh sẽ ném lỗi PIL khó hiểu nếu không chặn sớm bằng thông báo rõ ràng.
+        with tempfile.TemporaryDirectory() as tmp:
+            line_path = Path(tmp) / "line.png"
+            Image.new("RGB", (32, 32), "white").save(line_path)
+
+            with self.assertRaises(ValueError) as context:
+                select_binary_fill_map(
+                    str(line_path),
+                    brightness_threshold=120,
+                    line_close_radius=0,
+                    preprocess_profile="standard",
+                    ref_img=Image.new("RGB", (16, 16), (35, 23, 90)),
+                )
+
+            self.assertIn("trùng khớp", str(context.exception))
+
+    def test_missing_lost_color_pct_does_not_penalize_candidate(self):
+        # Không có ảnh tham chiếu -> không đo được màu -> không thưởng/phạt ai.
+        candidates = [
+            {"profile": "a", "playable_score": 80, "quality_score": 90, "total_regions": 100},
+            {"profile": "b", "playable_score": 80, "quality_score": 90, "total_regions": 200},
+        ]
+
+        self.assertEqual("b", select_preprocessing_candidate(candidates)["profile"])
 
 
 if __name__ == "__main__":
