@@ -11,6 +11,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -508,6 +509,18 @@ class PaintCanvasView @JvmOverloads constructor(
     fun focusOnRegionByMaskColor(maskColor: Int) {
         val region = regions.find { it.maskColorInt == maskColor } ?: return
         focusOnRegion(region.labelX, region.labelY)
+    }
+
+    fun getDisplayedBitmapRectInView(): RectF? {
+        val line = lineBitmap ?: return null
+        if (width == 0 || height == 0) return null
+
+        return RectF(
+            translateX,
+            translateY,
+            translateX + line.width * scaleFactor,
+            translateY + line.height * scaleFactor
+        )
     }
 
     fun focusOnRegion(cx: Float, cy: Float) {

@@ -47,21 +47,24 @@ class PaletteAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.colorCircle.setCardBackgroundColor(item.getTargetColorInt())
+        val colorInt = item.getTargetColorInt()
+        holder.colorCircle.setCardBackgroundColor(colorInt)
         holder.tvNumber.text = item.number.toString()
 
         // Tính màu chữ (trắng hoặc đen) dựa vào độ sáng của màu nền
-        val colorInt = item.getTargetColorInt()
         val r = Color.red(colorInt)
         val g = Color.green(colorInt)
         val b = Color.blue(colorInt)
         val brightness = 0.299 * r + 0.587 * g + 0.114 * b
         holder.tvNumber.setTextColor(if (brightness > 186) Color.BLACK else Color.WHITE)
+//        holder.tvNumber.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.grey_800))
 
         val isCompleted = completedIndexes.contains(position)
         val isSelected = position == selectedIndex
         val progressFraction = paletteProgress.getOrElse(position) { 0f }
         val isInProgress = progressFraction > 0f && progressFraction < 1f
+        val hasOuterRing = !isCompleted && (isSelected || isInProgress)
+        holder.setColorCircleDiameter(if (hasOuterRing) 38 else 50)
 
         when {
             isCompleted -> {
@@ -88,6 +91,17 @@ class PaletteAdapter(
                 holder.ivCheck.visibility = View.GONE
             }
         }
+    }
+
+    private fun ViewHolder.setColorCircleDiameter(sizeDp: Int) {
+        val sizePx = (sizeDp * itemView.resources.displayMetrics.density).toInt()
+        val params = colorCircle.layoutParams
+        if (params.width == sizePx && params.height == sizePx) return
+
+        params.width = sizePx
+        params.height = sizePx
+        colorCircle.layoutParams = params
+        colorCircle.radius = sizePx / 2f
     }
 
     override fun getItemCount() = items.size

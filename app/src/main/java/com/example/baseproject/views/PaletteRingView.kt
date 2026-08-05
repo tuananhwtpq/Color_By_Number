@@ -62,7 +62,10 @@ class PaletteRingView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
         when (ringMode) {
+            MODE_NONE -> Unit
+
             MODE_SELECTED -> {
                 canvas.drawOval(ringBounds, selectedRingPaint)
             }

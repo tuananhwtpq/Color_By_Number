@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
+import android.graphics.RectF
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -50,10 +52,12 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var levelId: String? = null
     private var guideStep: Int = GUIDE_STEP_01
     private var isGuideVisible: Boolean = false
+    private var shouldStartGuideWhenContentReady: Boolean = false
     private var isLoadingVisible: Boolean = false
     private var isFullColorPreviewVisible: Boolean = false
     private var fullPreviewBitmap: Bitmap? = null
     private var fullPreviewRenderKey: String? = null
+    private val guideRectBuffer = Rect()
 
     private val previewMultiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
@@ -160,6 +164,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     binding.paintCanvas.setCompletedRegions(state.completedMaskColors)
                     binding.paintCanvas.highlightNumber(state.highlightMaskColors)
                     binding.paintCanvas.setActiveColors(state.activeColors)
+                    showPendingGuideIfNeeded()
+                    binding.root.post { updateGuideOverlayForCurrentStep() }
                 }
             } else {
                 if (lastCompletedMaskColors.isNotEmpty() && state.completedMaskColors.isEmpty()) {
@@ -180,14 +186,23 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     private fun setupGuideIfNeeded() {
         if (SharedPrefManager.isShowGuide) {
-            isGuideVisible = true
-            setMainContentVisible(false)
-            showGuideStep(GUIDE_STEP_01)
+            shouldStartGuideWhenContentReady = true
+            isGuideVisible = false
+            binding.llGuide.visibility = View.GONE
+            setMainContentVisible(true)
         } else {
+            shouldStartGuideWhenContentReady = false
             isGuideVisible = false
             binding.llGuide.visibility = View.GONE
             setMainContentVisible(true)
         }
+    }
+
+    private fun showPendingGuideIfNeeded() {
+        if (!shouldStartGuideWhenContentReady || isGuideVisible) return
+
+        shouldStartGuideWhenContentReady = false
+        showGuideStep(GUIDE_STEP_01)
     }
 
     private fun showGuideStep(step: Int) {
@@ -202,12 +217,104 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.tvGuide03.visibility = if (step == GUIDE_STEP_03) View.VISIBLE else View.GONE
         binding.iv03.visibility = if (step == GUIDE_STEP_03) View.VISIBLE else View.GONE
 
-        val backgroundRes = when (step) {
-            GUIDE_STEP_02 -> com.example.baseproject.R.drawable.bg_guide_02
-            GUIDE_STEP_03 -> com.example.baseproject.R.drawable.bg_guide_03
-            else -> com.example.baseproject.R.drawable.bg_guide_01
+        binding.root.post { updateGuideOverlayForCurrentStep() }
+    }
+
+    private fun updateGuideOverlayForCurrentStep() {
+        if (!isGuideVisible || binding.llGuide.visibility != View.VISIBLE) return
+        if (binding.guideOverlay.width == 0 || binding.guideOverlay.height == 0) return
+
+        when (guideStep) {
+            GUIDE_STEP_01 -> {
+                val targetRect = getVisiblePaletteItemsRectInRoot()
+                    ?: getViewRectInRoot(binding.rvPalette)
+                binding.guideOverlay.setSpotlight(
+                    rect = targetRect,
+                    shape = GuideOverlayView.SpotlightShape.RoundRect,
+                    radius = dp(100f)
+                )
+            }
+
+            GUIDE_STEP_02 -> {
+                val imageRect = getDisplayedCanvasImageRectInRoot()
+                    ?: getViewRectInRoot(binding.paintCanvas)
+                val diameter = (minOf(imageRect.width(), imageRect.height()) * 0.42f)
+                    .coerceIn(dp(112f), dp(156f))
+                val centerX = imageRect.centerX()
+                val centerY = imageRect.centerY()
+                val targetRect = RectF(
+                    centerX - diameter / 2f,
+                    centerY - diameter / 2f,
+                    centerX + diameter / 2f,
+                    centerY + diameter / 2f
+                )
+                binding.guideOverlay.setSpotlight(
+                    rect = targetRect,
+                    shape = GuideOverlayView.SpotlightShape.Oval
+                )
+            }
+
+            GUIDE_STEP_03 -> {
+                val targetRect = getViewRectInRoot(binding.btnHint).apply {
+                    inset(-dp(13f), -dp(13f))
+                }
+                binding.guideOverlay.setSpotlight(
+                    rect = targetRect,
+                    shape = GuideOverlayView.SpotlightShape.Oval
+                )
+            }
         }
-        binding.llGuide.setBackgroundResource(backgroundRes)
+    }
+
+    private fun getVisiblePaletteItemsRectInRoot(): RectF? {
+        val childCount = binding.rvPalette.childCount
+        if (childCount == 0) return null
+
+        val result = RectF()
+        var hasChild = false
+        for (index in 0 until childCount) {
+            val child = binding.rvPalette.getChildAt(index) ?: continue
+            if (child.visibility != View.VISIBLE) continue
+
+            val childRect = getViewRectInRoot(child)
+            if (!hasChild) {
+                result.set(childRect)
+                hasChild = true
+            } else {
+                result.union(childRect)
+            }
+        }
+
+        if (!hasChild) return null
+
+        result.inset(-dp(8f), -dp(8f))
+        val paletteRect = getViewRectInRoot(binding.rvPalette)
+        result.left = result.left.coerceAtLeast(paletteRect.left)
+        result.top = result.top.coerceAtLeast(paletteRect.top)
+        result.right = result.right.coerceAtMost(paletteRect.right)
+        result.bottom = result.bottom.coerceAtMost(paletteRect.bottom)
+        return result
+    }
+
+    private fun getDisplayedCanvasImageRectInRoot(): RectF? {
+        val imageRectInCanvas = binding.paintCanvas.getDisplayedBitmapRectInView() ?: return null
+        val canvasRectInRoot = getViewRectInRoot(binding.paintCanvas)
+        return RectF(
+            canvasRectInRoot.left + imageRectInCanvas.left,
+            canvasRectInRoot.top + imageRectInCanvas.top,
+            canvasRectInRoot.left + imageRectInCanvas.right,
+            canvasRectInRoot.top + imageRectInCanvas.bottom
+        )
+    }
+
+    private fun getViewRectInRoot(view: View): RectF {
+        guideRectBuffer.set(0, 0, view.width, view.height)
+        binding.root.offsetDescendantRectToMyCoords(view, guideRectBuffer)
+        return RectF(guideRectBuffer)
+    }
+
+    private fun dp(value: Float): Float {
+        return value * resources.displayMetrics.density
     }
 
     private fun setMainContentVisible(isVisible: Boolean) {
@@ -225,6 +332,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         SharedPrefManager.isShowGuide = false
         isGuideVisible = false
         binding.llGuide.visibility = View.GONE
+        binding.guideOverlay.clearSpotlight()
         setMainContentVisible(true)
     }
 
