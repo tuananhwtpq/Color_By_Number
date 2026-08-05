@@ -182,7 +182,7 @@
       "number": 28,
       "target_color": "#58ad63",
       "region_count": 1,
-      "total_area": 249
+      "total_area": 337
     },
     {
       "number": 29,
@@ -290,7 +290,7 @@
       "number": 46,
       "target_color": "#a9d494",
       "region_count": 1,
-      "total_area": 48741
+      "total_area": 48653
     },
     {
       "number": 47,
@@ -2108,7 +2108,7 @@
       "target_color": "#a9d494",
       "fill_color": "#a9d494",
       "representative_color": "#a9d494",
-      "area": 48741,
+      "area": 48653,
       "bbox": {
         "left": 184,
         "top": 238,
@@ -2116,8 +2116,8 @@
         "bottom": 658
       },
       "centroid": {
-        "x": 375.69826224328597,
-        "y": 436.3981452986192
+        "x": 375.7296980658952,
+        "y": 436.5067107886461
       },
       "label_anchor": {
         "x": 338.0,
@@ -2129,7 +2129,7 @@
         "is_tiny": false,
         "is_small": false,
         "touchable": true,
-        "merged_region_count": 44
+        "merged_region_count": 42
       }
     },
     {
@@ -2790,16 +2790,16 @@
       "target_color": "#58ad63",
       "fill_color": "#58ad63",
       "representative_color": "#58ad63",
-      "area": 249,
+      "area": 337,
       "bbox": {
-        "left": 372,
+        "left": 345,
         "top": 334,
         "right": 408,
-        "bottom": 378
+        "bottom": 379
       },
       "centroid": {
-        "x": 396.5542168674699,
-        "y": 359.50602409638554
+        "x": 386.56973293768544,
+        "y": 363.91097922848667
       },
       "label_anchor": {
         "x": 405.0,
@@ -2811,7 +2811,7 @@
         "is_tiny": false,
         "is_small": false,
         "touchable": true,
-        "merged_region_count": 2
+        "merged_region_count": 4
       }
     },
     {
@@ -5146,16 +5146,16 @@
       "target_color": "#008b8a",
       "fill_color": "#008b8a",
       "representative_color": "#008d8c",
-      "area": 3161,
+      "area": 3316,
       "bbox": {
         "left": 866,
         "top": 873,
-        "right": 985,
+        "right": 995,
         "bottom": 937
       },
       "centroid": {
-        "x": 932.05852578298,
-        "y": 908.3843720341664
+        "x": 934.2659831121833,
+        "y": 908.5955971049457
       },
       "label_anchor": {
         "x": 934.0,
@@ -5167,7 +5167,7 @@
         "is_tiny": false,
         "is_small": false,
         "touchable": true,
-        "merged_region_count": 5
+        "merged_region_count": 8
       }
     },
     {
@@ -5332,16 +5332,16 @@
       "target_color": "#008b8a",
       "fill_color": "#008b8a",
       "representative_color": "#008888",
-      "area": 10055,
+      "area": 9900,
       "bbox": {
         "left": 845,
-        "top": 908,
+        "top": 917,
         "right": 1007,
         "bottom": 1023
       },
       "centroid": {
-        "x": 926.5785181501741,
-        "y": 972.5707608155146
+        "x": 925.7533333333333,
+        "y": 973.5049494949495
       },
       "label_anchor": {
         "x": 892.0,
@@ -5353,7 +5353,7 @@
         "is_tiny": false,
         "is_small": false,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 7
       }
     },
     {
@@ -6041,6 +6041,9 @@
   ],
   "stats": {
     "total_regions": 157,
+    "raw_region_count": 1074,
+    "final_region_count": 157,
+    "region_count_drop_pct": 85.38,
     "unique_numbers": 61,
     "estimated_difficulty": 10,
     "small_regions_count": 7,
@@ -6052,9 +6055,9 @@
   "small_regions_count": 7,
   "skipped_noise_regions": 240,
   "merged_small_regions_count": 1,
-  "merged_tiny_regions_count": 477,
-  "forced_tiny_region_merges_count": 338,
-  "remaining_tiny_regions_count": 148,
+  "merged_tiny_regions_count": 491,
+  "forced_tiny_region_merges_count": 348,
+  "remaining_tiny_regions_count": 2,
   "generation": {
     "source_mode": "line_plus_reference",
     "brightness_threshold": 120,
@@ -6068,6 +6071,9 @@
     "small_region_merge_mode": "shared_boundary_adjacency",
     "small_color_absorb_mode": "shared_boundary_adjacency",
     "tiny_region_merge_mode": "shared_boundary_adjacency",
+    "raw_region_count": 1074,
+    "final_region_count": 157,
+    "region_count_drop_pct": 85.38,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
     "tiny_merge_rejected_non_adjacent": 4520,
@@ -6081,10 +6087,16 @@
     "target_unique_colors": 64,
     "preprocess_profile": "auto",
     "min_touch_dp": 24.0,
-    "assumed_zoom": 2.0,
-    "min_touch_bbox_side": 12,
+    "assumed_zoom": 20.0,
+    "min_touch_bbox_side": 2,
     "untouchable_merge_color_threshold": 45.0,
-    "merged_untouchable_region_count": 16,
+    "merged_untouchable_region_count": 1,
+    "merged_unreadable_region_count": 50,
+    "forced_unreadable_region_merges_count": 39,
+    "absorbed_isolated_unreadable_region_count": 184,
+    "label_gate_canvas_radius_px": 23.704,
+    "merged_hidden_label_region_count": 0,
+    "remaining_hidden_label_region_count": 151,
     "ink_core_radius": 1,
     "ink_min_chroma_value": 60,
     "ink_min_chroma_spread": 18,
@@ -6111,6 +6123,9 @@
     "small_region_merge_mode": "shared_boundary_adjacency",
     "small_color_absorb_mode": "shared_boundary_adjacency",
     "tiny_region_merge_mode": "shared_boundary_adjacency",
+    "raw_region_count": 1074,
+    "final_region_count": 157,
+    "region_count_drop_pct": 85.38,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
     "tiny_merge_rejected_non_adjacent": 4520,
@@ -6124,10 +6139,16 @@
     "target_unique_colors": 64,
     "preprocess_profile": "auto",
     "min_touch_dp": 24.0,
-    "assumed_zoom": 2.0,
-    "min_touch_bbox_side": 12,
+    "assumed_zoom": 20.0,
+    "min_touch_bbox_side": 2,
     "untouchable_merge_color_threshold": 45.0,
-    "merged_untouchable_region_count": 16,
+    "merged_untouchable_region_count": 1,
+    "merged_unreadable_region_count": 50,
+    "forced_unreadable_region_merges_count": 39,
+    "absorbed_isolated_unreadable_region_count": 184,
+    "label_gate_canvas_radius_px": 23.704,
+    "merged_hidden_label_region_count": 0,
+    "remaining_hidden_label_region_count": 151,
     "ink_core_radius": 1,
     "ink_min_chroma_value": 60,
     "ink_min_chroma_spread": 18,

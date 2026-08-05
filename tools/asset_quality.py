@@ -134,6 +134,12 @@ def measure_preview_similarity_score(reference_path, preview_path):
     return round(max(0.0, 100.0 - (preview_mae / 255.0) * 100.0), 2)
 
 
+def calculate_detail_dependency_score(flat_similarity, preview_similarity):
+    if flat_similarity is None or preview_similarity is None:
+        return None
+    return round(max(0.0, preview_similarity - flat_similarity), 2)
+
+
 def rgb_luminance(rgb):
     return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
 
@@ -648,8 +654,13 @@ def score_quality(metrics):
     top_3_color_pct = metrics.get("top_3_color_pct")
     tap_risk = metrics.get("single_tap_completion_risk") or "none"
     playable_score = metrics.get("playable_score")
+    overmerge_risk = metrics.get("overmerge_risk")
+    giant_background_ok = (
+        metrics.get("giant_region_legitimacy") == "intentional_flat_background"
+        and total_regions >= 10
+    )
 
-    if largest_region_pct > 80:
+    if largest_region_pct > 80 and not giant_background_ok:
         fail_reasons.append(
             make_issue(
                 "GIANT_REGION",
@@ -666,7 +677,9 @@ def score_quality(metrics):
             largest_region_pct,
             70,
         )
-        if total_regions < 80 or (max_color_pct is not None and max_color_pct > 70):
+        if not giant_background_ok and (
+            total_regions < 80 or (max_color_pct is not None and max_color_pct > 70)
+        ):
             fail_reasons.append(issue)
         else:
             warnings.append({**issue, "code": "GIANT_REGION_SEVERE_WARNING"})
@@ -774,6 +787,38 @@ def score_quality(metrics):
                 )
             )
             score -= 8
+
+    if overmerge_risk == "high":
+        fail_reasons.append(
+            make_issue(
+                "OVERMERGE_RISK_HIGH",
+                "Mask tương tác có dấu hiệu bị gộp quá mạnh; preview/detail đẹp không đủ để pass gameplay.",
+                {
+                    "raw_region_count": metrics.get("raw_region_count"),
+                    "final_region_count": metrics.get("final_region_count"),
+                    "region_count_drop_pct": metrics.get("region_count_drop_pct"),
+                    "largest_region_pct": metrics.get("largest_region_pct"),
+                    "detail_dependency_score": metrics.get("detail_dependency_score"),
+                },
+                "medium",
+            )
+        )
+        score -= 30
+    elif overmerge_risk == "medium":
+        warnings.append(
+            make_issue(
+                "OVERMERGE_RISK_WARNING",
+                "Có dấu hiệu mask bị đơn giản hóa; cần review debug_regions trước khi nhận level.",
+                {
+                    "raw_region_count": metrics.get("raw_region_count"),
+                    "final_region_count": metrics.get("final_region_count"),
+                    "region_count_drop_pct": metrics.get("region_count_drop_pct"),
+                    "detail_dependency_score": metrics.get("detail_dependency_score"),
+                },
+                "low",
+            )
+        )
+        score -= 10
 
     preview_mae = metrics.get("preview_mae")
     if preview_mae is not None:
@@ -989,6 +1034,7 @@ def build_recommendation(report):
         "PLAYABLE_SCORE_LOW",
         "TINY_REGION_DENSITY_WARNING",
         "UNTOUCHABLE_REGIONS_WARNING",
+        "OVERMERGE_RISK_WARNING",
     }
     gameplay_fix_codes = {
         "GIANT_REGION",
@@ -997,6 +1043,7 @@ def build_recommendation(report):
         "PLAYABLE_SCORE_TOO_LOW",
         "DOMINANT_COLOR_AREA",
         "UNTOUCHABLE_REGIONS",
+        "OVERMERGE_RISK_HIGH",
     }
     giant_region_codes = {
         "GIANT_REGION",
@@ -1144,6 +1191,78 @@ def measure_giant_region_legitimacy(
     }
 
 
+def calculate_region_count_drop_pct(raw_region_count, final_region_count):
+    if raw_region_count is None or final_region_count is None:
+        return None
+    raw_region_count = int(raw_region_count or 0)
+    final_region_count = int(final_region_count or 0)
+    if raw_region_count <= 0:
+        return 0.0
+    return round(max(0, raw_region_count - final_region_count) * 100.0 / raw_region_count, 2)
+
+
+def classify_overmerge_risk(metrics):
+    raw_count = metrics.get("raw_region_count")
+    final_count = metrics.get("final_region_count") or metrics.get("total_regions") or 0
+    drop_pct = metrics.get("region_count_drop_pct")
+    largest_pct = metrics.get("largest_region_pct") or 0
+    detail_dependency = metrics.get("detail_dependency_score") or 0
+    similarity = metrics.get("preview_similarity_score") or 0
+    giant_legitimacy = metrics.get("giant_region_legitimacy")
+    background_exception = giant_legitimacy == "intentional_flat_background" and final_count >= 10
+
+    if drop_pct is None:
+        drop_pct = calculate_region_count_drop_pct(raw_count, final_count)
+    drop_pct = drop_pct or 0
+    raw_count = int(raw_count or 0)
+    final_count = int(final_count or 0)
+
+    high = (
+        (raw_count >= 30 and final_count < 10)
+        or (drop_pct > 80 and final_count < 30)
+        or (detail_dependency > 8 and final_count < 30 and similarity >= 93)
+        or (largest_pct > 55 and not background_exception and similarity >= 93)
+    )
+    if high:
+        return "high"
+
+    medium = (
+        (raw_count >= 30 and final_count < 20)
+        or drop_pct > 65
+        or (detail_dependency > 5 and final_count < 50)
+        or (largest_pct > 50 and not background_exception)
+    )
+    if medium:
+        return "medium"
+    return "low"
+
+
+def collect_generation_merge_metrics(config):
+    generation = config.get("generation_params") or config.get("generation") or {}
+    stats = config.get("stats") or {}
+    raw_region_count = generation.get("raw_region_count")
+    final_region_count = stats.get("total_regions") or config.get("total_regions") or len(
+        config.get("regions", [])
+    )
+    stage_counts = {
+        "merged_tiny_regions_count": config.get("merged_tiny_regions_count", 0),
+        "forced_tiny_region_merges_count": config.get("forced_tiny_region_merges_count", 0),
+        "merged_small_regions_count": config.get("merged_small_regions_count", 0),
+        "merged_untouchable_region_count": generation.get("merged_untouchable_region_count", 0),
+        "merged_unreadable_region_count": generation.get("merged_unreadable_region_count", 0),
+        "absorbed_isolated_unreadable_region_count": generation.get(
+            "absorbed_isolated_unreadable_region_count", 0
+        ),
+        "merged_hidden_label_region_count": generation.get("merged_hidden_label_region_count", 0),
+    }
+    return {
+        "raw_region_count": raw_region_count,
+        "final_region_count": final_region_count,
+        "region_count_drop_pct": calculate_region_count_drop_pct(raw_region_count, final_region_count),
+        **stage_counts,
+    }
+
+
 def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     config_path = os.path.join(level_dir, "config.json")
     config = load_json(config_path)
@@ -1153,12 +1272,19 @@ def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
 
     metrics = {}
     metrics.update(measure_mask_config(level_dir, config, mask_path))
+    metrics.update(collect_generation_merge_metrics(config))
     metrics.update(measure_line_ink(line_path))
     metrics["reference_missing"] = not reference_path or not os.path.exists(reference_path)
     metrics["reference_required"] = require_reference
     metrics["preview_mae"] = measure_preview_mae(reference_path, preview_path)
     metrics["color_mae"] = metrics["preview_mae"]
     metrics["preview_similarity_score"] = measure_preview_similarity_score(reference_path, preview_path)
+    flat_preview_path = resolve_asset_path(level_dir, config, "debug_preview_flat", "debug_preview_flat.png")
+    metrics["flat_similarity_score"] = measure_preview_similarity_score(reference_path, flat_preview_path)
+    metrics["detail_dependency_score"] = calculate_detail_dependency_score(
+        metrics["flat_similarity_score"],
+        metrics["preview_similarity_score"],
+    )
     metrics["shading_preservation_score"] = measure_luminance_preservation_score(
         reference_path,
         preview_path,
@@ -1166,6 +1292,7 @@ def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     detail_path = resolve_asset_path(level_dir, config, "detail", "detail.png")
     metrics["has_detail"] = os.path.exists(detail_path)
     metrics.update(measure_giant_region_legitimacy(config, reference_path, mask_path))
+    metrics["overmerge_risk"] = classify_overmerge_risk(metrics)
 
     quality = score_quality(metrics)
     report = {

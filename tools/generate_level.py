@@ -1107,6 +1107,7 @@ def choose_palette_color(target_color, palette_colors):
 # force_merge_unreadable_regions) — chỉ ẩn số thôi vẫn để lại 1 vùng tap được nhưng user
 # không biết là màu/số gì.
 LABEL_UNREADABLE_RADIUS_PX = 1.5
+DEFAULT_LABEL_GATE_MAX_HIDDEN_PCT = 80.0
 
 
 def point_inscribed_radius(region_set, x, y, directions):
@@ -1431,6 +1432,27 @@ def classify_region_infos(
     return region_infos
 
 
+def count_remaining_micro_regions(
+    region_infos,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+    unreadable_radius_px=None,
+):
+    classified = classify_region_infos(
+        region_infos=[dict(info) for info in region_infos],
+        min_region_area=min_region_area,
+        tiny_area_threshold=tiny_area_threshold,
+        tiny_side_threshold=tiny_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        unreadable_radius_px=unreadable_radius_px,
+    )
+    return sum(1 for info in classified if info.get("is_micro_region"))
+
+
 def build_region_point_index(region_infos):
     point_index = {}
     for region_idx, info in enumerate(region_infos):
@@ -1463,12 +1485,14 @@ def tiny_region_neighbor_score(small_info, candidate_info, color_gap, shared_bou
     )
 
 
-def merge_region_info_into_parent(parent_info, child_info, skip_label_anchor=False):
+def merge_region_info_into_parent(parent_info, child_info, skip_label_anchor=False, preserve_label_anchor=False):
     merged_regions = list(parent_info["region"])
     merged_regions.extend(child_info["region"])
     merged_bbox = merge_bboxes([parent_info["bbox"], child_info["bbox"]])
     merged_centroid = get_region_centroid(merged_regions)
-    if skip_label_anchor:
+    if preserve_label_anchor:
+        merged_label_anchor = parent_info["label_anchor"]
+    elif skip_label_anchor:
         # Label anchor placement is expensive (directional boundary scan) and irrelevant
         # when this merge is only run to estimate post-merge region sizes for candidate scoring.
         merged_label_anchor = merged_centroid
@@ -1861,7 +1885,7 @@ def merge_small_attached_regions(
 
 
 DEFAULT_MIN_TOUCH_TARGET_DP = 24.0
-DEFAULT_ASSUMED_ZOOM = 2.0
+DEFAULT_ASSUMED_ZOOM = 20.0
 
 
 def resolve_min_touch_bbox_side(
@@ -1874,8 +1898,8 @@ def resolve_min_touch_bbox_side(
 
     Suy ngược từ chuẩn chạm 24dp của Android và tỷ lệ ảnh khi fit vào khung xem, thay vì
     hằng số cứng — nhờ vậy data với ảnh kích thước khác nhau vẫn ra ngưỡng đúng.
-    `assumed_zoom` là mức phóng to giả định user sẽ dùng: 2.0 nghĩa là chấp nhận vùng chỉ
-    chạm được sau khi zoom 2x, đổi lại giữ được nhiều chi tiết hơn.
+    `assumed_zoom` là mức phóng to giả định user sẽ dùng. Mặc định khớp max zoom của app:
+    chỉ những vùng vẫn không chạm được ở max zoom mới bị gộp bắt buộc.
     """
     fit_scale = canvas_fit_scale(canvas_width, canvas_height)
     effective_scale = max(1e-6, fit_scale * max(1.0, assumed_zoom))
@@ -1999,6 +2023,48 @@ def merge_untouchable_regions(
     return merged_infos, merged_count
 
 
+def merge_label_hidden_regions_for_gate(
+    region_infos,
+    label_canvas_radius_threshold,
+    color_threshold,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+    max_hidden_pct=DEFAULT_LABEL_GATE_MAX_HIDDEN_PCT,
+    profile="medium",
+    total_pixels=None,
+):
+    """Đo label ẩn ở zoom mặc định nhưng không gộp mask để làm đẹp metric.
+
+    Nếu vùng vẫn chơi được khi zoom, giữ nó interactive và để quality/report nói rõ cho
+    designer. Merge bắt buộc chỉ thuộc về các pass max-zoom unreadable/untouchable.
+    """
+    if not region_infos or label_canvas_radius_threshold <= 0:
+        return region_infos, 0, 0
+
+    def hidden_count(infos):
+        return sum(
+            1
+            for info in infos
+            if (info.get("label_anchor", {}).get("radius") or 0) < label_canvas_radius_threshold
+        )
+
+    _ = (
+        color_threshold,
+        min_region_area,
+        tiny_area_threshold,
+        tiny_side_threshold,
+        tiny_merge_min_area,
+        tiny_merge_min_side,
+        max_hidden_pct,
+        profile,
+        total_pixels,
+    )
+    return region_infos, 0, hidden_count(region_infos)
+
+
 def split_giant_region_into_color_segments(region_info, ref_img, max_sub_colors=8):
     """Chia 1 vùng khổng lồ thành các mảng con theo màu tham chiếu (color quantization,
     tương đương k-means trong không gian màu) rồi tách connected component trong từng
@@ -2091,6 +2157,7 @@ def giant_region_split_looks_like_flat_patches(
     ref_pixels,
     min_region_area,
     max_component_color_deviation,
+    max_total_components=512,
     max_substantial_components=12,
 ):
     """True nếu kết quả tách trông giống các mảng màu PHẲNG thật sự bị dính vào nhau
@@ -2108,6 +2175,9 @@ def giant_region_split_looks_like_flat_patches(
     được chấp nhận tách, rồi không bao giờ được gộp lại hết vì mỗi mảnh đã đủ lớn để vượt
     ngưỡng "vùng nhỏ" của bước gộp phía sau, tạo hiệu ứng "vệt confetti" trên preview.
     """
+    if len(components) > max_total_components:
+        return False
+
     substantial = sorted(
         (points for points in components if len(points) >= min_region_area),
         key=len,
@@ -2218,9 +2288,40 @@ def evaluate_quality_gate(quality_report):
     if grade in {"D", "F"}:
         reasons.append(f"quality_grade={grade}")
 
+    playability_exception = (
+        quality_report.get("playability_exception")
+        or metrics.get("playability_exception")
+        or (quality_report.get("generation_params") or {}).get("playability_exception")
+    )
+    has_documented_playability_exception = bool(
+        isinstance(playability_exception, dict)
+        and str(playability_exception.get("reason") or "").strip()
+    )
+
     largest_region_pct = metrics.get("largest_region_pct") or 0
-    if largest_region_pct > 55:
+    giant_background_ok = (
+        metrics.get("giant_region_legitimacy") == "intentional_flat_background"
+        and (metrics.get("final_region_count") or metrics.get("total_regions") or 0) >= 10
+    )
+    if largest_region_pct > 55 and not giant_background_ok and not has_documented_playability_exception:
         reasons.append(f"largest_region_pct={largest_region_pct}>55")
+
+    if not has_documented_playability_exception:
+        hidden_label_pct = (
+            metrics.get("estimated_hidden_label_pct")
+            if metrics.get("estimated_hidden_label_pct") is not None
+            else metrics.get("hidden_label_pct")
+        ) or 0
+        tiny_region_pct_lt_100 = metrics.get("tiny_region_pct_lt_100") or 0
+        if hidden_label_pct > 80:
+            reasons.append(f"hidden_label_pct={hidden_label_pct}>80")
+        if tiny_region_pct_lt_100 > 45:
+            reasons.append(f"tiny_region_pct_lt_100={tiny_region_pct_lt_100}>45")
+        if metrics.get("overmerge_risk") == "high":
+            reasons.append("overmerge_risk=high")
+        region_count_drop_pct = metrics.get("region_count_drop_pct") or 0
+        if region_count_drop_pct > 80 and metrics.get("raw_region_count"):
+            reasons.append(f"region_count_drop_pct={region_count_drop_pct}>80")
 
     # KHÔNG dùng giant_region_count làm điều kiện chặn: nó đếm số vùng > 50% diện tích
     # (asset_quality.py) — một ngưỡng cứng, không đồng bộ với ngưỡng 55% ở trên. Vì chỉ có
@@ -2613,13 +2714,13 @@ def generate_level_assets(
             f"vào láng giềng gần nhất ({forced_unreadable_count} trong số đó bị lệch màu, "
             "chấp nhận đổi lấy việc user luôn xác định được vùng đó là gì)."
         )
+    total_absorbed_isolated_count = 0
     if remaining_unreadable_count:
         # Không có adjacency (bị nét vẽ bao kín hoàn toàn, vd 1 ô trong hoạ tiết mandala) —
         # phương án cuối: gán theo khoảng cách gần nhất, bỏ qua yêu cầu liền kề/màu khớp. Lặp
         # tối đa vài lượt: vùng "survivor" vừa hấp thụ 1 ô cô lập có thể vẫn còn mảnh (hình
         # dạng phức tạp/phân nhánh), cần thêm lượt để tìm survivor khác phù hợp hơn — dừng
         # ngay khi không còn hấp thụ được gì thêm (hội tụ) hoặc đã hết vùng không đọc được.
-        total_absorbed_isolated_count = 0
         for _ in range(3):
             still_unreadable_before = sum(
                 1
@@ -2661,6 +2762,44 @@ def generate_level_assets(
                 "sau mọi phương án gộp (level có thể chỉ có 1 vùng duy nhất, không có gì để "
                 "gộp vào)."
             )
+
+    fit_scale_for_label_gate = canvas_fit_scale(width, height)
+    label_gate_canvas_radius_px = (
+        25.0 / fit_scale_for_label_gate if fit_scale_for_label_gate > 0 else 0.0
+    )
+    (
+        region_infos,
+        merged_hidden_label_region_count,
+        remaining_hidden_label_region_count,
+    ) = merge_label_hidden_regions_for_gate(
+        region_infos=region_infos,
+        label_canvas_radius_threshold=label_gate_canvas_radius_px,
+        color_threshold=untouchable_merge_color_threshold,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        profile=resolved_profile,
+        total_pixels=width * height,
+    )
+    if merged_hidden_label_region_count:
+        merged_tiny_regions_count += merged_hidden_label_region_count
+        print(
+            f"Đã gộp thêm {merged_hidden_label_region_count} vùng có label quá nhỏ ở zoom mặc định "
+            f"(radius canvas < {label_gate_canvas_radius_px:.2f}px); còn "
+            f"{remaining_hidden_label_region_count} vùng ước tính sẽ ẩn số."
+        )
+
+    remaining_tiny_regions_count = count_remaining_micro_regions(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
+    )
 
     palette_result = build_palette_with_adaptive_merge(
         region_infos=region_infos,
@@ -2764,6 +2903,12 @@ def generate_level_assets(
     )
     stats = {
         "total_regions": len(region_configs),
+        "raw_region_count": raw_region_count,
+        "final_region_count": len(region_configs),
+        "region_count_drop_pct": round(
+            max(0, raw_region_count - len(region_configs)) * 100.0 / max(1, raw_region_count),
+            2,
+        ),
         "unique_numbers": unique_numbers,
         "estimated_difficulty": difficulty,
         "small_regions_count": small_regions_count,
@@ -2781,6 +2926,9 @@ def generate_level_assets(
         "small_region_merge_mode": "shared_boundary_adjacency",
         "small_color_absorb_mode": "shared_boundary_adjacency",
         "tiny_region_merge_mode": "shared_boundary_adjacency",
+        "raw_region_count": raw_region_count,
+        "final_region_count": len(region_configs),
+        "region_count_drop_pct": stats["region_count_drop_pct"],
         "tiny_merge_color_threshold": effective_tiny_merge_color_threshold,
         "tiny_merge_policy": tiny_merge_policy,
         **tiny_merge_stats,
@@ -2795,6 +2943,12 @@ def generate_level_assets(
         "min_touch_bbox_side": min_touch_bbox_side,
         "untouchable_merge_color_threshold": untouchable_merge_color_threshold,
         "merged_untouchable_region_count": merged_untouchable_region_count,
+        "merged_unreadable_region_count": merged_unreadable_count,
+        "forced_unreadable_region_merges_count": forced_unreadable_count,
+        "absorbed_isolated_unreadable_region_count": total_absorbed_isolated_count,
+        "label_gate_canvas_radius_px": round(label_gate_canvas_radius_px, 3),
+        "merged_hidden_label_region_count": merged_hidden_label_region_count,
+        "remaining_hidden_label_region_count": remaining_hidden_label_region_count,
         "ink_core_radius": ink_core_radius,
         "ink_min_chroma_value": ink_min_chroma_value,
         "ink_min_chroma_spread": ink_min_chroma_spread,

@@ -2,6 +2,9 @@
   "schema_version": 1,
   "stats": {
     "total_regions": 89,
+    "raw_region_count": 1241,
+    "final_region_count": 89,
+    "region_count_drop_pct": 92.83,
     "unique_numbers": 62,
     "estimated_difficulty": 10,
     "small_regions_count": 0,
@@ -19,6 +22,9 @@
     "small_region_merge_mode": "shared_boundary_adjacency",
     "small_color_absorb_mode": "shared_boundary_adjacency",
     "tiny_region_merge_mode": "shared_boundary_adjacency",
+    "raw_region_count": 1241,
+    "final_region_count": 89,
+    "region_count_drop_pct": 92.83,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
     "tiny_merge_rejected_non_adjacent": 484,
@@ -32,10 +38,16 @@
     "target_unique_colors": 64,
     "preprocess_profile": "auto",
     "min_touch_dp": 24.0,
-    "assumed_zoom": 2.0,
-    "min_touch_bbox_side": 12,
+    "assumed_zoom": 20.0,
+    "min_touch_bbox_side": 2,
     "untouchable_merge_color_threshold": 45.0,
     "merged_untouchable_region_count": 0,
+    "merged_unreadable_region_count": 0,
+    "forced_unreadable_region_merges_count": 0,
+    "absorbed_isolated_unreadable_region_count": 555,
+    "label_gate_canvas_radius_px": 23.704,
+    "merged_hidden_label_region_count": 0,
+    "remaining_hidden_label_region_count": 87,
     "ink_core_radius": 1,
     "ink_min_chroma_value": 60,
     "ink_min_chroma_spread": 18,
@@ -305,10 +317,21 @@
         5,
         67
       ]
+    },
+    {
+      "code": "OVERMERGE_RISK_WARNING",
+      "message": "Có dấu hiệu mask bị đơn giản hóa; cần review debug_regions trước khi nhận level.",
+      "value": {
+        "raw_region_count": 1241,
+        "final_region_count": 89,
+        "region_count_drop_pct": 92.83,
+        "detail_dependency_score": 7.22
+      },
+      "threshold": "low"
     }
   ],
-  "quality_grade": "A",
-  "quality_score": 100,
+  "quality_grade": "B",
+  "quality_score": 90,
   "fail_reasons": [],
   "metrics": {
     "total_regions": 89,
@@ -353,6 +376,16 @@
     "playability_profile": "medium",
     "single_tap_completion_risk": "none",
     "playable_score": 100,
+    "raw_region_count": 1241,
+    "final_region_count": 89,
+    "region_count_drop_pct": 92.83,
+    "merged_tiny_regions_count": 0,
+    "forced_tiny_region_merges_count": 0,
+    "merged_small_regions_count": 0,
+    "merged_untouchable_region_count": 0,
+    "merged_unreadable_region_count": 0,
+    "absorbed_isolated_unreadable_region_count": 555,
+    "merged_hidden_label_region_count": 0,
     "line_dark_pct": 8.55,
     "line_ink_pct": 8.55,
     "reference_missing": false,
@@ -360,16 +393,21 @@
     "preview_mae": 12.41,
     "color_mae": 12.41,
     "preview_similarity_score": 95.13,
+    "flat_similarity_score": 87.91,
+    "detail_dependency_score": 7.22,
     "shading_preservation_score": 95.25,
     "has_detail": true,
     "giant_region_legitimacy": null,
-    "giant_region_reference_color_std": null
+    "giant_region_reference_color_std": null,
+    "overmerge_risk": "medium"
   },
   "recommendation": {
-    "action": "KEEP",
+    "action": "REGENERATE_AUTO",
     "reasons": [
-      "KEEP"
+      "REGENERATE_AUTO"
     ],
-    "design_focus": []
+    "design_focus": [
+      "line"
+    ]
   }
 }

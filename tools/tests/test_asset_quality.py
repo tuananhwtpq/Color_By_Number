@@ -8,6 +8,8 @@ from PIL import Image
 from tools.asset_quality import (
     analyze_region_playability,
     build_recommendation,
+    calculate_detail_dependency_score,
+    classify_overmerge_risk,
     calculate_gameplay_metrics,
     evaluate_level_dir,
     measure_giant_region_legitimacy,
@@ -297,6 +299,61 @@ class AssetQualityTest(unittest.TestCase):
         self.assertEqual("EXCLUDE_DEMO", recommendation["action"])
         self.assertIn("DESIGN_FIX_LINE", recommendation["reasons"])
 
+    def test_overmerge_risk_high_fails_even_when_detail_makes_preview_similar(self):
+        metrics = {
+            "total_regions": 6,
+            "raw_region_count": 80,
+            "final_region_count": 6,
+            "region_count_drop_pct": 92.5,
+            "largest_region_pct": 35.0,
+            "top_3_region_pct": 70.0,
+            "max_color_pct": 40.0,
+            "top_3_color_pct": 70.0,
+            "playable_region_count": 6,
+            "giant_region_count": 0,
+            "single_tap_completion_risk": "high",
+            "playable_score": 60,
+            "flat_similarity_score": 84.0,
+            "preview_similarity_score": 96.0,
+            "detail_dependency_score": 12.0,
+            "preview_mae": 10,
+            "mask_config_mismatch_count": 0,
+        }
+        metrics["overmerge_risk"] = classify_overmerge_risk(metrics)
+
+        quality = score_quality(metrics)
+
+        self.assertEqual("high", metrics["overmerge_risk"])
+        self.assertIn("OVERMERGE_RISK_HIGH", {issue["code"] for issue in quality["fail_reasons"]})
+        self.assertEqual("D", quality["quality_grade"])
+
+    def test_large_flat_background_is_exception_candidate_not_overmerge_high(self):
+        metrics = {
+            "total_regions": 35,
+            "raw_region_count": 45,
+            "final_region_count": 35,
+            "region_count_drop_pct": 22.22,
+            "largest_region_pct": 82.0,
+            "top_3_region_pct": 90.0,
+            "max_color_pct": 82.0,
+            "top_3_color_pct": 90.0,
+            "playable_region_count": 30,
+            "giant_region_count": 1,
+            "single_tap_completion_risk": "medium",
+            "playable_score": 72,
+            "preview_similarity_score": 96.0,
+            "preview_mae": 10,
+            "mask_config_mismatch_count": 0,
+            "giant_region_legitimacy": "intentional_flat_background",
+        }
+        metrics["overmerge_risk"] = classify_overmerge_risk(metrics)
+
+        quality = score_quality(metrics)
+
+        self.assertEqual("low", metrics["overmerge_risk"])
+        self.assertNotIn("GIANT_REGION", {issue["code"] for issue in quality["fail_reasons"]})
+        self.assertNotIn("OVERMERGE_RISK_HIGH", {issue["code"] for issue in quality["fail_reasons"]})
+
     def test_simple_icon_with_good_visuals_does_not_fail_gameplay_gate(self):
         quality = score_quality(
             {
@@ -550,8 +607,14 @@ class AssetQualityTest(unittest.TestCase):
             report = evaluate_level_dir(temp_dir, reference_path=reference_path)
 
             self.assertIn("preview_similarity_score", report["metrics"])
+            self.assertIn("flat_similarity_score", report["metrics"])
+            self.assertIn("detail_dependency_score", report["metrics"])
             self.assertIn("shading_preservation_score", report["metrics"])
             self.assertEqual(100.0, report["metrics"]["preview_similarity_score"])
+
+    def test_detail_dependency_score_is_preview_minus_flat_similarity(self):
+        self.assertEqual(7.5, calculate_detail_dependency_score(88.0, 95.5))
+        self.assertEqual(0.0, calculate_detail_dependency_score(97.0, 95.5))
 
     def test_recommendation_review_visual_for_grade_b_warning(self):
         recommendation = build_recommendation(

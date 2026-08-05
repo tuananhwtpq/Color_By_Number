@@ -62,8 +62,8 @@ class PaletteAdapter(
         val isCompleted = completedIndexes.contains(position)
         val isSelected = position == selectedIndex
         val progressFraction = paletteProgress.getOrElse(position) { 0f }
-        val isInProgress = progressFraction > 0f && progressFraction < 1f
-        val hasOuterRing = !isCompleted && (isSelected || isInProgress)
+        val isSelectedInProgress = isSelected && progressFraction > 0f && progressFraction < 1f
+        val hasOuterRing = !isCompleted && isSelected
         holder.setColorCircleDiameter(if (hasOuterRing) 38 else 50)
 
         when {
@@ -73,7 +73,7 @@ class PaletteAdapter(
                 holder.ivCheck.visibility = View.VISIBLE
             }
 
-            isInProgress -> {
+            isSelectedInProgress -> {
                 holder.ringView.setRingState(PaletteRingView.MODE_PROGRESS, progressFraction)
                 holder.tvNumber.visibility = View.VISIBLE
                 holder.ivCheck.visibility = View.GONE

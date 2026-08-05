@@ -38,6 +38,8 @@ if [[ $# -lt 2 ]]; then
   echo "bash tools/import_category_from_data.sh "Data/Fairy Tail" --overwrite --continue-on-error"
   echo "Command dùng để thêm data nếu như assets vẫn lỗi: "
   echo "bash tools/import_category_from_data.sh "Data/Fairy Tail" --overwrite --allow-low-quality --continue-on-error"
+  # sinh bảng review sau khi import all data xong
+  echo "python3 tools/export_asset_review_report.py app/src/main/assets --data-root Data --output outputs/color_by_number_asset_review/color_by_number_designer_review.csv"
   exit 1
 
 fi

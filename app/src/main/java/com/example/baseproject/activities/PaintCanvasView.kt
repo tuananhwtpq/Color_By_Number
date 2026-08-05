@@ -18,6 +18,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import com.example.baseproject.data.AnimatedFiller
+import com.example.baseproject.data.DetailRevealEngine
 import com.example.baseproject.data.RegionData
 import com.example.baseproject.highlight.HighlightRenderer
 import com.example.baseproject.highlight.HighlightTheme
@@ -386,11 +387,12 @@ class PaintCanvasView @JvmOverloads constructor(
         val detailOutPx = revealedDetailPixelsArray ?: return
         val detailBmp = revealedDetailBitmap ?: return
 
-        for (i in maskPx.indices) {
-            if (maskPx[i] == maskColor) {
-                detailOutPx[i] = detailSrcPx[i]
-            }
-        }
+        DetailRevealEngine.revealDetailForMaskColor(
+            maskPixels = maskPx,
+            detailSourcePixels = detailSrcPx,
+            revealedDetailPixels = detailOutPx,
+            maskColor = maskColor,
+        )
         detailBmp.setPixels(detailOutPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
     }
 

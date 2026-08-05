@@ -17,7 +17,9 @@ from tools.asset_quality import (
 from tools.generate_level import (
     LevelQualityGateError,
     absorb_small_region_colors,
+    absorb_isolated_unreadable_regions_by_proximity,
     build_chromatic_mask,
+    count_remaining_micro_regions,
     create_parser,
     evaluate_quality_gate,
     measure_lost_color_pct,
@@ -30,7 +32,9 @@ from tools.generate_level import (
     get_region_bbox,
     get_region_centroid,
     get_representative_color,
+    giant_region_split_looks_like_flat_patches,
     merge_small_attached_regions,
+    merge_label_hidden_regions_for_gate,
     merge_tiny_regions_into_neighbors,
     reclaim_non_ink_pixels_into_regions,
     resolve_generation_profile,
@@ -661,6 +665,7 @@ class GenerateLevelCliTest(unittest.TestCase):
                 str(GENERATOR),
                 "--target-unique-colors",
                 "4",
+                "--allow-low-quality",
             ]
             subprocess.run(
                 [
@@ -860,6 +865,104 @@ class GenerateLevelCliTest(unittest.TestCase):
             "metrics": {"largest_region_pct": 54.4, "giant_region_count": 1},
         }
         self.assertEqual([], evaluate_quality_gate(report))
+
+    def test_evaluate_quality_gate_blocks_extreme_hidden_or_tiny_density_even_with_good_color(self):
+        visually_good_but_unplayable = {
+            "quality_grade": "B",
+            "metrics": {
+                "largest_region_pct": 20.0,
+                "preview_similarity_score": 99.8,
+                "hidden_label_pct": 81.0,
+                "tiny_region_pct_lt_100": 46.0,
+            },
+        }
+
+        reasons = evaluate_quality_gate(visually_good_but_unplayable)
+
+        self.assertIn("hidden_label_pct=81.0>80", reasons)
+        self.assertIn("tiny_region_pct_lt_100=46.0>45", reasons)
+
+    def test_evaluate_quality_gate_allows_documented_playability_exception(self):
+        exception_report = {
+            "quality_grade": "B",
+            "metrics": {
+                "largest_region_pct": 20.0,
+                "hidden_label_pct": 95.0,
+                "tiny_region_pct_lt_100": 70.0,
+            },
+            "generation_params": {
+                "playability_exception": {
+                    "reason": "intentional mandala micro-detail",
+                },
+            },
+        }
+
+        self.assertEqual([], evaluate_quality_gate(exception_report))
+
+    def test_remaining_micro_count_reflects_absorb_after_final_unreadable_pass(self):
+        unreadable = self.make_region_info([(0, 0)], (250, 0, 0), hide_number=True)
+        unreadable["label_anchor"]["radius"] = 0.0
+        readable = self.make_region_info(
+            [(x, y) for y in range(5) for x in range(10, 15)],
+            (0, 0, 250),
+        )
+        readable["label_anchor"]["radius"] = 3.0
+        region_infos = [unreadable, readable]
+
+        stale_remaining = count_remaining_micro_regions(
+            region_infos,
+            min_region_area=1,
+            tiny_area_threshold=1,
+            tiny_side_threshold=1,
+            tiny_merge_min_area=1,
+            tiny_merge_min_side=1,
+            unreadable_radius_px=1.5,
+        )
+        absorbed_infos, absorbed_count = absorb_isolated_unreadable_regions_by_proximity(
+            region_infos,
+            unreadable_radius_px=1.5,
+        )
+        final_remaining = count_remaining_micro_regions(
+            absorbed_infos,
+            min_region_area=1,
+            tiny_area_threshold=1,
+            tiny_side_threshold=1,
+            tiny_merge_min_area=1,
+            tiny_merge_min_side=1,
+            unreadable_radius_px=1.5,
+        )
+
+        self.assertEqual(1, stale_remaining)
+        self.assertEqual(1, absorbed_count)
+        self.assertEqual(0, final_remaining)
+
+    def test_label_hidden_gate_reports_default_zoom_hidden_regions_without_merging(self):
+        visible_neighbor = self.make_region_info(
+            [(x, y) for y in range(6) for x in range(9, 15)],
+            (240, 0, 0),
+        )
+        visible_neighbor["label_anchor"]["radius"] = 4.0
+        hidden_regions = []
+        for x in range(9):
+            region = self.make_region_info([(x, 0)], (245, 0, 0), hide_number=True)
+            region["label_anchor"]["radius"] = 0.0
+            hidden_regions.append(region)
+
+        merged, merged_count, remaining_hidden = merge_label_hidden_regions_for_gate(
+            region_infos=[visible_neighbor, *hidden_regions],
+            label_canvas_radius_threshold=2.0,
+            color_threshold=40.0,
+            min_region_area=1,
+            tiny_area_threshold=1,
+            tiny_side_threshold=1,
+            tiny_merge_min_area=1,
+            tiny_merge_min_side=1,
+            max_hidden_pct=80.0,
+        )
+
+        self.assertEqual(0, merged_count)
+        self.assertEqual(10, len(merged))
+        self.assertEqual(9, remaining_hidden)
 
     def test_hard_gate_raises_and_does_not_write_low_quality_asset(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1097,6 +1200,22 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(0, stats["giant_region_split_count"])
         self.assertEqual(1, len(updated_infos))
 
+    def test_giant_split_rejects_component_explosion_even_with_some_flat_patches(self):
+        ref = Image.new("RGB", (80, 80), (200, 20, 20))
+        ref_pixels = ref.load()
+        substantial_a = [(x, y) for y in range(10) for x in range(10)]
+        substantial_b = [(x, y) for y in range(10) for x in range(20, 30)]
+        tiny_noise = [[(index % 80, 20 + index // 80)] for index in range(1200)]
+
+        self.assertFalse(
+            giant_region_split_looks_like_flat_patches(
+                components=[substantial_a, substantial_b, *tiny_noise],
+                ref_pixels=ref_pixels,
+                min_region_area=50,
+                max_component_color_deviation=7.0,
+            )
+        )
+
 
 class UntouchableRegionMergeTest(unittest.TestCase):
     """Vùng dài mà hẹp lọt qua mọi bước gộp theo diện tích: diện tích đủ lớn nhưng bề ngang
@@ -1218,7 +1337,7 @@ class UntouchableRegionMergeTest(unittest.TestCase):
         self.assertEqual(0, merged_count)
         self.assertEqual(2, len(merged))
 
-    def test_min_touch_bbox_side_scales_with_canvas_size(self):
+    def test_min_touch_bbox_side_defaults_to_max_zoom_playability(self):
         # Ngưỡng suy ngược từ 24dp + tỷ lệ fit, không phải hằng số cứng, để data với ảnh
         # kích thước khác nhau vẫn ra ngưỡng đúng.
         small = resolve_min_touch_bbox_side(512, 512)
@@ -1227,13 +1346,15 @@ class UntouchableRegionMergeTest(unittest.TestCase):
 
         self.assertLess(small, medium)
         self.assertLess(medium, large)
-        self.assertEqual(12, medium)
+        self.assertEqual(2, medium)
 
     def test_assumed_zoom_one_requires_bigger_regions_than_zoom_two(self):
         no_zoom = resolve_min_touch_bbox_side(1024, 1024, assumed_zoom=1.0)
         zoom_two = resolve_min_touch_bbox_side(1024, 1024, assumed_zoom=2.0)
+        max_zoom = resolve_min_touch_bbox_side(1024, 1024)
 
         self.assertGreater(no_zoom, zoom_two)
+        self.assertGreater(zoom_two, max_zoom)
 
 
 class UntouchableRegionScoringTest(unittest.TestCase):

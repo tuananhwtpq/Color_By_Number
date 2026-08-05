@@ -16,7 +16,12 @@ data class HighlightTheme(
     val cellSizePx: Int,
     val baseAlpha: Int,
     val fadeInDurationMs: Long,
-    val interpolator: Interpolator
+    val interpolator: Interpolator,
+    val tinyTargetAreaThresholdPx: Int = 100,
+    val tinyTargetMinSideThresholdPx: Int = 10,
+    val tinyTargetHaloRadiusPx: Int = 14,
+    val tinyTargetHaloAlpha: Int = 170,
+    val tinyTargetHaloColor: Int = Color.parseColor("#FFFFFF")
 )
 
 object HighlightThemes {
