@@ -44,6 +44,7 @@ from tools.generate_level import (
     merge_tiny_regions_into_neighbors,
     paint_cell_seams_on_line_image,
     reclaim_non_ink_pixels_into_regions,
+    region_looks_like_background,
     subdivide_giant_regions_into_cells,
     subdivide_region_into_cells,
     resolve_generation_profile,
@@ -1303,6 +1304,56 @@ class GenerateLevelCliTest(unittest.TestCase):
                 len(cell), 10000 // 3, f"còn ô {len(cell)}px — quá nhỏ để tap"
             )
 
+    def test_background_is_recognised_by_hugging_the_canvas_edges(self):
+        # Nền: khung bao quanh, chạm cả 4 cạnh canvas.
+        canvas = 300
+        background = [
+            (x, y)
+            for y in range(canvas)
+            for x in range(canvas)
+            if x < 40 or x >= canvas - 40 or y < 40 or y >= canvas - 40
+        ]
+
+        self.assertTrue(region_looks_like_background(background, canvas, canvas))
+
+    def test_huge_centred_subject_is_not_mistaken_for_background(self):
+        # Ca quyết định, lấy từ data thật: Animal/05 có vùng chiếm 44.3% canvas nhưng là
+        # THÂN CON VẬT nằm giữa tranh — chỉ chạm 1 cạnh. "To" một mình không đủ kết luận là
+        # nền, nếu không chủ thể sẽ bị chia thành ô thưa và mất hết chi tiết đáng tô.
+        canvas = 300
+        subject = [(x, y) for y in range(20, 290) for x in range(20, 280)]
+
+        self.assertGreater(len(subject) * 100.0 / (canvas * canvas), 44)
+        self.assertFalse(region_looks_like_background(subject, canvas, canvas))
+
+    def test_background_cells_are_larger_than_subject_cells(self):
+        canvas = 400
+        background = [
+            (x, y)
+            for y in range(canvas)
+            for x in range(canvas)
+            if x < 70 or x >= canvas - 70 or y < 70 or y >= canvas - 70
+        ]
+        info = self.make_region_info(background, (200, 210, 220))
+
+        cells, _, stats = subdivide_giant_regions_into_cells(
+            region_infos=[info],
+            target_cell_area=5000,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+            canvas_width=canvas,
+            canvas_height=canvas,
+            background_multiplier=3.0,
+        )
+
+        self.assertEqual(1, stats["cell_subdivided_background_count"])
+        # Ô nền phải to xấp xỉ 3 lần ô mục tiêu thường, tức số ô ít đi tương ứng.
+        average_cell_area = len(background) / len(cells)
+        self.assertGreater(average_cell_area, 5000 * 1.8)
+
     def test_subdivide_leaves_small_region_alone(self):
         points = [(x, y) for y in range(50) for x in range(50)]
 
@@ -1325,9 +1376,13 @@ class GenerateLevelCliTest(unittest.TestCase):
             tiny_side_threshold=10,
             tiny_merge_min_area=48,
             tiny_merge_min_side=6,
+            canvas_width=600,
+            canvas_height=600,
         )
 
         self.assertEqual(1, stats["cell_subdivided_region_count"])
+        # Mảng 200x200 nằm gọn giữa canvas 600x600 -> không chạm cạnh nào, là chủ thể.
+        self.assertEqual(0, stats["cell_subdivided_background_count"])
         self.assertGreater(len(cells), 1)
         for cell in cells:
             self.assertEqual((33, 77, 190), cell["target_color"])

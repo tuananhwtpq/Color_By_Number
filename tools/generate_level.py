@@ -4,7 +4,7 @@ import math
 import os
 import shutil
 import tempfile
-from collections import Counter, deque
+from collections import Counter, defaultdict, deque
 
 from PIL import Image, ImageChops, ImageFilter
 from PIL import ImageDraw
@@ -1242,6 +1242,55 @@ def find_label_anchor(region, bbox, centroid):
 # Nhỏ hơn (5.000px) cho ra 94 ô cho riêng một mảng nền — lặp và chán.
 DEFAULT_CELL_TARGET_AREA = 10000
 
+# Nền được chia thành ô TO HƠN hẳn chủ thể. Chia nền nhỏ như chủ thể thì user phải tap hàng
+# chục ô cho một mảng phẳng chẳng có gì để nhìn — vừa lâu vừa chán, trong khi công sức đó bỏ
+# vào chủ thể mới đáng. Hệ số 3 nghĩa là nền 45% canvas ra ~15 ô thay vì ~46 ô.
+BACKGROUND_CELL_AREA_MULTIPLIER = 3.0
+
+# Ngưỡng nhận diện nền. Đo trên data thật (mask trước khi chia ô), hai nhóm tách bạch hẳn:
+#   nền     — chạm 3-4 cạnh canvas, chiếm 32-100% chu vi
+#   chủ thể — chạm 0-2 cạnh, kể cả vùng CHIẾM TỚI 44% canvas (thân con vật nằm giữa tranh)
+# Nên "to" một mình không đủ để kết luận là nền; phải là bao quanh, tức chạm nhiều cạnh.
+BACKGROUND_MIN_BORDER_SIDES = 3
+BACKGROUND_MIN_BORDER_PCT = 25.0
+
+
+def region_border_contact(region_points, canvas_width, canvas_height):
+    """(phần trăm chu vi canvas vùng này chiếm, số cạnh canvas nó chạm tới)."""
+    last_x = canvas_width - 1
+    last_y = canvas_height - 1
+    sides = set()
+    border_pixels = 0
+    for x, y in region_points:
+        on_border = False
+        if x == 0:
+            sides.add("L")
+            on_border = True
+        elif x == last_x:
+            sides.add("R")
+            on_border = True
+        if y == 0:
+            sides.add("T")
+            on_border = True
+        elif y == last_y:
+            sides.add("B")
+            on_border = True
+        if on_border:
+            border_pixels += 1
+
+    perimeter = max(1, 2 * (canvas_width + canvas_height))
+    return border_pixels * 100.0 / perimeter, len(sides)
+
+
+def region_looks_like_background(region_points, canvas_width, canvas_height):
+    border_pct, side_count = region_border_contact(
+        region_points, canvas_width, canvas_height
+    )
+    return (
+        side_count >= BACKGROUND_MIN_BORDER_SIDES
+        and border_pct >= BACKGROUND_MIN_BORDER_PCT
+    )
+
 # Chỉ chia vùng lớn hơn ngần này lần ô mục tiêu, để không băm nhỏ vùng cỡ vừa.
 CELL_SUBDIVIDE_MIN_MULTIPLIER = 2
 
@@ -1304,21 +1353,53 @@ def subdivide_region_into_cells(region_points, target_cell_area):
             grid_x += spacing
         grid_y += spacing
 
+    # Lan bằng Dijkstra với chi phí mỗi bước = 2 hoặc 3 tuỳ nhiễu băm của toạ độ, thay cho
+    # BFS chi phí đều. BFS đều cho ra ranh giới Voronoi THẲNG, nên mảng phẳng lớn hiện ra
+    # thành lưới đa giác đều đặn trông rất máy móc. Cho chi phí nhấp nhô nhẹ thì ranh giới
+    # men theo đường rẻ nhất và lượn tự nhiên, trong khi kích thước ô vẫn đồng đều vì chênh
+    # lệch chi phí chỉ 1.5 lần. Nhiễu lấy từ hàm băm toạ độ nên vẫn TẤT ĐỊNH.
+    #
+    # Dùng hàng đợi theo xô (bucket queue) thay vì heapq: chi phí là số nguyên nhỏ nên đây
+    # là Dijkstra O(số pixel), không có log, đủ nhanh cho vùng vài trăm nghìn pixel.
     owner = {}
-    queue = deque()
+    best_cost = {}
+    buckets = defaultdict(list)
     for seed_index, seed in enumerate(seeds):
         owner[seed] = seed_index
-        queue.append(seed)
+        best_cost[seed] = 0
+        buckets[0].append(seed)
 
-    while queue:
-        cx, cy = queue.popleft()
-        current_owner = owner[(cx, cy)]
-        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            neighbor = (cx + dx, cy + dy)
-            if neighbor in owner or neighbor not in point_set:
+    def step_cost(x, y):
+        return 2 + (((x * 374761393 + y * 668265263) >> 7) & 1)
+
+    cursor = 0
+    remaining = len(seeds)
+    while remaining > 0:
+        bucket = buckets.pop(cursor, None)
+        if bucket is None:
+            cursor += 1
+            continue
+        for point in bucket:
+            cost = best_cost.get(point)
+            if cost is None or cost != cursor:
                 continue
-            owner[neighbor] = current_owner
-            queue.append(neighbor)
+            remaining -= 1
+            px_, py_ = point
+            current_owner = owner[point]
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                neighbor = (px_ + dx, py_ + dy)
+                if neighbor not in point_set:
+                    continue
+                candidate = cost + step_cost(neighbor[0], neighbor[1])
+                known = best_cost.get(neighbor)
+                if known is not None and known <= candidate:
+                    continue
+                if known is None:
+                    remaining += 1
+                best_cost[neighbor] = candidate
+                owner[neighbor] = current_owner
+                buckets[candidate].append(neighbor)
+        cursor += 1
 
     cells = [[] for _ in seeds]
     # Pixel không hạt giống nào với tới được: nằm trong mảnh rời khác của vùng (một vùng có
@@ -1424,7 +1505,10 @@ def subdivide_giant_regions_into_cells(
     tiny_side_threshold,
     tiny_merge_min_area,
     tiny_merge_min_side,
+    canvas_width,
+    canvas_height,
     min_multiplier=CELL_SUBDIVIDE_MIN_MULTIPLIER,
+    background_multiplier=BACKGROUND_CELL_AREA_MULTIPLIER,
 ):
     """Chia mọi vùng quá lớn thành các ô cỡ target_cell_area.
 
@@ -1436,23 +1520,35 @@ def subdivide_giant_regions_into_cells(
     (đo được độ lệch nội bộ 0.8-2.8) nên tách theo màu vỡ vụn thành hàng nghìn mảnh và bị
     guard chặn lại — đúng. Chia theo HÌNH HỌC mới là công cụ hợp cho trường hợp đó.
     """
-    minimum_area = target_cell_area * min_multiplier
     result = []
     seam_pixels = set()
     subdivided_count = 0
+    background_count = 0
     new_cell_count = 0
 
     for info in region_infos:
-        if info["area"] < minimum_area:
+        is_background = region_looks_like_background(
+            info["region"], canvas_width, canvas_height
+        )
+        # Nền dùng ô to hơn nên NGƯỠNG chia cũng phải to lên theo, nếu không một mảng nền
+        # cỡ vừa sẽ bị chia thành đúng 2 ô — vô nghĩa.
+        region_cell_area = (
+            int(round(target_cell_area * background_multiplier))
+            if is_background
+            else target_cell_area
+        )
+        if info["area"] < region_cell_area * min_multiplier:
             result.append(info)
             continue
 
-        cells = subdivide_region_into_cells(info["region"], target_cell_area)
+        cells = subdivide_region_into_cells(info["region"], region_cell_area)
         if len(cells) <= 1:
             result.append(info)
             continue
 
         subdivided_count += 1
+        if is_background:
+            background_count += 1
         new_cell_count += len(cells)
         seam_pixels |= collect_cell_seam_pixels(cells)
         for cell in cells:
@@ -1488,8 +1584,10 @@ def subdivide_giant_regions_into_cells(
 
     stats = {
         "cell_subdivided_region_count": subdivided_count,
+        "cell_subdivided_background_count": background_count,
         "cell_subdivision_cell_count": new_cell_count,
         "cell_target_area": target_cell_area,
+        "cell_background_area_multiplier": background_multiplier,
     }
     return result, seam_pixels, stats
 
@@ -3327,12 +3425,16 @@ def generate_level_assets(
         tiny_side_threshold=tiny_region_side_threshold,
         tiny_merge_min_area=tiny_merge_min_area,
         tiny_merge_min_side=tiny_merge_min_side,
+        canvas_width=width,
+        canvas_height=height,
     )
     if cell_subdivision_stats["cell_subdivided_region_count"]:
         print(
             f"Đã chia {cell_subdivision_stats['cell_subdivided_region_count']} vùng quá lớn "
             f"thành {cell_subdivision_stats['cell_subdivision_cell_count']} ô nhỏ "
-            f"(ô mục tiêu {cell_target_area}px) để user có nhiều chỗ tô hơn."
+            f"(ô mục tiêu {cell_target_area}px, trong đó "
+            f"{cell_subdivision_stats['cell_subdivided_background_count']} vùng là NỀN nên "
+            f"dùng ô to gấp {BACKGROUND_CELL_AREA_MULTIPLIER:g} lần)."
         )
         # CHỈ vẽ vào line.png (ảnh app nhân lên khi chơi), KHÔNG vẽ vào render_line_img.
         # render_line_img dựng nên preview_colored.png = bức tranh lúc ĐÃ HOÀN THÀNH, mà app
