@@ -10,18 +10,29 @@ import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.baseproject.R
 import com.example.baseproject.data.PaletteItem
+import com.example.baseproject.utils.Constants
 import com.example.baseproject.views.PaletteRingView
 
 class PaletteAdapter(
     private val items: List<PaletteItem>,
-    private val onColorSelected: (position: Int, item: PaletteItem) -> Unit
+    private val removeCompletedColors: Boolean = Constants.REMOVE_COMPLETED_COLORS_FROM_PALETTE,
+    private val onColorSelected: (originalIndex: Int, item: PaletteItem) -> Unit
 ) : RecyclerView.Adapter<PaletteAdapter.ViewHolder>() {
 
-    var selectedIndex = 0
+    var selectedIndex = -1
         private set
 
     val completedIndexes = mutableSetOf<Int>()
     private var paletteProgress: List<Float> = List(items.size) { 0f }
+    private var displayItems: List<DisplayPaletteItem> = buildDisplayItems()
+
+    val sourceItemCount: Int
+        get() = items.size
+
+    private data class DisplayPaletteItem(
+        val originalIndex: Int,
+        val item: PaletteItem
+    )
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val colorCircle: CardView = view.findViewById(R.id.colorCircle)
@@ -32,9 +43,10 @@ class PaletteAdapter(
         init {
             view.setOnClickListener {
                 val position = bindingAdapterPosition
-                if (position != RecyclerView.NO_POSITION && !completedIndexes.contains(position)) {
-                    setSelection(position)
-                    onColorSelected(position, items[position])
+                val displayItem = displayItems.getOrNull(position)
+                if (displayItem != null && !completedIndexes.contains(displayItem.originalIndex)) {
+                    setSelection(displayItem.originalIndex)
+                    onColorSelected(displayItem.originalIndex, displayItem.item)
                 }
             }
         }
@@ -46,7 +58,9 @@ class PaletteAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = items[position]
+        val displayItem = displayItems[position]
+        val item = displayItem.item
+        val originalIndex = displayItem.originalIndex
         val colorInt = item.getTargetColorInt()
         holder.colorCircle.setCardBackgroundColor(colorInt)
         holder.tvNumber.text = item.number.toString()
@@ -59,9 +73,9 @@ class PaletteAdapter(
         holder.tvNumber.setTextColor(if (brightness > 186) Color.BLACK else Color.WHITE)
 //        holder.tvNumber.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.grey_800))
 
-        val isCompleted = completedIndexes.contains(position)
-        val isSelected = position == selectedIndex
-        val progressFraction = paletteProgress.getOrElse(position) { 0f }
+        val isCompleted = completedIndexes.contains(originalIndex)
+        val isSelected = originalIndex == selectedIndex
+        val progressFraction = paletteProgress.getOrElse(originalIndex) { 0f }
         val isSelectedInProgress = isSelected && progressFraction > 0f && progressFraction < 1f
         val hasOuterRing = !isCompleted && isSelected
         holder.setColorCircleDiameter(if (hasOuterRing) 38 else 50)
@@ -104,24 +118,24 @@ class PaletteAdapter(
         colorCircle.radius = sizePx / 2f
     }
 
-    override fun getItemCount() = items.size
+    override fun getItemCount() = displayItems.size
 
-    fun setSelection(position: Int) {
+    fun setSelection(originalIndex: Int) {
         val prev = selectedIndex
-        selectedIndex = position
-        notifyItemChanged(prev)
-        notifyItemChanged(selectedIndex)
+        selectedIndex = originalIndex
+        notifyOriginalIndexChanged(prev)
+        notifyOriginalIndexChanged(selectedIndex)
     }
 
-    fun markCompleted(position: Int) {
-        completedIndexes.add(position)
-        notifyItemChanged(position)
+    fun markCompleted(originalIndex: Int) {
+        completedIndexes.add(originalIndex)
+        refreshDisplayItems()
     }
 
     fun setCompletedIndexes(indexes: Set<Int>) {
         completedIndexes.clear()
         completedIndexes.addAll(indexes)
-        notifyDataSetChanged()
+        refreshDisplayItems()
     }
 
     fun setPaletteState(
@@ -133,6 +147,29 @@ class PaletteAdapter(
         this.completedIndexes.clear()
         this.completedIndexes.addAll(completedIndexes)
         this.paletteProgress = paletteProgress
+        this.displayItems = buildDisplayItems()
         notifyDataSetChanged()
+    }
+
+    private fun buildDisplayItems(): List<DisplayPaletteItem> {
+        return items.mapIndexedNotNull { index, item ->
+            if (removeCompletedColors && completedIndexes.contains(index)) {
+                null
+            } else {
+                DisplayPaletteItem(index, item)
+            }
+        }
+    }
+
+    private fun refreshDisplayItems() {
+        displayItems = buildDisplayItems()
+        notifyDataSetChanged()
+    }
+
+    private fun notifyOriginalIndexChanged(originalIndex: Int) {
+        val displayIndex = displayItems.indexOfFirst { it.originalIndex == originalIndex }
+        if (displayIndex != -1) {
+            notifyItemChanged(displayIndex)
+        }
     }
 }

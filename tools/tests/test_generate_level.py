@@ -18,7 +18,13 @@ from tools.generate_level import (
     LevelQualityGateError,
     absorb_small_region_colors,
     absorb_isolated_unreadable_regions_by_proximity,
+    CELL_SEAM_LINE_VALUE,
+    MAX_REGION_FRAGMENTS,
+    bbox_min_side,
     build_chromatic_mask,
+    is_micro_region,
+    region_thickness_diameter,
+    update_region_classification,
     count_remaining_micro_regions,
     create_parser,
     evaluate_quality_gate,
@@ -36,7 +42,10 @@ from tools.generate_level import (
     merge_small_attached_regions,
     merge_label_hidden_regions_for_gate,
     merge_tiny_regions_into_neighbors,
+    paint_cell_seams_on_line_image,
     reclaim_non_ink_pixels_into_regions,
+    subdivide_giant_regions_into_cells,
+    subdivide_region_into_cells,
     resolve_generation_profile,
     resolve_generation_profile_settings,
     resolve_target_unique_colors,
@@ -177,33 +186,119 @@ class GenerateLevelCliTest(unittest.TestCase):
 
         self.assertEqual(1, merged_count)
         self.assertEqual(1, forced_count)
-        self.assertEqual(0, remaining)
+        # Kết quả gộp là 1 khối 5 pixel dày đúng 1px, nên vẫn là micro region theo bề ngang
+        # THẬT (region_thickness_diameter). bbox 3x2 của nó từng cho min_side=2 = đủ ngưỡng,
+        # đó chính là kiểu nhầm mà việc đổi sang đo bề ngang thật nhắm tới.
+        self.assertEqual(1, remaining)
         self.assertEqual(2, len(merged))
         self.assertTrue(any(info["area"] == 5 and info["target_color"] == (0, 0, 250) for info in merged))
 
-    def test_tiny_merge_v2_does_not_merge_across_line_gap_even_when_nearby(self):
+    def _tiny_merge_across_gap(self, gap_px, attach_distance):
+        """Vùng 1 pixel tại (5,5) và một vùng khác cách đúng gap_px pixel mực về bên phải."""
+        left = 6 + gap_px
         tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
-        separated_by_boundary = self.make_region_info(
-            [(7, 5), (7, 6), (8, 5), (8, 6)],
+        other = self.make_region_info(
+            [(left, 5), (left, 6), (left + 1, 5), (left + 1, 6)],
             (250, 0, 0),
         )
-
-        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
-            region_infos=[tiny, separated_by_boundary],
+        return merge_tiny_regions_into_neighbors(
+            region_infos=[tiny, other],
             min_region_area=1,
             tiny_area_threshold=10,
             tiny_side_threshold=3,
             tiny_merge_min_area=2,
             tiny_merge_min_side=2,
-            attach_distance=12,
+            attach_distance=attach_distance,
             color_threshold=80,
             tiny_merge_policy="relaxed",
+        )
+
+    def test_tiny_merge_v2_requires_true_adjacency_when_no_ink_budget(self):
+        # attach_distance=0 -> giữ nguyên hợp đồng cũ: chỉ gộp khi CHẠM thật, khe 1px cũng
+        # đủ để tách. Đây là đường đi của mọi vùng đã có láng giềng chạm trực tiếp.
+        _, merged_count, forced_count, remaining = self._tiny_merge_across_gap(
+            gap_px=1, attach_distance=0
         )
 
         self.assertEqual(0, merged_count)
         self.assertEqual(0, forced_count)
         self.assertEqual(1, remaining)
+
+    def test_tiny_merge_v2_crosses_thin_ink_gap_when_no_touching_neighbor_exists(self):
+        # Vùng bị nét mực bao kín hoàn toàn (33% số vùng trên data thật, 4 level là 100%):
+        # nếu vẫn đòi tiếp xúc trực tiếp thì không bao giờ gộp được gì. Cho phép nhìn xuyên
+        # tối đa attach_distance pixel mực để tìm láng giềng.
+        merged, merged_count, _, _ = self._tiny_merge_across_gap(
+            gap_px=1, attach_distance=4
+        )
+
+        self.assertEqual(1, merged_count)
+        # Hai vùng đã nhập làm một (remaining vẫn là 1 vì khối 5 pixel kết quả bản thân nó
+        # vẫn mảnh — đó là chuyện của ngưỡng bề ngang, không phải của bước gộp này).
+        self.assertEqual(1, len(merged))
+        self.assertEqual(5, merged[0]["area"])
+
+    def test_tiny_merge_v2_stops_bridging_ink_gaps_at_the_fragment_cap(self):
+        # Mỗi vùng chỉ được vẽ ĐÚNG MỘT con số, và 1 cú tap tô toàn bộ mask color đó trên cả
+        # canvas. Nên vùng gồm N mảnh rải rác = N-1 mảnh không có số nhưng vẫn tự tô. Gộp
+        # xuyên nét mực phải dừng lại ở MAX_REGION_FRAGMENTS thay vì dồn vô hạn (data thật
+        # từng có 1 vùng gồm 194 mảnh).
+        host = self.make_region_info(
+            [(x, y) for y in range(20) for x in range(20)], (250, 0, 0)
+        )
+        host["fragment_count"] = MAX_REGION_FRAGMENTS
+        # Chấm nhỏ nằm cách host đúng 1 pixel mực -> chỉ tới được bằng đường nhảy qua mực.
+        speck = self.make_region_info([(21, 5)], (250, 0, 0), hide_number=True)
+
+        merged, merged_count, _, _ = merge_tiny_regions_into_neighbors(
+            region_infos=[speck, host],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=4,
+            color_threshold=80,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(0, merged_count)
         self.assertEqual(2, len(merged))
+
+    def test_touching_merge_does_not_spend_fragment_budget(self):
+        # Hai vùng CHẠM nhau nhập lại thành một khối liền -> tổng số mảnh giảm 1, không tăng.
+        # Hạn mức chỉ được tính vào đường gộp xuyên nét mực.
+        host = self.make_region_info(
+            [(x, y) for y in range(20) for x in range(20)], (250, 0, 0)
+        )
+        host["fragment_count"] = MAX_REGION_FRAGMENTS
+        touching = self.make_region_info([(20, 5)], (250, 0, 0), hide_number=True)
+
+        merged, merged_count, _, _ = merge_tiny_regions_into_neighbors(
+            region_infos=[touching, host],
+            min_region_area=1,
+            tiny_area_threshold=10,
+            tiny_side_threshold=3,
+            tiny_merge_min_area=2,
+            tiny_merge_min_side=2,
+            attach_distance=4,
+            color_threshold=80,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(1, len(merged))
+        self.assertEqual(MAX_REGION_FRAGMENTS, merged[0]["fragment_count"])
+
+    def test_tiny_merge_v2_still_refuses_gap_wider_than_ink_budget(self):
+        # Nét viền cố ý dày (dày hơn ngân sách mực) vẫn phải tách 2 vật thể khác nhau —
+        # đây mới là thứ mà luật "không gộp qua khe" thật sự cần bảo vệ.
+        _, merged_count, _, remaining = self._tiny_merge_across_gap(
+            gap_px=8, attach_distance=4
+        )
+
+        self.assertEqual(0, merged_count)
+        self.assertEqual(1, remaining)
 
     def test_tiny_merge_v2_leaves_bbox_overlap_region_when_no_real_edge_neighbor(self):
         tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
@@ -243,7 +338,7 @@ class GenerateLevelCliTest(unittest.TestCase):
             tiny_side_threshold=3,
             tiny_merge_min_area=2,
             tiny_merge_min_side=2,
-            attach_distance=12,
+            attach_distance=0,
             color_threshold=1,
             tiny_merge_policy="mandala",
         )
@@ -272,7 +367,8 @@ class GenerateLevelCliTest(unittest.TestCase):
 
         self.assertEqual(1, merged_count)
         self.assertEqual(0, forced_count)
-        self.assertEqual(0, remaining)
+        # Kết quả gộp là hình L 3 pixel, dày 1px -> vẫn micro theo bề ngang thật.
+        self.assertEqual(1, remaining)
         self.assertTrue(any(info["area"] == 3 and info["target_color"] == (250, 0, 0) for info in merged))
 
     def test_tiny_merge_v2_does_not_miss_long_thin_adjacent_neighbor(self):
@@ -301,7 +397,8 @@ class GenerateLevelCliTest(unittest.TestCase):
 
         self.assertEqual(1, merged_count)
         self.assertEqual(0, forced_count)
-        self.assertEqual(0, remaining)
+        # Dải này cao đúng 2px nên bề ngang thật là 1 -> vẫn micro, dù bbox dài 800px.
+        self.assertEqual(1, remaining)
         self.assertEqual(len(long_points) + 1, max(info["area"] for info in merged))
 
     def test_tiny_merge_v2_does_not_merge_into_giant_target_over_profile_limit(self):
@@ -328,10 +425,12 @@ class GenerateLevelCliTest(unittest.TestCase):
 
         self.assertEqual(1, merged_count)
         self.assertEqual(0, forced_count)
-        self.assertEqual(0, remaining)
+        # Vùng an toàn sau khi gộp là 1 khối 5 pixel dày 1px -> vẫn micro theo bề ngang thật.
+        self.assertEqual(1, remaining)
         self.assertGreater(stats["tiny_merge_rejected_giant_target"], 0)
         self.assertTrue(any(info["area"] == 5 and info["target_color"] == (240, 0, 0) for info in merged))
 
+    # Khe giữa 2 vùng ở đây rộng 2px, vượt ngân sách mực attach_distance=1 -> vẫn phải tách.
     def test_production_merge_sequence_does_not_merge_small_regions_across_boundary_gap(self):
         small = self.make_region_info(
             [(2, 2), (2, 3), (3, 2), (3, 3)],
@@ -350,14 +449,14 @@ class GenerateLevelCliTest(unittest.TestCase):
             tiny_side_threshold=1,
             tiny_merge_min_area=1,
             tiny_merge_min_side=1,
-            attach_distance=12,
+            attach_distance=1,
             color_threshold=80,
             tiny_merge_policy="relaxed",
         )
         after_small_merge, small_count = merge_small_attached_regions(
             region_infos=after_tiny_merge,
             min_region_area=10,
-            attach_distance=12,
+            attach_distance=1,
             color_threshold=80,
             tiny_area_threshold=1,
             tiny_side_threshold=1,
@@ -378,9 +477,10 @@ class GenerateLevelCliTest(unittest.TestCase):
             (240, 0, 0),
         )
 
+        # Khe rộng 2px, vượt ngân sách mực attach_distance=1 -> không được chép màu qua.
         absorbed_count = absorb_small_region_colors(
             region_infos=[small, separated_by_line_gap],
-            attach_distance=12,
+            attach_distance=1,
             color_threshold=80,
             tiny_area_threshold=10,
             tiny_side_threshold=3,
@@ -1164,9 +1264,8 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertLessEqual(anchor["radius"], 2)
 
     def test_find_label_anchor_fallback_path_still_returns_a_radius(self):
-        # Vùng 1 pixel duy nhất: vòng lặp chính không tìm được điểm hợp lệ nào (min_distance
-        # tới bbox luôn < 1), phải rơi vào nhánh centroid_fallback — vẫn phải trả về radius
-        # (0, vì không có chỗ trống nào) thay vì thiếu key hoặc lỗi.
+        # Vùng 1 pixel duy nhất: không có chỗ trống nào, phải trả về radius 0 thay vì thiếu
+        # key hoặc lỗi.
         points = [(5, 5)]
         bbox = get_region_bbox(points)
         centroid = get_region_centroid(points)
@@ -1176,6 +1275,209 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(5.0, anchor["x"])
         self.assertEqual(5.0, anchor["y"])
         self.assertEqual(0.0, anchor["radius"])
+
+    def test_subdivide_splits_big_region_into_contiguous_cells_of_target_size(self):
+        # Mảng vuông 300x300 = 90.000px, ô mục tiêu 10.000px -> khoảng 9 ô.
+        points = [(x, y) for y in range(300) for x in range(300)]
+
+        cells = subdivide_region_into_cells(points, target_cell_area=10000)
+
+        self.assertGreaterEqual(len(cells), 6)
+        self.assertLessEqual(len(cells), 12)
+        # Phủ đúng một lần, không mất cũng không trùng pixel nào.
+        flat = [p for cell in cells for p in cell]
+        self.assertEqual(len(points), len(flat))
+        self.assertEqual(set(points), set(flat))
+        # Mỗi ô phải LIỀN MẠCH — nếu không, một số lại ứng với nhiều mẩu rời rạc.
+        for cell in cells:
+            self.assertTrue(self.is_contiguous(cell), f"ô {len(cell)}px bị đứt rời")
+
+    def test_subdivide_leaves_no_cell_too_small_to_tap(self):
+        # Hình chữ L lõm: lưới hạt giống chắc chắn để lại mẩu vụn ở rìa, phải được gộp lại.
+        points = [(x, y) for y in range(200) for x in range(200) if x < 90 or y < 90]
+
+        cells = subdivide_region_into_cells(points, target_cell_area=10000)
+
+        for cell in cells:
+            self.assertGreaterEqual(
+                len(cell), 10000 // 3, f"còn ô {len(cell)}px — quá nhỏ để tap"
+            )
+
+    def test_subdivide_leaves_small_region_alone(self):
+        points = [(x, y) for y in range(50) for x in range(50)]
+
+        self.assertEqual(
+            [points], subdivide_region_into_cells(points, target_cell_area=10000)
+        )
+
+    def test_subdivided_cells_keep_parent_colour_so_they_share_one_number(self):
+        # Các ô con phải giữ NGUYÊN màu vùng gốc. Nếu đo lại màu từng ô, mỗi ô sẽ lệch một
+        # chút rồi rơi vào số khác nhau, biến mảng nền phẳng thành đám loang lổ.
+        points = [(x, y) for y in range(200) for x in range(200)]
+        parent = self.make_region_info(points, (33, 77, 190))
+        parent["representative_color"] = (33, 77, 190)
+
+        cells, seams, stats = subdivide_giant_regions_into_cells(
+            region_infos=[parent],
+            target_cell_area=10000,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+        )
+
+        self.assertEqual(1, stats["cell_subdivided_region_count"])
+        self.assertGreater(len(cells), 1)
+        for cell in cells:
+            self.assertEqual((33, 77, 190), cell["target_color"])
+        # Có đường ranh để user phân biệt được ô, và nó nằm trong vùng.
+        self.assertTrue(seams)
+        self.assertTrue(seams <= set(points))
+
+    def test_seam_is_a_faint_line_not_a_real_stroke(self):
+        # Vẽ đè lên ảnh nét: seam phải là xám nhạt (thấy được khi chơi, gần như chìm trên
+        # tranh hoàn thành), và KHÔNG được ghi đè nét mực thật đang có.
+        line = Image.new("RGB", (10, 10), (255, 255, 255))
+        line.putpixel((0, 0), (0, 0, 0))
+
+        paint_cell_seams_on_line_image(line, {(0, 0), (5, 5)})
+
+        self.assertEqual((0, 0, 0), line.getpixel((0, 0)))
+        seam = line.getpixel((5, 5))
+        self.assertEqual((CELL_SEAM_LINE_VALUE,) * 3, seam)
+        self.assertLess(seam[0], 255)
+        self.assertGreater(seam[0], 200)
+
+    def is_contiguous(self, points):
+        remaining = set(points)
+        start = next(iter(remaining))
+        queue = [start]
+        remaining.discard(start)
+        while queue:
+            x, y = queue.pop()
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                neighbor = (x + dx, y + dy)
+                if neighbor in remaining:
+                    remaining.discard(neighbor)
+                    queue.append(neighbor)
+        return not remaining
+
+    def test_find_label_anchor_picks_roomy_blob_not_long_thin_strip(self):
+        # Hình chữ L: khối vuông 21x21 rộng rãi ở góc trên-trái, nối bằng cuống mảnh xuống
+        # một dải ngang 401x3 ở đáy. Cách chấm điểm CŨ dùng TỔNG độ dài 8 tia nên điểm giữa
+        # dải ngang thắng tuyệt đối (2 tia dọc trục dài 400px), rồi báo radius = MIN của 8
+        # tia tại chính điểm đó = 0.0 -> app không bao giờ hiện số cho cả vùng, dù vùng có
+        # hẳn một khối 21x21 thừa chỗ. Đây đúng là dạng lỗi đo được trên data thật (vùng
+        # 39k pixel bị báo radius 1.0 trong khi radius thật là 55).
+        blob = [(x, y) for y in range(0, 21) for x in range(0, 21)]
+        stem = [(x, y) for y in range(21, 100) for x in range(0, 3)]
+        strip = [(x, y) for y in range(100, 103) for x in range(0, 401)]
+        points = sorted(set(blob + stem + strip))
+        bbox = get_region_bbox(points)
+        centroid = get_region_centroid(points)
+
+        anchor = find_label_anchor(points, bbox, centroid)
+
+        self.assertGreaterEqual(anchor["radius"], 8)
+        self.assertTrue(
+            anchor["x"] <= 20 and anchor["y"] <= 20,
+            f"anchor phải nằm trong khối vuông rộng rãi, nhận được {anchor}",
+        )
+
+    def test_find_label_anchor_never_reports_more_room_than_really_exists(self):
+        # Bất biến cốt lõi: radius là bán kính hình tròn vẽ được TẠI CHÍNH anchor. Vòng tròn
+        # bán kính đó quanh anchor phải nằm trọn trong vùng — nếu không, app sẽ vẽ số tràn
+        # ra ngoài vùng. Kiểm trên hình vành khăn (bbox lớn, thịt hẹp, có lỗ ở giữa).
+        points = [
+            (x, y)
+            for y in range(60)
+            for x in range(60)
+            if 100 <= (x - 30) ** 2 + (y - 30) ** 2 <= 400
+        ]
+        bbox = get_region_bbox(points)
+        centroid = get_region_centroid(points)
+
+        anchor = find_label_anchor(points, bbox, centroid)
+        region_set = set(points)
+        radius = int(anchor["radius"])
+
+        self.assertIn((int(anchor["x"]), int(anchor["y"])), region_set)
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if dx * dx + dy * dy > radius * radius:
+                    continue
+                self.assertIn(
+                    (int(anchor["x"]) + dx, int(anchor["y"]) + dy),
+                    region_set,
+                    f"radius {anchor['radius']} tràn ra ngoài vùng tại lệch ({dx},{dy})",
+                )
+
+    def test_thickness_diameter_catches_thin_arc_that_bbox_min_side_calls_comfortable(self):
+        # Vòng cung dày 3px nằm trong bbox 40x40: bbox_min_side = 40 (rộng rãi), nhưng bề
+        # ngang thật chỉ 3px. Đây đúng là loại vùng lọt lưới mọi cổng lọc cũ.
+        points = [
+            (x, y)
+            for y in range(40)
+            for x in range(40)
+            if 256 <= (x - 20) ** 2 + (y - 20) ** 2 <= 400 and y <= 20
+        ]
+        info = self.make_region_info(points, (10, 20, 30))
+        info["label_anchor"] = find_label_anchor(points, info["bbox"], info["centroid"])
+
+        self.assertGreaterEqual(bbox_min_side(info["bbox"]), 20)
+        self.assertLess(region_thickness_diameter(info), 6)
+        self.assertTrue(is_micro_region(info, tiny_merge_min_area=1, tiny_merge_min_side=6))
+
+    def test_thickness_diameter_falls_back_to_bbox_when_anchor_has_no_radius(self):
+        # Đường candidate-scoring rẻ (skip_label_anchor=True) đặt label_anchor = centroid,
+        # không có radius — phải quay về bbox_min_side thay vì nổ KeyError.
+        points = [(x, y) for y in range(6) for x in range(9)]
+        info = self.make_region_info(points, (10, 20, 30))
+
+        self.assertNotIn("radius", info["label_anchor"])
+        self.assertEqual(6, region_thickness_diameter(info))
+
+    def test_hide_number_stays_off_for_thin_region_that_zoom_can_still_reveal(self):
+        # Vùng dày 9px: hẹp ở zoom mặc định nhưng radius ~4 nên app chỉ cần zoom ~6x là hiện
+        # số (PaintCanvasView cho tới 20x). hide_number là ẩn VĨNH VIỄN nên không được bật ở
+        # đây — chỉ vùng không zoom nào cứu được mới bị ẩn.
+        points = [(x, y) for y in range(9) for x in range(400)]
+        info = self.make_region_info(points, (10, 20, 30))
+        info["label_anchor"] = find_label_anchor(points, info["bbox"], info["centroid"])
+
+        update_region_classification(
+            info=info,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+            unreadable_radius_px=1.5,
+        )
+
+        # Vẫn bị coi là "hẹp" cho mục đích gộp/thống kê...
+        self.assertTrue(info["is_tiny_display_region"])
+        # ...nhưng số thì không bị ẩn vĩnh viễn.
+        self.assertFalse(info["hide_number"])
+
+    def test_hide_number_turns_on_when_no_zoom_can_reveal_the_label(self):
+        # Dải dày 1px: radius 0 -> ngay cả zoom tối đa cũng không đủ chỗ vẽ số.
+        points = [(x, 0) for x in range(400)]
+        info = self.make_region_info(points, (10, 20, 30))
+        info["label_anchor"] = find_label_anchor(points, info["bbox"], info["centroid"])
+
+        update_region_classification(
+            info=info,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=10,
+            tiny_merge_min_area=48,
+            tiny_merge_min_side=6,
+            unreadable_radius_px=1.5,
+        )
+
+        self.assertTrue(info["hide_number"])
 
     def test_split_remaining_giant_regions_leaves_region_not_formed_by_merge_untouched(self):
         width, height = 20, 10
@@ -1337,16 +1639,26 @@ class UntouchableRegionMergeTest(unittest.TestCase):
         self.assertEqual(0, merged_count)
         self.assertEqual(2, len(merged))
 
-    def test_min_touch_bbox_side_defaults_to_max_zoom_playability(self):
-        # Ngưỡng suy ngược từ 24dp + tỷ lệ fit, không phải hằng số cứng, để data với ảnh
-        # kích thước khác nhau vẫn ra ngưỡng đúng.
+    def test_min_touch_bbox_side_scales_with_canvas_and_stays_a_real_touch_target(self):
+        # Ngưỡng suy ngược từ 24dp + density màn hình tham chiếu + tỷ lệ fit, không phải
+        # hằng số cứng, để data với ảnh kích thước khác nhau vẫn ra ngưỡng đúng.
         small = resolve_min_touch_bbox_side(512, 512)
         medium = resolve_min_touch_bbox_side(1024, 1024)
         large = resolve_min_touch_bbox_side(2048, 2048)
 
         self.assertLess(small, medium)
         self.assertLess(medium, large)
-        self.assertEqual(2, medium)
+        self.assertEqual(12, medium)
+
+    def test_min_touch_bbox_side_counts_dp_at_screen_density_not_as_raw_pixels(self):
+        # 24dp KHÔNG phải 24 pixel: khung xem tham chiếu 1080px ứng với 360dp nên density
+        # là 3. Bỏ quên hệ số này là lý do ngưỡng cũ ra 2px — nhỏ tới mức bước gộp vùng
+        # không chạm được chưa từng gộp nổi vùng nào trên toàn bộ data (0/4711).
+        with_density = resolve_min_touch_bbox_side(1024, 1024)
+        as_raw_pixels = resolve_min_touch_bbox_side(1024, 1024, screen_density=1.0)
+
+        self.assertEqual(3, round(with_density / as_raw_pixels))
+        self.assertGreaterEqual(with_density, 8)
 
     def test_assumed_zoom_one_requires_bigger_regions_than_zoom_two(self):
         no_zoom = resolve_min_touch_bbox_side(1024, 1024, assumed_zoom=1.0)

@@ -21,6 +21,7 @@ import com.example.baseproject.databinding.ActivityPaintBinding
 import com.example.baseproject.ui.paint.PaintUiEvent
 import com.example.baseproject.ui.paint.PaintUiState
 import com.example.baseproject.ui.paint.PaintViewModel
+import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.SharedPrefManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -46,7 +47,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     private lateinit var adapter: PaletteAdapter
     private var currentRenderKey: String? = null
-    private var lastSelectedIndex: Int = -1
     private var lastCompletedMaskColors: Set<Int> = emptySet()
     private var category: String? = null
     private var levelId: String? = null
@@ -125,9 +125,12 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             if (state.isLoading && !isGuideVisible) View.VISIBLE else View.GONE
 //        binding.tvTitle.text = state.title
 
-        if (state.palette.isNotEmpty() && (!this::adapter.isInitialized || adapter.itemCount != state.palette.size)) {
-            adapter = PaletteAdapter(state.palette) { position, _ ->
-                viewModel.onPaletteSelected(position)
+        if (state.palette.isNotEmpty() && (!this::adapter.isInitialized || adapter.sourceItemCount != state.palette.size)) {
+            adapter = PaletteAdapter(
+                items = state.palette,
+                removeCompletedColors = Constants.REMOVE_COMPLETED_COLORS_FROM_PALETTE
+            ) { originalIndex, _ ->
+                viewModel.onPaletteSelected(originalIndex)
             }
             binding.rvPalette.adapter = adapter
         }
@@ -138,10 +141,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                 completedIndexes = state.completedIndexes,
                 paletteProgress = state.paletteProgress
             )
-
-            if (lastSelectedIndex != state.selectedPaletteIndex && state.selectedPaletteIndex in 0 until adapter.itemCount) {
-                binding.rvPalette.smoothScrollToPosition(state.selectedPaletteIndex)
-            }
         }
 
         val renderData = state.renderData
@@ -180,7 +179,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         }
 
         updateFullPreviewVisibility()
-        lastSelectedIndex = state.selectedPaletteIndex
         lastCompletedMaskColors = state.completedMaskColors
     }
 

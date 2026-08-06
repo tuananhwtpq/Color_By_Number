@@ -37,6 +37,15 @@ def text(row, key):
     return row.get(key, "") or ""
 
 
+def format_number(value, digits=1):
+    if value in ("", "-", None):
+        return ""
+    try:
+        return f"{float(value):.{digits}f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
 def has_issue(row, code):
     return code in (text(row, "fail_reasons") + "," + text(row, "warnings"))
 
@@ -159,6 +168,84 @@ def classify_for_designer(row):
     }
 
 
+def classify_compact_issue(row):
+    largest = number(row, "largest_region_pct")
+    top2 = number(row, "top_2_region_pct")
+    hidden = number(row, "estimated_hidden_label_pct") or number(row, "hidden_label_pct")
+    tiny100 = number(row, "tiny_region_pct_lt_100")
+    region_drop = number(row, "region_count_drop_pct")
+    final_regions = number(row, "final_region_count") or number(row, "regions")
+    similarity = number(row, "preview_similarity_score")
+    overmerge_risk = text(row, "overmerge_risk")
+    legitimacy = text(row, "giant_region_legitimacy")
+
+    tags = []
+    if largest >= 25 or top2 >= 45:
+        tags.append("large_regions")
+    elif largest >= 18:
+        tags.append("large_region_review")
+
+    if region_drop > 80 or overmerge_risk == "high":
+        tags.append("overmerge")
+    elif region_drop > 65 or overmerge_risk == "medium":
+        tags.append("overmerge_review")
+
+    if hidden > 80 or tiny100 > 45:
+        tags.append("tiny_regions")
+    elif hidden > 50:
+        tags.append("many_hidden_labels")
+
+    if final_regions < 80:
+        tags.append("too_few_regions")
+    elif final_regions < 120:
+        tags.append("low_region_count")
+
+    if similarity and similarity < 93:
+        tags.append("color_fidelity")
+
+    if legitimacy == "intentional_flat_background" and "large_regions" in tags:
+        tags.append("flat_background_possible")
+
+    if "large_regions" in tags and "overmerge" in tags:
+        decision = "replace_or_redraw"
+    elif "tiny_regions" in tags or "too_few_regions" in tags:
+        decision = "replace_or_redraw"
+    elif any(tag in tags for tag in ("large_regions", "overmerge", "many_hidden_labels")):
+        decision = "designer_review"
+    elif any(tag.endswith("_review") for tag in tags) or "low_region_count" in tags:
+        decision = "quick_review"
+    else:
+        decision = "keep"
+
+    return {
+        "decision": decision,
+        "issue_tags": ";".join(dict.fromkeys(tags)) or "ok",
+    }
+
+
+def top_region_stats(level_dir):
+    config_path = os.path.join(level_dir, "config.json")
+    if not os.path.exists(config_path):
+        return {"top_2_region_pct": "", "final_region_count_from_config": ""}
+    try:
+        config = load_json(config_path)
+    except (OSError, json.JSONDecodeError):
+        return {"top_2_region_pct": "", "final_region_count_from_config": ""}
+
+    width = int(config.get("width") or 0)
+    height = int(config.get("height") or 0)
+    total_pixels = max(1, width * height)
+    areas = sorted(
+        (int(region.get("area") or 0) for region in config.get("regions", [])),
+        reverse=True,
+    )
+    top_2_pct = round(sum(areas[:2]) * 100.0 / total_pixels, 2) if areas else ""
+    return {
+        "top_2_region_pct": top_2_pct,
+        "final_region_count_from_config": len(areas),
+    }
+
+
 def collect_rows(assets_path, data_root, require_reference=False):
     root_path = os.path.abspath(assets_path)
     rows = []
@@ -202,14 +289,56 @@ def collect_rows(assets_path, data_root, require_reference=False):
         flat["tiny_region_pct_lt_100"] = metrics.get("tiny_region_pct_lt_100", "")
         flat["overmerge_risk"] = metrics.get("overmerge_risk", "")
         flat["level_key"] = f"{category}/{level}"
+        flat.update(top_region_stats(level_dir))
+        if not flat.get("final_region_count") and flat.get("final_region_count_from_config"):
+            flat["final_region_count"] = flat["final_region_count_from_config"]
         flat.update(classify_for_designer(flat))
+        flat.update(classify_compact_issue(flat))
         rows.append(flat)
     return rows
 
 
-def write_csv(rows, output_path):
+COMPACT_FIELDS = [
+    "level_key",
+    "decision",
+    "issue_tags",
+    "grade",
+    "score",
+    "final_region_count",
+    "largest_region_pct",
+    "top_2_region_pct",
+    "region_count_drop_pct",
+    "hidden_label_pct",
+]
+
+
+def compact_row(row):
+    return {
+        "level_key": row.get("level_key", ""),
+        "decision": row.get("decision", ""),
+        "issue_tags": row.get("issue_tags", ""),
+        "grade": row.get("grade", ""),
+        "score": format_number(row.get("score"), digits=0),
+        "final_region_count": format_number(row.get("final_region_count"), digits=0),
+        "largest_region_pct": format_number(row.get("largest_region_pct"), digits=1),
+        "top_2_region_pct": format_number(row.get("top_2_region_pct"), digits=1),
+        "region_count_drop_pct": format_number(row.get("region_count_drop_pct"), digits=1),
+        "hidden_label_pct": format_number(row.get("hidden_label_pct"), digits=1),
+    }
+
+
+def write_csv(rows, output_path, compact=True):
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    if compact:
+        with open(output_path, "w", newline="", encoding="utf-8") as output_file:
+            writer = csv.DictWriter(output_file, fieldnames=COMPACT_FIELDS)
+            writer.writeheader()
+            writer.writerows(compact_row(row) for row in rows)
+        return
+
     preferred_fields = [
+        "decision",
+        "issue_tags",
         "priority",
         "designer_status",
         "owner",
@@ -229,6 +358,7 @@ def write_csv(rows, output_path):
         "final_region_count",
         "region_count_drop_pct",
         "largest_region_pct",
+        "top_2_region_pct",
         "giant_region_legitimacy",
         "giant_region_reference_color_std",
         "hidden_label_pct",
@@ -280,12 +410,17 @@ def main():
         action="store_true",
         help="Fail report nếu không tìm thấy ảnh màu gốc.",
     )
+    parser.add_argument(
+        "--wide",
+        action="store_true",
+        help="Xuất CSV đầy đủ tất cả metric cũ. Mặc định là bản gọn 10 cột để lọc designer.",
+    )
     args = parser.parse_args()
 
     rows = collect_rows(args.assets_path, args.data_root, require_reference=args.require_reference)
     if not rows:
         raise SystemExit("Không tìm thấy level asset nào để export.")
-    write_csv(rows, args.output)
+    write_csv(rows, args.output, compact=not args.wide)
 
     counts = {}
     for row in rows:

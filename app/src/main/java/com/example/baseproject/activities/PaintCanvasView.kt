@@ -46,6 +46,20 @@ class PaintCanvasView @JvmOverloads constructor(
         // nhưng chữ phải co lại theo đúng khoảng trống thật để không tràn ra ngoài — hệ số
         // này nhân với bán kính an toàn trên màn hình để ra cỡ chữ tối đa cho phép.
         private const val LABEL_SAFE_RADIUS_FACTOR = 1.3f
+
+        // Đường ranh giữa hai ô được tách ra từ cùng một mảng lớn. line.png vốn CHỈ có 0
+        // (mực) và 255 (giấy), nên 235 là giá trị trung gian duy nhất — nhận ra pixel seam
+        // ngay từ chính line.png, khỏi cần asset riêng hay thêm bộ nhớ. Phải khớp với
+        // CELL_SEAM_LINE_VALUE trong tools/generate_level.py (ghi lại trong config ở khoá
+        // generation.cell_seam_line_value).
+        private const val SEAM_LINE_VALUE = 235
+        private const val SEAM_LINE_COLOR = 0xFFEBEBEB.toInt()
+        private const val SEAM_LINE_HIDDEN_COLOR = 0xFFFFFFFF.toInt()
+
+        // mask.png tô nền đen cho mọi pixel KHÔNG thuộc vùng nào (nét mực). getPixels trả về
+        // ARGB nên giá trị đó là 0xFF000000 chứ không phải 0 — nhầm chỗ này thì mọi pixel
+        // seam nằm sát viền mực đều bị coi là "còn hàng xóm chưa tô" và không bao giờ ẩn.
+        private const val MASK_BACKGROUND_COLOR = 0xFF000000.toInt()
     }
 
     private var lineBitmap: Bitmap? = null
@@ -96,6 +110,11 @@ class PaintCanvasView @JvmOverloads constructor(
     private var regions: List<RegionData> = emptyList()
     private val labelPointBuffer = FloatArray(2)
     private var completedMaskColors: Set<Int> = emptySet()
+
+    // Vị trí các pixel seam, chụp lại một lần lúc nạp ảnh. Vài nghìn phần tử (đo trên data:
+    // ~8900 trên canvas 1024) nên rẻ hơn hẳn việc quét lại cả triệu pixel mỗi lần đổi trạng
+    // thái, và cần thiết vì khi ẩn seam ta ghi đè giá trị 235 nên mất dấu vị trí gốc.
+    private var seamPixelIndices: IntArray = IntArray(0)
 
     private var currentValidMaskColors: Map<Int, Int> = emptyMap()
     private var highlightTheme: HighlightTheme = HighlightThemes.defaultChecker()
@@ -184,11 +203,33 @@ class PaintCanvasView @JvmOverloads constructor(
             val lp = IntArray(w * h)
             line.getPixels(lp, 0, w, 0, 0, w, h)
 
+            // Ghi lại vị trí seam để sau này bật/tắt được. Chỉ level có mảng lớn bị chia ô
+            // mới có seam; level không có thì mảng rỗng và toàn bộ phần này không tốn gì.
+            var seamCount = 0
+            for (pixel in lp) {
+                if (isSeamPixelValue(pixel)) seamCount++
+            }
+            val seams = IntArray(seamCount)
+            var seamCursor = 0
+            for (i in lp.indices) {
+                if (isSeamPixelValue(lp[i])) seams[seamCursor++] = i
+            }
+
+            // Chỉ cần bitmap ghi được khi thật sự có seam để bật/tắt. Không copy vô ích cho
+            // level thường, và KHÔNG recycle bản gốc vì nó còn được dùng chỗ khác
+            // (ensureFullPreviewBitmap trong PaintActivity dùng chung đúng bitmap này).
+            val drawableLine = if (seamCount > 0 && !line.isMutable) {
+                line.copy(Bitmap.Config.ARGB_8888, true)
+            } else {
+                line
+            }
+
             // Giải phóng maskBitmap để tiết kiệm 4.6MB RAM
             mask.recycle()
 
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                lineBitmap = line
+                seamPixelIndices = seams
+                lineBitmap = drawableLine
                 maskWidth = w
                 maskHeight = h
                 regions = regionsData
@@ -377,9 +418,76 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     fun setCompletedRegions(completed: Set<Int>) {
+        val changed = this.completedMaskColors != completed
         this.completedMaskColors = completed
+        if (changed) {
+            updateSeamVisibility()
+        }
         invalidate()
     }
+
+    private fun isSeamPixelValue(pixel: Int): Boolean =
+        (pixel shr 16 and 0xFF) == SEAM_LINE_VALUE &&
+            (pixel shr 8 and 0xFF) == SEAM_LINE_VALUE &&
+            (pixel and 0xFF) == SEAM_LINE_VALUE
+
+    /**
+     * Ẩn đường ranh giữa hai ô khi CẢ HAI đã được tô, hiện lại khi còn ít nhất một ô chưa tô.
+     *
+     * Hai ô tách ra từ cùng một mảng lớn mang cùng một màu, nên khi tô xong đường ranh chỉ
+     * còn là vết bẩn trên tranh — ẩn đi thì bức tranh hoàn thành đúng bằng màu gốc. Ngược
+     * lại, khi còn ô chưa tô thì đường ranh là thứ DUY NHẤT cho user biết ô tiếp theo nằm
+     * đâu (hai ô cùng màu, chưa tô thì đều trắng), nên phải giữ.
+     *
+     * Chỉ quét đúng các pixel seam đã ghi nhận sẵn nên chi phí không đáng kể; phần tốn nhất
+     * là một lần setPixels, và nó chỉ chạy khi tập vùng đã tô thật sự đổi.
+     */
+    private fun updateSeamVisibility() {
+        if (seamPixelIndices.isEmpty()) return
+        val linePx = linePixelsArray ?: return
+        val maskPx = maskPixelsArray ?: return
+        val bitmap = lineBitmap ?: return
+        if (!bitmap.isMutable) return
+        val w = maskWidth
+        val h = maskHeight
+
+        var dirty = false
+        for (index in seamPixelIndices) {
+            val ownMask = maskPx[index]
+            var visible = !isRegionMask(ownMask) || !completedMaskColors.contains(ownMask)
+
+            if (!visible) {
+                val x = index % w
+                val y = index / w
+                if (x > 0) visible = isUnfilledNeighbour(maskPx[index - 1], ownMask)
+                if (!visible && x < w - 1) visible = isUnfilledNeighbour(maskPx[index + 1], ownMask)
+                if (!visible && y > 0) visible = isUnfilledNeighbour(maskPx[index - w], ownMask)
+                if (!visible && y < h - 1) visible = isUnfilledNeighbour(maskPx[index + w], ownMask)
+            }
+
+            val wanted = if (visible) SEAM_LINE_COLOR else SEAM_LINE_HIDDEN_COLOR
+            if (linePx[index] != wanted) {
+                linePx[index] = wanted
+                dirty = true
+            }
+        }
+
+        if (dirty) {
+            bitmap.setPixels(linePx, 0, w, 0, 0, w, h)
+        }
+    }
+
+    private fun isRegionMask(maskColor: Int): Boolean =
+        maskColor != 0 && maskColor != MASK_BACKGROUND_COLOR
+
+    /**
+     * Hàng xóm là một Ô KHÁC và ô đó chưa được tô. Pixel nền/nét mực không tính — chúng
+     * không bao giờ được "tô" nên nếu tính vào thì seam sát viền sẽ hiện vĩnh viễn.
+     */
+    private fun isUnfilledNeighbour(neighbourMask: Int, ownMask: Int): Boolean =
+        isRegionMask(neighbourMask) &&
+            neighbourMask != ownMask &&
+            !completedMaskColors.contains(neighbourMask)
 
     private fun revealDetailForMaskColor(maskColor: Int) {
         val maskPx = maskPixelsArray ?: return

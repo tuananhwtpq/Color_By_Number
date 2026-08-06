@@ -59,7 +59,7 @@ class PaintViewModel(
                 val paletteProgress = calculatePaletteProgress(completedMaskColors)
                 val completedIndexes = calculateCompletedIndexes(completedMaskColors)
                 val selectedIndex =
-                    uniqueColors.indices.firstOrNull { it !in completedIndexes } ?: 0
+                    uniqueColors.indices.firstOrNull { it !in completedIndexes } ?: -1
 
                 _uiState.update {
                     it.copy(
@@ -148,16 +148,15 @@ class PaintViewModel(
         paintingProgressRepository.resetProgress(category, levelId)
         thumbnailRepository.deleteThumbnail(category, levelId)
 
-        val selectedIndex = if (uniqueColors.isNotEmpty()) 0 else 0
         _uiState.update {
             it.copy(
                 paletteProgress = List(uniqueColors.size) { 0f },
-                selectedPaletteIndex = selectedIndex,
+                selectedPaletteIndex = -1,
                 completedMaskColors = emptySet(),
                 completedColorMap = emptyMap(),
                 completedIndexes = emptySet(),
-                highlightMaskColors = highlightForIndex(selectedIndex, emptySet()),
-                activeColors = activeColorsForIndex(selectedIndex)
+                highlightMaskColors = emptyList(),
+                activeColors = emptyMap()
             )
         }
     }
@@ -176,17 +175,15 @@ class PaintViewModel(
 
         val paletteProgress = calculatePaletteProgress(newCompleted)
         val completedIndexes = calculateCompletedIndexes(newCompleted)
-        var selectedIndex = _uiState.value.selectedPaletteIndex
+        val selectedIndex = _uiState.value.selectedPaletteIndex
         val selectedColor = uniqueColors.getOrNull(selectedIndex)
-        if (selectedColor != null) {
+        val isSelectedColorCompleted = if (selectedColor != null) {
             val validRegions = allRegions.filter { it.number == selectedColor.number }
-            val isSelectedColorCompleted =
-                validRegions.all { newCompleted.contains(it.getMaskColorInt()) }
-            if (isSelectedColorCompleted) {
-                selectedIndex =
-                    uniqueColors.indices.firstOrNull { it !in completedIndexes } ?: selectedIndex
-            }
+            validRegions.all { newCompleted.contains(it.getMaskColorInt()) }
+        } else {
+            false
         }
+        val nextSelectedIndex = if (isSelectedColorCompleted) -1 else selectedIndex
 
         _uiState.update {
             it.copy(
@@ -194,16 +191,16 @@ class PaintViewModel(
                 completedMaskColors = newCompleted,
                 completedColorMap = completedColorMap(newCompleted),
                 completedIndexes = completedIndexes,
-                selectedPaletteIndex = selectedIndex,
-                highlightMaskColors = if (completedIndexes.size == uniqueColors.size) {
+                selectedPaletteIndex = nextSelectedIndex,
+                highlightMaskColors = if (nextSelectedIndex == -1 || completedIndexes.size == uniqueColors.size) {
                     emptyList()
                 } else {
-                    highlightForIndex(selectedIndex, newCompleted)
+                    highlightForIndex(nextSelectedIndex, newCompleted)
                 },
-                activeColors = if (completedIndexes.size == uniqueColors.size) {
+                activeColors = if (nextSelectedIndex == -1 || completedIndexes.size == uniqueColors.size) {
                     emptyMap()
                 } else {
-                    activeColorsForIndex(selectedIndex)
+                    activeColorsForIndex(nextSelectedIndex)
                 }
             )
         }

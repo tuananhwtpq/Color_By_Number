@@ -138,6 +138,12 @@ def resolve_target_unique_colors(category_name, requested_profile=None, explicit
 # Các khoá ngưỡng "vùng nhỏ" theo pixel thô, cần hiệu chỉnh theo độ phân giải ảnh nguồn
 # thực tế (screen_scale) để giữ đúng kích thước hiển thị trên màn hình — side-based nhân
 # 1 lần theo scale, area-based nhân bình phương (vì area ~ side^2).
+# Số pixel mực tối đa được phép "nhìn xuyên qua" khi một vùng không chạm trực tiếp vùng nào
+# (xem find_adjacent_region_indices). Đo phân bố bề rộng khe mực giữa 2 vùng trên data thật:
+# 4px phủ 78-90% số ranh giới, trong khi nét viền cố ý dày — thứ thật sự nên tách 2 vật thể
+# khác nhau — luôn dày hơn mức này.
+DEFAULT_INK_GAP_ATTACH_PX = 4
+
 SCREEN_SCALE_SIDE_KEYS = ("tiny_region_side_threshold", "tiny_merge_min_side")
 SCREEN_SCALE_AREA_KEYS = ("min_region_area", "hide_small_label_threshold", "tiny_merge_min_area")
 
@@ -385,6 +391,7 @@ def estimate_post_merge_region_stats(
     small_merge_color_threshold,
     tiny_merge_policy,
     profile,
+    ink_gap_attach_px=DEFAULT_INK_GAP_ATTACH_PX,
 ):
     """Ước lượng region_infos SAU khi chạy merge_tiny_regions_into_neighbors +
     merge_small_attached_regions, để candidate scoring nhìn thấy hệ quả gộp vùng
@@ -434,7 +441,7 @@ def estimate_post_merge_region_stats(
         tiny_side_threshold=tiny_side_threshold,
         tiny_merge_min_area=tiny_merge_min_area,
         tiny_merge_min_side=tiny_merge_min_side,
-        attach_distance=0,
+        attach_distance=ink_gap_attach_px,
         color_threshold=tiny_merge_color_threshold,
         tiny_merge_policy=tiny_merge_policy,
         profile=profile,
@@ -444,7 +451,7 @@ def estimate_post_merge_region_stats(
     region_infos, _ = merge_small_attached_regions(
         region_infos=region_infos,
         min_region_area=min_region_area,
-        attach_distance=0,
+        attach_distance=ink_gap_attach_px,
         color_threshold=small_merge_color_threshold,
         tiny_area_threshold=tiny_area_threshold,
         tiny_side_threshold=tiny_side_threshold,
@@ -1110,80 +1117,397 @@ LABEL_UNREADABLE_RADIUS_PX = 1.5
 DEFAULT_LABEL_GATE_MAX_HIDDEN_PCT = 80.0
 
 
-def point_inscribed_radius(region_set, x, y, directions):
-    """Bán kính hình tròn lớn nhất có thể vẽ tại (x, y) mà không tràn ra khỏi region_set —
-    lấy MIN (không phải SUM) khoảng cách theo từng hướng trong directions, vì hình tròn bị
-    giới hạn bởi hướng hẹp nhất. Dùng để biết chính xác có bao nhiêu chỗ trống thật tại 1
-    điểm, thay vì suy đoán qua bounding box (sai với vùng hình lưỡi liềm/dải dài cong — bbox
-    có thể rất lớn dù "thịt" vùng tại điểm đó rất hẹp).
-    """
-    min_step = None
-    for dx, dy in directions:
-        step = 0
-        while True:
-            nx = x + dx * (step + 1)
-            ny = y + dy * (step + 1)
-            if (nx, ny) not in region_set:
-                break
-            step += 1
-        if min_step is None or step < min_step:
-            min_step = step
-    return float(min_step or 0)
-
-
-def centroid_fallback(region, centroid):
-    best_point = region[0]
-    best_distance = None
-    for point in region:
-        distance = (point[0] - centroid["x"]) ** 2 + (point[1] - centroid["y"]) ** 2
-        if best_distance is None or distance < best_distance:
-            best_distance = distance
-            best_point = point
-    return {"x": float(best_point[0]), "y": float(best_point[1])}
+# Chi phí bước đi của chamfer distance transform, xấp xỉ khoảng cách Euclid bằng số
+# nguyên: đi ngang/dọc tốn 3, đi chéo tốn 4 (4/3 = 1.333, xấp xỉ căn 2 = 1.414). Chia lại
+# cho 3 ở cuối để ra khoảng cách tính theo pixel.
+CHAMFER_ORTHOGONAL_COST = 3
+CHAMFER_DIAGONAL_COST = 4
 
 
 def find_label_anchor(region, bbox, centroid):
-    region_set = set(region)
-    width = bbox["right"] - bbox["left"] + 1
-    height = bbox["bottom"] - bbox["top"] + 1
-    sample_stride = max(1, int(math.sqrt(max(1, len(region) // 250))))
+    """Đặt số tại điểm RỘNG RÃI NHẤT của vùng (pole of inaccessibility), kèm bán kính
+    chỗ trống thật tại đó.
 
-    best_point = None
-    best_score = -1
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, -1), (-1, 1), (1, 1)]
+    Cách cũ chấm điểm ứng viên bằng TỔNG độ dài 8 tia rồi lại báo cáo radius bằng MIN của
+    chính 8 tia đó — hai hàm mục tiêu ngược nhau. Điểm nằm giữa một dải dài hẹp có tổng
+    rất lớn (2 tia dọc trục dài mênh mông) nhưng min gần 0, nên thuật toán chủ động chọn
+    đúng chỗ tệ nhất để đặt số rồi báo radius của chỗ tệ đó. Đo trên data thật: 12.4% vùng
+    bị báo thiếu radius quá 2 lần, cá biệt vùng 39k pixel có radius thật 55 bị báo là 1.0.
+    Vì app dùng chính con số này để quyết định hiện số (PaintCanvasView:
+    radius * scaleFactor >= 25) nên sai số đó đẩy thẳng vào trải nghiệm: số hiện muộn hơn
+    mức cần thiết, hoặc không bao giờ hiện.
 
-    for index, point in enumerate(region):
-        if index % sample_stride != 0:
+    Ở đây dùng distance transform: tính một lần khoảng cách từ MỌI pixel trong vùng tới
+    biên gần nhất, rồi lấy điểm xa biên nhất. Đó đúng là tâm hình tròn nội tiếp lớn nhất —
+    vừa là chỗ đặt số hợp lý nhất, vừa cho radius nhất quán với điểm được chọn. Chamfer 2
+    lượt quét nên chi phí O(diện tích bbox) thay vì O(số điểm mẫu × độ dài tia).
+
+    radius giữ nguyên ĐƠN VỊ CŨ ("số pixel trống quanh điểm", pixel sát biên = 0) để mọi
+    ngưỡng đã tinh chỉnh theo nó — kể cả MIN_SCREEN_RADIUS_TO_SHOW_LABEL bên Kotlin — không
+    phải hiệu chỉnh lại.
+    """
+    left = bbox["left"]
+    top = bbox["top"]
+    # Đệm 1 pixel mỗi phía: viền đệm giữ giá trị 0 nên tự đóng vai trò "bên ngoài vùng",
+    # khỏi phải kiểm tra biên trong vòng lặp nóng.
+    grid_width = bbox["right"] - left + 3
+    grid_height = bbox["bottom"] - top + 3
+    unset = 1 << 28
+
+    distances = [0] * (grid_width * grid_height)
+    # Mỗi hàng chỉ quét đúng đoạn có pixel của vùng — vùng cong/chéo có bbox lớn hơn hẳn
+    # diện tích thật, quét cả bbox sẽ phí.
+    row_start = [grid_width] * grid_height
+    row_end = [-1] * grid_height
+    for x, y in region:
+        gx = x - left + 1
+        gy = y - top + 1
+        distances[gy * grid_width + gx] = unset
+        if gx < row_start[gy]:
+            row_start[gy] = gx
+        if gx > row_end[gy]:
+            row_end[gy] = gx
+
+    for gy in range(1, grid_height - 1):
+        if row_end[gy] < 0:
             continue
-        x, y = point
-        min_distance = min(x - bbox["left"], bbox["right"] - x, y - bbox["top"], bbox["bottom"] - y)
-        if min_distance < 1:
+        base = gy * grid_width
+        above = base - grid_width
+        for gx in range(row_start[gy], row_end[gy] + 1):
+            index = base + gx
+            if not distances[index]:
+                continue
+            best = distances[above + gx - 1] + CHAMFER_DIAGONAL_COST
+            candidate = distances[above + gx] + CHAMFER_ORTHOGONAL_COST
+            if candidate < best:
+                best = candidate
+            candidate = distances[above + gx + 1] + CHAMFER_DIAGONAL_COST
+            if candidate < best:
+                best = candidate
+            candidate = distances[index - 1] + CHAMFER_ORTHOGONAL_COST
+            if candidate < best:
+                best = candidate
+            if best < distances[index]:
+                distances[index] = best
+
+    for gy in range(grid_height - 2, 0, -1):
+        if row_end[gy] < 0:
             continue
+        base = gy * grid_width
+        below = base + grid_width
+        for gx in range(row_end[gy], row_start[gy] - 1, -1):
+            index = base + gx
+            if not distances[index]:
+                continue
+            best = distances[below + gx + 1] + CHAMFER_DIAGONAL_COST
+            candidate = distances[below + gx] + CHAMFER_ORTHOGONAL_COST
+            if candidate < best:
+                best = candidate
+            candidate = distances[below + gx - 1] + CHAMFER_DIAGONAL_COST
+            if candidate < best:
+                best = candidate
+            candidate = distances[index + 1] + CHAMFER_ORTHOGONAL_COST
+            if candidate < best:
+                best = candidate
+            if best < distances[index]:
+                distances[index] = best
 
-        distance_score = 0
-        for dx, dy in directions:
-            step = 0
-            while True:
-                nx = x + dx * (step + 1)
-                ny = y + dy * (step + 1)
-                if (nx, ny) not in region_set:
-                    break
-                step += 1
-            distance_score += step
+    # Vùng phẳng thường có cả một mảng điểm cùng khoảng cách lớn nhất; chọn điểm gần trọng
+    # tâm nhất trong số đó để số không nhảy sang một bên khi vùng được gộp thêm.
+    centroid_x = centroid["x"] - left + 1
+    centroid_y = centroid["y"] - top + 1
+    best_distance = -1
+    best_penalty = 0.0
+    best_point = region[0]
+    for x, y in region:
+        gx = x - left + 1
+        gy = y - top + 1
+        distance = distances[gy * grid_width + gx]
+        if distance < best_distance:
+            continue
+        penalty = abs(gx - centroid_x) + abs(gy - centroid_y)
+        if distance > best_distance or penalty < best_penalty:
+            best_distance = distance
+            best_penalty = penalty
+            best_point = (x, y)
 
-        center_penalty = abs(x - centroid["x"]) + abs(y - centroid["y"])
-        score = distance_score * 10 - center_penalty
-        if score > best_score:
-            best_score = score
-            best_point = point
-
-    if best_point is None:
-        fallback = centroid_fallback(region, centroid)
-        radius = point_inscribed_radius(region_set, int(fallback["x"]), int(fallback["y"]), directions)
-        return {"x": fallback["x"], "y": fallback["y"], "radius": radius}
-
-    radius = point_inscribed_radius(region_set, best_point[0], best_point[1], directions)
+    radius = max(0.0, best_distance / float(CHAMFER_ORTHOGONAL_COST) - 1.0)
     return {"x": float(best_point[0]), "y": float(best_point[1]), "radius": radius}
+
+
+# Diện tích mong muốn của một ô sau khi chia nhỏ vùng khổng lồ. 10.000px (cạnh ~100px trên
+# canvas 1024) đúng bằng p90 của phân bố vùng hiện có, nên ô mới sinh ra có cùng cỡ với các
+# vùng "to nhưng bình thường" đang có sẵn — nhìn đồng nhất chứ không lộ ra là cắt máy móc.
+# Đo trên data: mảng nền 48% của Animal/09 thành ~46 ô, tổng số vùng toàn bộ +30%.
+# Nhỏ hơn (5.000px) cho ra 94 ô cho riêng một mảng nền — lặp và chán.
+DEFAULT_CELL_TARGET_AREA = 10000
+
+# Chỉ chia vùng lớn hơn ngần này lần ô mục tiêu, để không băm nhỏ vùng cỡ vừa.
+CELL_SUBDIVIDE_MIN_MULTIPLIER = 2
+
+# Độ sáng của đường ranh giữa 2 ô cùng màu, vẽ vào line.png (app nhân ảnh này lên). Hai ô
+# cạnh nhau có CÙNG màu nên khi chưa tô đều trắng, không có gì phân định — không có đường
+# ranh thì user không biết ô tiếp theo nằm đâu. 235/255 làm tối ~8%: đủ thấy khi đang chơi,
+# gần như chìm hẳn trên tranh đã hoàn thành.
+CELL_SEAM_LINE_VALUE = 235
+
+
+def subdivide_region_into_cells(region_points, target_cell_area):
+    """Chia một vùng lớn thành các ô nhỏ liền mạch, cỡ xấp xỉ target_cell_area.
+
+    Dùng BFS đa nguồn từ các hạt giống rải đều (Voronoi trắc địa): mỗi ô lớn dần từ hạt
+    giống của nó và dừng khi chạm ô khác. Chọn cách này thay vì k-means vì:
+      - O(số pixel) thay vì O(số pixel × số ô) mỗi vòng lặp — vùng 500k pixel chia 50 ô thì
+        k-means tốn 25 triệu phép mỗi vòng, quá chậm trong Python thuần;
+      - mỗi ô LIỀN MẠCH theo đúng định nghĩa (lan từ 1 hạt giống), không cần bước tách
+        connected component vá lại;
+      - ranh giới đi theo hình dạng thật của vùng (khoảng cách trắc địa, không phải khoảng
+        cách thẳng), nên ô ôm theo mảng màu thay vì bị cắt vuông vức như chia lưới.
+
+    Trả về danh sách các list điểm. Vùng nhỏ hơn ngưỡng thì trả về nguyên vẹn.
+    """
+    area = len(region_points)
+    cell_count = int(round(area / float(target_cell_area)))
+    if cell_count < 2:
+        return [region_points]
+
+    point_set = set(region_points)
+    left = min(x for x, _ in region_points)
+    right = max(x for x, _ in region_points)
+    top = min(y for _, y in region_points)
+    bottom = max(y for _, y in region_points)
+
+    # Rải hạt giống trên một lưới có bước ~cạnh ô mong muốn, rồi kéo mỗi hạt về pixel gần
+    # nhất THUỘC vùng — vùng lõm/hình vành khăn có ô lưới rơi ra ngoài, bỏ qua chúng.
+    spacing = max(2, int(round(math.sqrt(target_cell_area))))
+    # Xô lệch hạt giống khỏi vị trí lưới. Không xô lệch thì trong một mảng phẳng rộng,
+    # Voronoi từ lưới đều chính là các ô VUÔNG đều tăm tắp — nền hiện ra như giấy kẻ ô, lộ
+    # ngay là cắt bằng máy. Lệch tối đa ~1/3 bước lưới là đủ để ô méo tự nhiên mà vẫn giữ
+    # được kích thước đồng đều. Dùng hàm băm của chính toạ độ nên kết quả TẤT ĐỊNH: sinh lại
+    # cùng một ảnh luôn ra cùng một cách chia.
+    jitter = max(1, spacing // 3)
+
+    def jittered(value, salt):
+        noise = (value * 73856093 + salt * 19349663) & 0xFFFF
+        return value + (noise % (2 * jitter + 1)) - jitter
+
+    seeds = []
+    grid_y = top + spacing // 2
+    while grid_y <= bottom:
+        grid_x = left + spacing // 2
+        while grid_x <= right:
+            seed = (jittered(grid_x, grid_y), jittered(grid_y, grid_x))
+            if seed in point_set:
+                seeds.append(seed)
+            elif (grid_x, grid_y) in point_set:
+                seeds.append((grid_x, grid_y))
+            grid_x += spacing
+        grid_y += spacing
+
+    owner = {}
+    queue = deque()
+    for seed_index, seed in enumerate(seeds):
+        owner[seed] = seed_index
+        queue.append(seed)
+
+    while queue:
+        cx, cy = queue.popleft()
+        current_owner = owner[(cx, cy)]
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            neighbor = (cx + dx, cy + dy)
+            if neighbor in owner or neighbor not in point_set:
+                continue
+            owner[neighbor] = current_owner
+            queue.append(neighbor)
+
+    cells = [[] for _ in seeds]
+    # Pixel không hạt giống nào với tới được: nằm trong mảnh rời khác của vùng (một vùng có
+    # thể gồm tới MAX_REGION_FRAGMENTS mảnh) và mảnh đó không chứa ô lưới nào. TUYỆT ĐỐI
+    # không gieo hạt mới cho từng pixel như vậy — làm thế sinh ra hàng chục "ô" 2 pixel,
+    # radius 0, không thể tap cũng không thể nhìn thấy. Chúng được gom lại rồi gắn vào ô gần
+    # nhất ở dưới, đúng như trước khi chia chúng vốn đã thuộc cùng một vùng.
+    stranded = []
+    for point in region_points:
+        cell_index = owner.get(point)
+        if cell_index is None:
+            stranded.append(point)
+        else:
+            cells[cell_index].append(point)
+
+    cells = [cell for cell in cells if cell]
+    if not cells:
+        return [region_points]
+
+    cells = absorb_undersized_cells(cells, max(1, target_cell_area // 3))
+
+    if stranded:
+        centroids = [get_region_centroid(cell) for cell in cells]
+        for point in stranded:
+            nearest = min(
+                range(len(cells)),
+                key=lambda index: (centroids[index]["x"] - point[0]) ** 2
+                + (centroids[index]["y"] - point[1]) ** 2,
+            )
+            cells[nearest].append(point)
+
+    return cells
+
+
+def absorb_undersized_cells(cells, min_cell_area):
+    """Gộp ô quá nhỏ vào ô liền kề lớn nhất.
+
+    BFS từ lưới hạt giống để lại ô vụn ở rìa vùng (chỗ hình dạng lõm, hoặc ô lưới rơi sát
+    biên). Không dọn thì chúng thành vùng riêng không tap được — đúng loại lỗi mà cả pipeline
+    đang cố loại bỏ.
+    """
+    working = [list(cell) for cell in cells]
+    cell_of = {}
+    for index, cell in enumerate(working):
+        for point in cell:
+            cell_of[point] = index
+
+    while True:
+        candidates = [
+            index
+            for index, cell in enumerate(working)
+            if cell and len(cell) < min_cell_area
+        ]
+        if not candidates:
+            break
+        smallest = min(candidates, key=lambda index: len(working[index]))
+
+        neighbors = Counter()
+        for x, y in working[smallest]:
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                other = cell_of.get((x + dx, y + dy))
+                if other is not None and other != smallest and working[other]:
+                    neighbors[other] += 1
+        if not neighbors:
+            break
+
+        target = max(neighbors, key=lambda index: (neighbors[index], len(working[index])))
+        for point in working[smallest]:
+            cell_of[point] = target
+        working[target].extend(working[smallest])
+        working[smallest] = []
+
+    return [cell for cell in working if cell]
+
+
+def collect_cell_seam_pixels(cells):
+    """Pixel nằm dọc ranh giới GIỮA HAI Ô của cùng một vùng gốc.
+
+    Chỉ lấy phía có chỉ số ô nhỏ hơn để ra đường dày 1px thay vì 2px. Ranh giới với vùng
+    khác thì đã có nét mực thật rồi, không đụng tới ở đây.
+    """
+    cell_of = {}
+    for cell_index, cell in enumerate(cells):
+        for point in cell:
+            cell_of[point] = cell_index
+
+    seam = set()
+    for point, cell_index in cell_of.items():
+        x, y = point
+        for dx, dy in ((1, 0), (0, 1)):
+            neighbor_cell = cell_of.get((x + dx, y + dy))
+            if neighbor_cell is not None and neighbor_cell != cell_index:
+                seam.add(point)
+                break
+    return seam
+
+
+def subdivide_giant_regions_into_cells(
+    region_infos,
+    target_cell_area,
+    min_region_area,
+    tiny_area_threshold,
+    tiny_side_threshold,
+    tiny_merge_min_area,
+    tiny_merge_min_side,
+    min_multiplier=CELL_SUBDIVIDE_MIN_MULTIPLIER,
+):
+    """Chia mọi vùng quá lớn thành các ô cỡ target_cell_area.
+
+    Các ô con GIỮ NGUYÊN target_color của vùng gốc nên chúng nhận cùng một số trong bảng
+    màu — user chọn số đó, cả mảng sáng lên, rồi tap từng ô. Mỗi ô có label_anchor riêng nên
+    ô nào cũng có số hiển thị.
+
+    Khác hẳn split_remaining_giant_regions (tách theo MÀU): mảng nền lớn gần như đồng màu
+    (đo được độ lệch nội bộ 0.8-2.8) nên tách theo màu vỡ vụn thành hàng nghìn mảnh và bị
+    guard chặn lại — đúng. Chia theo HÌNH HỌC mới là công cụ hợp cho trường hợp đó.
+    """
+    minimum_area = target_cell_area * min_multiplier
+    result = []
+    seam_pixels = set()
+    subdivided_count = 0
+    new_cell_count = 0
+
+    for info in region_infos:
+        if info["area"] < minimum_area:
+            result.append(info)
+            continue
+
+        cells = subdivide_region_into_cells(info["region"], target_cell_area)
+        if len(cells) <= 1:
+            result.append(info)
+            continue
+
+        subdivided_count += 1
+        new_cell_count += len(cells)
+        seam_pixels |= collect_cell_seam_pixels(cells)
+        for cell in cells:
+            bbox = get_region_bbox(cell)
+            centroid = get_region_centroid(cell)
+            result.append(
+                update_region_classification(
+                    info={
+                        "region": cell,
+                        "area": len(cell),
+                        "bbox": bbox,
+                        "centroid": centroid,
+                        "label_anchor": find_label_anchor(cell, bbox, centroid),
+                        # GIỮ NGUYÊN màu của vùng gốc chứ không đo lại màu từng ô: các ô
+                        # phải cùng một màu để nhận CÙNG MỘT SỐ trong bảng màu. Đo lại sẽ
+                        # cho mỗi ô một sắc hơi khác rồi rơi vào các số khác nhau, biến một
+                        # mảng nền phẳng thành đám loang lổ nhiều màu.
+                        "target_color": info["target_color"],
+                        "representative_color": info.get(
+                            "representative_color", info["target_color"]
+                        ),
+                        "merged_region_count": 1,
+                        "fragment_count": 1,
+                    },
+                    min_region_area=min_region_area,
+                    tiny_area_threshold=tiny_area_threshold,
+                    tiny_side_threshold=tiny_side_threshold,
+                    tiny_merge_min_area=tiny_merge_min_area,
+                    tiny_merge_min_side=tiny_merge_min_side,
+                    unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
+                )
+            )
+
+    stats = {
+        "cell_subdivided_region_count": subdivided_count,
+        "cell_subdivision_cell_count": new_cell_count,
+        "cell_target_area": target_cell_area,
+    }
+    return result, seam_pixels, stats
+
+
+def paint_cell_seams_on_line_image(line_img, seam_pixels, value=CELL_SEAM_LINE_VALUE):
+    """Vẽ đường ranh giữa các ô vào ảnh nét mà app nhân lên.
+
+    line.png vốn chỉ có 0 (mực) và 255 (giấy); seam dùng giá trị trung gian nên hiện ra như
+    một đường rất nhạt chứ không phải nét vẽ thật.
+    """
+    if not seam_pixels:
+        return line_img
+    pixels = line_img.load()
+    seam_rgb = (value, value, value)
+    for x, y in seam_pixels:
+        if pixels[x, y] != (0, 0, 0):
+            pixels[x, y] = seam_rgb
+    return line_img
 
 
 def estimate_difficulty(total_regions, unique_numbers, small_regions_count):
@@ -1354,12 +1678,40 @@ def build_quality_report(width, height, region_configs, stats, generation_params
     }
 
 
+def region_thickness_diameter(info):
+    """Bề ngang THẬT của vùng tại chỗ rộng nhất, quy về cùng đơn vị với bbox_min_side.
+
+    bbox_min_side mù với hình dạng: một vòng cung dày 5px có bbox 60x40 nên bị chấm là
+    "cạnh nhỏ nhất 40px" — thoải mái — trong khi user nhìn thấy một sợi chỉ. Đo trên data
+    thật: 606/4711 vùng (12.9%) có bề ngang thật dưới 6px vẫn lọt qua mọi cổng lọc vì
+    bbox của chúng lớn.
+
+    label_anchor.radius (từ distance transform) là bán kính hình tròn nội tiếp lớn nhất,
+    nên 2*radius+1 chính là bề ngang thật đó — cùng đơn vị với bbox_min_side, dùng lại
+    được nguyên các ngưỡng đã tinh chỉnh. Luôn <= bbox_min_side, nên đổi sang nó chỉ làm
+    các cổng CHẶT hơn chứ không nới ra.
+
+    Đường candidate-scoring rẻ (skip_label_anchor=True) không tính anchor thật nên không có
+    radius — lúc đó quay về bbox_min_side như cũ.
+    """
+    radius = (info.get("label_anchor") or {}).get("radius")
+    if radius is None:
+        return bbox_min_side(info["bbox"])
+    return 2.0 * radius + 1.0
+
+
 def is_tiny_display_region(info, tiny_area_threshold, tiny_side_threshold):
-    return info["area"] < tiny_area_threshold or bbox_min_side(info["bbox"]) < tiny_side_threshold
+    return (
+        info["area"] < tiny_area_threshold
+        or region_thickness_diameter(info) < tiny_side_threshold
+    )
 
 
 def is_micro_region(info, tiny_merge_min_area, tiny_merge_min_side):
-    return info["area"] < tiny_merge_min_area or bbox_min_side(info["bbox"]) < tiny_merge_min_side
+    return (
+        info["area"] < tiny_merge_min_area
+        or region_thickness_diameter(info) < tiny_merge_min_side
+    )
 
 
 def update_region_classification(
@@ -1380,7 +1732,9 @@ def update_region_classification(
     không có láng giềng màu hợp — gây kẹt vô ích ở những bước chưa có fallback đảm bảo.
     """
     min_side = bbox_min_side(info["bbox"])
+    thickness = region_thickness_diameter(info)
     info["min_side"] = min_side
+    info["thickness_diameter"] = thickness
     info["is_small_region"] = info["area"] < min_region_area
 
     unreadable_even_at_max_zoom = False
@@ -1394,19 +1748,25 @@ def update_region_classification(
 
     info["is_tiny_display_region"] = (
         info["area"] < tiny_area_threshold
-        or min_side < tiny_side_threshold
+        or thickness < tiny_side_threshold
         or unreadable_even_at_max_zoom
     )
     info["is_micro_region"] = (
         info["area"] < tiny_merge_min_area
-        or min_side < tiny_merge_min_side
+        or thickness < tiny_merge_min_side
         or unreadable_even_at_max_zoom
     )
 
-    # hide_number tính lại MỖI LẦN từ hình dạng hiện tại (area/bbox/radius), không kế thừa
-    # kiểu AND từ trước khi gộp — nếu không, 2 vùng nhỏ bị ẩn số gộp lại thành 1 vùng đủ lớn
-    # vẫn có thể tiếp tục bị ẩn nhầm.
-    info["hide_number"] = info["is_tiny_display_region"]
+    # hide_number tính lại MỖI LẦN từ hình dạng hiện tại (area/radius), không kế thừa kiểu
+    # AND từ trước khi gộp — nếu không, 2 vùng nhỏ bị ẩn số gộp lại thành 1 vùng đủ lớn vẫn
+    # có thể tiếp tục bị ẩn nhầm.
+    #
+    # KHÔNG dùng chung điều kiện với is_tiny_display_region: hide_number là ẩn VĨNH VIỄN,
+    # nên chỉ đúng cho vùng mà không mức zoom nào cứu được. App vốn đã có luật động theo
+    # zoom (PaintCanvasView: radius * scaleFactor >= 25) và luật đó giờ đáng tin vì radius
+    # đã được đo đúng — vùng chỉ "hẹp ở zoom mặc định" cứ để app tự ẩn/hiện theo zoom. Ẩn
+    # vĩnh viễn ở đây là lấy mất con số mà user chỉ cần zoom vào là đọc được.
+    info["hide_number"] = info["area"] < tiny_area_threshold or unreadable_even_at_max_zoom
     return info
 
 
@@ -1461,7 +1821,13 @@ def build_region_point_index(region_infos):
     return point_index
 
 
-def find_adjacent_region_indices(small_idx, region_infos, point_index):
+def find_adjacent_region_indices(small_idx, region_infos, point_index, ink_gap_px=0):
+    """Trả về (adjacent_counts, bridged_ink_gap).
+
+    bridged_ink_gap=True nghĩa là các láng giềng này tìm được bằng cách nhìn XUYÊN nét mực
+    chứ không chạm trực tiếp — gộp vào chúng sẽ tạo ra vùng KHÔNG liền mạch, nên caller phải
+    tính thêm vào hạn mức mảnh rời (xem MAX_REGION_FRAGMENTS).
+    """
     adjacent_counts = Counter()
     for x, y in region_infos[small_idx]["region"]:
         for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
@@ -1469,7 +1835,61 @@ def find_adjacent_region_indices(small_idx, region_infos, point_index):
             if neighbor_idx is None or neighbor_idx == small_idx:
                 continue
             adjacent_counts[neighbor_idx] += 1
-    return adjacent_counts
+
+    if adjacent_counts or ink_gap_px <= 0:
+        return adjacent_counts, False
+
+    # Không có láng giềng nào CHẠM trực tiếp: vùng bị nét mực bao kín. Đo trên data thật thì
+    # 33% số vùng (1561/4711) rơi vào trường hợp này, và 4 level có tỉ lệ 100% — ở đó MỌI
+    # bước gộp dựa trên adjacency đều chạy không, `merged_tiny_regions_count` đúng bằng 0.
+    # Việc giảm số vùng trên các level đó trước đây hoàn toàn là hệ quả phụ của lỗi radius
+    # (vùng bị gắn cờ "không đọc được" sai nên rơi vào absorb-by-proximity); sửa lỗi radius
+    # xong thì không còn gì gộp chúng nữa.
+    #
+    # Nên chỉ khi KHÔNG có tiếp xúc trực tiếp mới nới ra: cho phép nhìn xuyên tối đa
+    # ink_gap_px pixel mực để tìm láng giềng. Chạy sau chứ không chạy thay, nên vùng có
+    # tiếp xúc thật giữ nguyên hành vi cũ từng pixel — không đụng gì tới các level đang tốt.
+    # Đo phân bố khe mực giữa 2 vùng: 4px phủ 78-90% số ranh giới, vẫn mỏng hơn hẳn nét viền
+    # cố ý dày (vốn nên tách 2 vật thể khác nhau thật).
+    for x, y in region_infos[small_idx]["region"]:
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            for step in range(2, ink_gap_px + 2):
+                probe = point_index.get((x + dx * step, y + dy * step))
+                if probe == small_idx:
+                    # Quay lại chính mình (vùng hình chữ U) — hướng này không dẫn ra ngoài.
+                    break
+                if probe is not None:
+                    adjacent_counts[probe] += 1
+                    break
+    return adjacent_counts, True
+
+
+# Số mảnh rời tối đa của một vùng. Mỗi vùng chỉ được vẽ ĐÚNG MỘT con số (tại label_anchor),
+# và một cú tap tô toàn bộ mask color đó trên cả canvas, nên vùng gồm N mảnh rải rác nghĩa là
+# N-1 mảnh không có số nhưng vẫn tự tô khi user bấm chỗ khác. Đo trên data: 57% số vùng bị đứt
+# rời, trung bình 6.5 mảnh, cá biệt 194 mảnh — tức 193 mảnh không số.
+#
+# Lưu ý khi chỉnh: TỔNG số mảnh của một level gần như cố định (do line art quyết định — đo
+# được 592 mảnh trước và sau khi đổi hạn mức), nên hạn mức chỉ PHÂN BỔ LẠI mảnh vào nhiều
+# vùng hơn chứ không làm mảnh biến mất. Hạ xuống 4 tiếp tục cắt đuôi nhưng làm số vùng gần
+# gấp đôi (Animal/01: 180 -> 324) và đẩy tỉ lệ ẩn số lên; 8 là mức tốt hơn "không hạn mức" ở
+# mọi level và mọi chỉ số đã đo, mà không làm nổ số vùng:
+#   Animal/05  194 -> 8 mảnh (90 -> 118 vùng, ẩn số 54.4% -> 37.3%)
+#   Animal/03   83 -> 18 mảnh (flat_similarity 84.7 -> 89.6)
+#   Animal/01   27 -> 13 mảnh (180 -> 186 vùng)
+MAX_REGION_FRAGMENTS = 8
+
+
+def region_fragment_count(info):
+    return info.get("fragment_count", 1)
+
+
+def merged_fragment_count(parent_info, child_info, bridged_ink_gap):
+    """Hai vùng CHẠM nhau nhập lại thành một khối liền -> tổng số mảnh giảm đi 1. Gộp xuyên
+    nét mực thì không dính vào nhau nên số mảnh cộng dồn nguyên vẹn.
+    """
+    total = region_fragment_count(parent_info) + region_fragment_count(child_info)
+    return total if bridged_ink_gap else total - 1
 
 
 def tiny_region_neighbor_score(small_info, candidate_info, color_gap, shared_boundary_count):
@@ -1485,7 +1905,13 @@ def tiny_region_neighbor_score(small_info, candidate_info, color_gap, shared_bou
     )
 
 
-def merge_region_info_into_parent(parent_info, child_info, skip_label_anchor=False, preserve_label_anchor=False):
+def merge_region_info_into_parent(
+    parent_info,
+    child_info,
+    skip_label_anchor=False,
+    preserve_label_anchor=False,
+    bridged_ink_gap=False,
+):
     merged_regions = list(parent_info["region"])
     merged_regions.extend(child_info["region"])
     merged_bbox = merge_bboxes([parent_info["bbox"], child_info["bbox"]])
@@ -1508,6 +1934,9 @@ def merge_region_info_into_parent(parent_info, child_info, skip_label_anchor=Fal
     # tránh việc 2 vùng nhỏ bị ẩn số gộp lại thành 1 vùng đủ lớn vẫn tiếp tục bị ẩn nhầm.
     parent_info["merged_region_count"] = parent_info.get("merged_region_count", 1) + child_info.get(
         "merged_region_count", 1
+    )
+    parent_info["fragment_count"] = merged_fragment_count(
+        parent_info, child_info, bridged_ink_gap
     )
     return parent_info
 
@@ -1533,6 +1962,7 @@ def merge_tiny_regions_into_neighbors(
             "tiny_merge_rejected_non_adjacent": 0,
             "tiny_merge_rejected_color_distance": 0,
             "tiny_merge_rejected_giant_target": 0,
+            "tiny_merge_rejected_fragment_cap": 0,
             "tiny_merge_profile": resolve_generation_profile(profile),
         }
         if return_stats:
@@ -1561,6 +1991,7 @@ def merge_tiny_regions_into_neighbors(
     rejected_non_adjacent_count = 0
     rejected_color_distance_count = 0
     rejected_giant_target_count = 0
+    rejected_fragment_cap_count = 0
 
     # 1 lượt (pass) = 1 lần build point_index, xử lý TOÀN BỘ micro_indices hiện có thay vì
     # chỉ gộp 1 cặp rồi rebuild lại từ đầu. Vùng "small" đã gộp được TOMBSTONE (đánh dấu,
@@ -1596,7 +2027,9 @@ def merge_tiny_regions_into_neighbors(
             fallback_candidate_idx = None
             fallback_candidate_score = None
 
-            adjacent_counts = find_adjacent_region_indices(small_idx, region_infos, point_index)
+            adjacent_counts, bridged_ink_gap = find_adjacent_region_indices(
+                small_idx, region_infos, point_index, ink_gap_px=attach_distance
+            )
             if not adjacent_counts:
                 rejected_non_adjacent_count += 1
             for candidate_idx, shared_boundary_count in adjacent_counts.items():
@@ -1611,6 +2044,12 @@ def merge_tiny_regions_into_neighbors(
                 merged_pct = (candidate_info["area"] + small_info["area"]) * 100.0 / total_pixels
                 if enforce_largest_target and merged_pct > thresholds["max_largest_region_pct"]:
                     rejected_giant_target_count += 1
+                    continue
+                if (
+                    merged_fragment_count(candidate_info, small_info, bridged_ink_gap)
+                    > MAX_REGION_FRAGMENTS
+                ):
+                    rejected_fragment_cap_count += 1
                     continue
 
                 color_gap = color_distance(small_info["target_color"], candidate_info["target_color"])
@@ -1645,7 +2084,10 @@ def merge_tiny_regions_into_neighbors(
                 continue
 
             merge_region_info_into_parent(
-                region_infos[target_idx], small_info, skip_label_anchor=skip_label_anchor
+                region_infos[target_idx],
+                small_info,
+                skip_label_anchor=skip_label_anchor,
+                bridged_ink_gap=bridged_ink_gap,
             )
             tombstoned.add(small_idx)
             frozen_targets.add(target_idx)
@@ -1676,6 +2118,7 @@ def merge_tiny_regions_into_neighbors(
         "tiny_merge_rejected_non_adjacent": rejected_non_adjacent_count,
         "tiny_merge_rejected_color_distance": rejected_color_distance_count,
         "tiny_merge_rejected_giant_target": rejected_giant_target_count,
+        "tiny_merge_rejected_fragment_cap": rejected_fragment_cap_count,
         "tiny_merge_profile": resolved_profile,
     }
     result = (
@@ -1696,8 +2139,6 @@ def absorb_small_region_colors(
     tiny_area_threshold,
     tiny_side_threshold,
 ):
-    # Kept for CLI/backward compatibility; color absorption eligibility is adjacency-only.
-    _ = attach_distance
     absorbed_count = 0
     point_index = build_region_point_index(region_infos)
     sorted_indices = sorted(range(len(region_infos)), key=lambda idx: region_infos[idx]["area"])
@@ -1708,7 +2149,11 @@ def absorb_small_region_colors(
 
         best_candidate = None
         best_score = None
-        adjacent_counts = find_adjacent_region_indices(small_idx, region_infos, point_index)
+        # Buoc nay chi CHEP MAU sang vung nho, khong nhap vung, nen khong lam tang so manh
+        # roi -> khong can hạn mức fragment.
+        adjacent_counts, _ = find_adjacent_region_indices(
+            small_idx, region_infos, point_index, ink_gap_px=attach_distance
+        )
         for large_idx, shared_boundary_count in adjacent_counts.items():
             candidate = region_infos[large_idx]
             if candidate["area"] <= info["area"]:
@@ -1761,13 +2206,23 @@ def absorb_isolated_unreadable_regions_by_proximity(region_infos, unreadable_rad
             continue
         cx = small_info["centroid"]["x"]
         cy = small_info["centroid"]["y"]
-        nearest = min(
-            survivors,
-            key=lambda candidate: (
-                (candidate["centroid"]["x"] - cx) ** 2 + (candidate["centroid"]["y"] - cy) ** 2
-            ),
-        )
-        merge_region_info_into_parent(nearest, small_info)
+
+        def distance_to(candidate):
+            return (candidate["centroid"]["x"] - cx) ** 2 + (
+                candidate["centroid"]["y"] - cy
+            ) ** 2
+
+        # Gộp theo khoảng cách thì hai vùng không hề dính nhau, nên luôn cộng thêm mảnh rời.
+        # Hạn mức ở đây là MỀM: ưu tiên vùng gần nhất còn dưới hạn mức, nhưng nếu không còn
+        # vùng nào như vậy thì vẫn gộp vào vùng gần nhất — đây là phương án CUỐI cho vùng
+        # không đọc được số và không có láng giềng, để trống nó còn tệ hơn.
+        under_cap = [
+            candidate
+            for candidate in survivors
+            if merged_fragment_count(candidate, small_info, True) <= MAX_REGION_FRAGMENTS
+        ]
+        nearest = min(under_cap or survivors, key=distance_to)
+        merge_region_info_into_parent(nearest, small_info, bridged_ink_gap=True)
         absorbed_count += 1
 
     return survivors + unresolved, absorbed_count
@@ -1789,8 +2244,6 @@ def merge_small_attached_regions(
     if not region_infos:
         return region_infos, 0
 
-    # Kept for CLI/backward compatibility; geometry merge eligibility is adjacency-only.
-    _ = attach_distance
     resolved_profile = resolve_generation_profile(profile)
     thresholds = profile_thresholds(resolved_profile)
     enforce_largest_target = total_pixels is not None
@@ -1832,7 +2285,9 @@ def merge_small_attached_regions(
 
             best_candidate_idx = None
             best_candidate_score = None
-            adjacent_counts = find_adjacent_region_indices(small_idx, region_infos, point_index)
+            adjacent_counts, bridged_ink_gap = find_adjacent_region_indices(
+                small_idx, region_infos, point_index, ink_gap_px=attach_distance
+            )
 
             for large_idx, shared_boundary_count in adjacent_counts.items():
                 if large_idx in tombstoned or large_idx in frozen_targets:
@@ -1842,6 +2297,11 @@ def merge_small_attached_regions(
                     continue
                 merged_pct = (large_info["area"] + small_info["area"]) * 100.0 / total_pixels
                 if enforce_largest_target and merged_pct > thresholds["max_largest_region_pct"]:
+                    continue
+                if (
+                    merged_fragment_count(large_info, small_info, bridged_ink_gap)
+                    > MAX_REGION_FRAGMENTS
+                ):
                     continue
 
                 color_gap = color_distance(small_info["target_color"], large_info["target_color"])
@@ -1858,7 +2318,10 @@ def merge_small_attached_regions(
                 continue
 
             merge_region_info_into_parent(
-                region_infos[best_candidate_idx], small_info, skip_label_anchor=skip_label_anchor
+                region_infos[best_candidate_idx],
+                small_info,
+                skip_label_anchor=skip_label_anchor,
+                bridged_ink_gap=bridged_ink_gap,
             )
             tombstoned.add(small_idx)
             frozen_targets.add(best_candidate_idx)
@@ -1885,7 +2348,19 @@ def merge_small_attached_regions(
 
 
 DEFAULT_MIN_TOUCH_TARGET_DP = 24.0
-DEFAULT_ASSUMED_ZOOM = 20.0
+
+# canvas_fit_scale quy đổi pixel canvas sang pixel MÀN HÌNH của khung xem 1080px
+# (DEFAULT_VIEW_SIZE). 1080px ứng với 360dp — bề ngang điện thoại tiêu chuẩn — nên khung
+# tham chiếu đó có density 3. Thiếu hệ số này thì 24dp bị dùng thẳng như 24 pixel, tức chỉ
+# bằng 1/3 chuẩn chạm thật của Android.
+REFERENCE_SCREEN_DENSITY = 3.0
+
+# Mức zoom giả định người chơi dùng khi tô. KHÔNG phải max zoom của app (20x): lấy 20x nghĩa
+# là "chỉ gộp khi vùng vẫn không chạm nổi dù đã phóng hết cỡ", cho ra ngưỡng 2px và bước gộp
+# gần như không bao giờ chạy — đo trên toàn bộ data cũ: 0/4711 vùng bị gộp ở bước này. 6x là
+# mức zoom thực tế người chơi hay dùng, và đo trên Animal/03 thì nó đưa untouchable_region_pct
+# từ 42.9% xuống 12.2% (dưới ngưỡng 18% của profile medium) mà vẫn giữ 123 vùng.
+DEFAULT_ASSUMED_ZOOM = 6.0
 
 
 def resolve_min_touch_bbox_side(
@@ -1893,17 +2368,16 @@ def resolve_min_touch_bbox_side(
     canvas_height,
     min_touch_dp=DEFAULT_MIN_TOUCH_TARGET_DP,
     assumed_zoom=DEFAULT_ASSUMED_ZOOM,
+    screen_density=REFERENCE_SCREEN_DENSITY,
 ):
-    """Cạnh bbox nhỏ nhất (tính bằng pixel canvas) để một vùng còn chạm được.
+    """Bề ngang nhỏ nhất (tính bằng pixel canvas) để một vùng còn chạm được.
 
     Suy ngược từ chuẩn chạm 24dp của Android và tỷ lệ ảnh khi fit vào khung xem, thay vì
     hằng số cứng — nhờ vậy data với ảnh kích thước khác nhau vẫn ra ngưỡng đúng.
-    `assumed_zoom` là mức phóng to giả định user sẽ dùng. Mặc định khớp max zoom của app:
-    chỉ những vùng vẫn không chạm được ở max zoom mới bị gộp bắt buộc.
     """
     fit_scale = canvas_fit_scale(canvas_width, canvas_height)
     effective_scale = max(1e-6, fit_scale * max(1.0, assumed_zoom))
-    return max(1, int(math.ceil(min_touch_dp / effective_scale)))
+    return max(1, int(math.ceil(min_touch_dp * screen_density / effective_scale)))
 
 
 def merge_untouchable_regions(
@@ -1917,6 +2391,7 @@ def merge_untouchable_regions(
     tiny_merge_min_side,
     profile="medium",
     total_pixels=None,
+    ink_gap_px=0,
 ):
     """Gộp các vùng quá nhỏ để chạm vào hàng xóm phù hợp nhất.
 
@@ -1925,10 +2400,10 @@ def merge_untouchable_regions(
     bề ngang chỉ vài pixel. Với user đó là một chấm gần như vô hình, lại thường bị ẩn số,
     biến level thành trò mò tìm điểm ảnh.
 
-    Ở đây xét theo HÌNH DẠNG (cạnh nhỏ nhất của bbox) và cho phép ngưỡng màu rộng hơn
-    nhiều. Nới màu ở bước này gần như không mất gì: detail.png mang màu chuẩn theo từng
-    pixel, nên sau khi gộp ảnh cuối vẫn hiện đúng màu ảnh gốc tại đó — chỉ thay đổi việc
-    user bấm vào số nào.
+    Ở đây xét theo HÌNH DẠNG (bề ngang thật tại chỗ rộng nhất, xem region_thickness_diameter)
+    và cho phép ngưỡng màu rộng hơn nhiều. Nới màu ở bước này gần như không mất gì:
+    detail.png mang màu chuẩn theo từng pixel, nên sau khi gộp ảnh cuối vẫn hiện đúng màu
+    ảnh gốc tại đó — chỉ thay đổi việc user bấm vào số nào.
     """
     if not region_infos or min_touch_bbox_side <= 1:
         return region_infos, 0
@@ -1939,7 +2414,7 @@ def merge_untouchable_regions(
     total_pixels = max(1, int(total_pixels or sum(info["area"] for info in region_infos) or 1))
 
     def is_untouchable(info):
-        return bbox_min_side(info["bbox"]) < min_touch_bbox_side
+        return region_thickness_diameter(info) < min_touch_bbox_side
 
     # Số vùng cần gộp ở bước này rất lớn (hàng trăm), nên dựng lại point_index sau mỗi lần
     # gộp như các bước trước sẽ quá chậm. Thay vào đó đánh dấu vùng đã gộp là None và cập
@@ -1970,14 +2445,20 @@ def merge_untouchable_regions(
             best_score = None
             fallback_idx = None
             fallback_score = None
-            for candidate_idx, shared_boundary_count in find_adjacent_region_indices(
-                small_idx, working_infos, point_index
-            ).items():
+            adjacent_counts, bridged_ink_gap = find_adjacent_region_indices(
+                small_idx, working_infos, point_index, ink_gap_px=ink_gap_px
+            )
+            for candidate_idx, shared_boundary_count in adjacent_counts.items():
                 candidate_info = working_infos[candidate_idx]
                 if candidate_info is None:
                     continue
                 merged_pct = (candidate_info["area"] + small_info["area"]) * 100.0 / total_pixels
                 if enforce_largest_target and merged_pct > thresholds["max_largest_region_pct"]:
+                    continue
+                if (
+                    merged_fragment_count(candidate_info, small_info, bridged_ink_gap)
+                    > MAX_REGION_FRAGMENTS
+                ):
                     continue
 
                 color_gap = color_distance(
@@ -2001,7 +2482,9 @@ def merge_untouchable_regions(
             if target_idx is None:
                 continue
 
-            merge_region_info_into_parent(working_infos[target_idx], small_info)
+            merge_region_info_into_parent(
+                working_infos[target_idx], small_info, bridged_ink_gap=bridged_ink_gap
+            )
             for point in small_info["region"]:
                 point_index[point] = target_idx
             working_infos[small_idx] = None
@@ -2367,6 +2850,8 @@ def generate_level_assets(
     min_touch_dp=DEFAULT_MIN_TOUCH_TARGET_DP,
     assumed_zoom=DEFAULT_ASSUMED_ZOOM,
     untouchable_merge_color_threshold=None,
+    ink_gap_attach_px=DEFAULT_INK_GAP_ATTACH_PX,
+    cell_target_area=DEFAULT_CELL_TARGET_AREA,
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
     resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
@@ -2409,6 +2894,12 @@ def generate_level_assets(
     tiny_merge_min_area = profile_settings["tiny_merge_min_area"]
     tiny_merge_min_side = profile_settings["tiny_merge_min_side"]
     tiny_merge_policy = profile_settings["tiny_merge_policy"]
+    # Ô mục tiêu cũng là ngưỡng DIỆN TÍCH nên phải nhân bình phương screen_scale, giống các
+    # khoá trong SCREEN_SCALE_AREA_KEYS — nếu không, ảnh nguồn 2048px sẽ bị chia thành số ô
+    # gấp 4 lần cần thiết.
+    cell_target_area = max(
+        1000, int(round(cell_target_area * max(1.0, screen_scale) ** 2))
+    )
 
     # Deprecated/no-op. Kept only so old CLI invocations do not fail.
     _ = tiny_merge_attach_distance
@@ -2439,6 +2930,7 @@ def generate_level_assets(
         "small_merge_color_threshold": small_merge_color_threshold,
         "tiny_merge_policy": tiny_merge_policy,
         "profile": resolved_profile,
+        "ink_gap_attach_px": ink_gap_attach_px,
     }
 
     source_line_img, binary_img, selected_preprocessing = select_binary_fill_map(
@@ -2557,7 +3049,7 @@ def generate_level_assets(
         tiny_side_threshold=tiny_region_side_threshold,
         tiny_merge_min_area=tiny_merge_min_area,
         tiny_merge_min_side=tiny_merge_min_side,
-        attach_distance=0,
+        attach_distance=ink_gap_attach_px,
         color_threshold=effective_tiny_merge_color_threshold,
         tiny_merge_policy=tiny_merge_policy,
         profile=resolved_profile,
@@ -2568,7 +3060,7 @@ def generate_level_assets(
     region_infos, merged_small_region_count = merge_small_attached_regions(
         region_infos=region_infos,
         min_region_area=min_region_area,
-        attach_distance=0,
+        attach_distance=ink_gap_attach_px,
         color_threshold=small_merge_color_threshold,
         tiny_area_threshold=hide_small_label_threshold,
         tiny_side_threshold=tiny_region_side_threshold,
@@ -2596,6 +3088,7 @@ def generate_level_assets(
         tiny_merge_min_side=tiny_merge_min_side,
         profile=resolved_profile,
         total_pixels=width * height,
+        ink_gap_px=ink_gap_attach_px,
     )
     if merged_untouchable_region_count:
         print(
@@ -2613,7 +3106,7 @@ def generate_level_assets(
     )
     absorbed_small_color_count = absorb_small_region_colors(
         region_infos=region_infos,
-        attach_distance=0,
+        attach_distance=ink_gap_attach_px,
         color_threshold=max(10.0, color_merge_threshold * 1.5),
         tiny_area_threshold=hide_small_label_threshold,
         tiny_side_threshold=tiny_region_side_threshold,
@@ -2654,7 +3147,7 @@ def generate_level_assets(
             tiny_side_threshold=tiny_region_side_threshold,
             tiny_merge_min_area=tiny_merge_min_area,
             tiny_merge_min_side=tiny_merge_min_side,
-            attach_distance=0,
+            attach_distance=ink_gap_attach_px,
             color_threshold=effective_tiny_merge_color_threshold,
             tiny_merge_policy=tiny_merge_policy,
             profile=resolved_profile,
@@ -2667,7 +3160,7 @@ def generate_level_assets(
         region_infos, merged_small_region_count_after_split = merge_small_attached_regions(
             region_infos=region_infos,
             min_region_area=min_region_area,
-            attach_distance=0,
+            attach_distance=ink_gap_attach_px,
             color_threshold=small_merge_color_threshold,
             tiny_area_threshold=hide_small_label_threshold,
             tiny_side_threshold=tiny_region_side_threshold,
@@ -2698,7 +3191,7 @@ def generate_level_assets(
         tiny_side_threshold=tiny_region_side_threshold,
         tiny_merge_min_area=tiny_merge_min_area,
         tiny_merge_min_side=tiny_merge_min_side,
-        attach_distance=0,
+        attach_distance=ink_gap_attach_px,
         color_threshold=effective_tiny_merge_color_threshold,
         tiny_merge_policy="relaxed",
         profile=resolved_profile,
@@ -2791,6 +3284,19 @@ def generate_level_assets(
             f"{remaining_hidden_label_region_count} vùng ước tính sẽ ẩn số."
         )
 
+    # Chốt lại phân loại trên hình dạng CUỐI CÙNG, có bật luật max-zoom: hide_number ghi ra
+    # config phải phản ánh đúng vùng sau mọi bước gộp, không phải trạng thái còn sót lại từ
+    # một lượt phân loại giữa chừng (các bước gộp chỉ classify khi thực sự có gộp).
+    region_infos = classify_region_infos(
+        region_infos=region_infos,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+        unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
+    )
+
     remaining_tiny_regions_count = count_remaining_micro_regions(
         region_infos=region_infos,
         min_region_area=min_region_area,
@@ -2808,6 +3314,31 @@ def generate_level_assets(
         category_profile=resolved_profile,
         adaptive_enabled=adaptive_palette,
     )
+
+    # Chia ô SAU khi đã dựng bảng màu: các ô con dùng chung target_color của vùng gốc nên
+    # tra bảng vẫn ra đúng một màu/một số, mà bảng màu không bị lệch vì bỗng dưng có thêm
+    # hàng chục vùng cùng màu (build_palette_with_adaptive_merge cân nhắc theo số vùng và
+    # diện tích, thêm bản sao sẽ làm màu đó có vẻ quan trọng hơn thực tế).
+    region_infos, cell_seam_pixels, cell_subdivision_stats = subdivide_giant_regions_into_cells(
+        region_infos=region_infos,
+        target_cell_area=cell_target_area,
+        min_region_area=min_region_area,
+        tiny_area_threshold=hide_small_label_threshold,
+        tiny_side_threshold=tiny_region_side_threshold,
+        tiny_merge_min_area=tiny_merge_min_area,
+        tiny_merge_min_side=tiny_merge_min_side,
+    )
+    if cell_subdivision_stats["cell_subdivided_region_count"]:
+        print(
+            f"Đã chia {cell_subdivision_stats['cell_subdivided_region_count']} vùng quá lớn "
+            f"thành {cell_subdivision_stats['cell_subdivision_cell_count']} ô nhỏ "
+            f"(ô mục tiêu {cell_target_area}px) để user có nhiều chỗ tô hơn."
+        )
+        # CHỈ vẽ vào line.png (ảnh app nhân lên khi chơi), KHÔNG vẽ vào render_line_img.
+        # render_line_img dựng nên preview_colored.png = bức tranh lúc ĐÃ HOÀN THÀNH, mà app
+        # thì ẩn seam đi khi cả hai ô hai bên đều đã tô — nên preview phải sạch seam thì mới
+        # khớp với thứ user thật sự nhìn thấy lúc tô xong.
+        paint_cell_seams_on_line_image(line_img, cell_seam_pixels)
     palette_colors = palette_result["palette_colors"]
     color_to_number = {color: index + 1 for index, color in enumerate(palette_colors)}
 
@@ -2955,6 +3486,11 @@ def generate_level_assets(
         "recovered_ink_pixel_count": recovered_ink_pixel_count,
         "lost_color_pct": selected_preprocessing.get("lost_color_pct"),
         "selected_preprocessing": selected_preprocessing,
+        **cell_subdivision_stats,
+        # Giá trị mốc để app nhận ra pixel seam ngay trong line.png: ảnh đó vốn chỉ có 0
+        # (mực) và 255 (giấy), nên đây là giá trị trung gian DUY NHẤT. Nhờ vậy không cần
+        # thêm asset hay thêm bộ nhớ để biết seam nằm ở đâu.
+        "cell_seam_line_value": CELL_SEAM_LINE_VALUE,
         "has_detail": True,
         "detail_mode": "reference_lerp_rgba",
         "detail_alpha": detail_alpha,
@@ -3263,6 +3799,16 @@ def create_parser():
         ),
     )
     parser.add_argument(
+        "--cell-target-area",
+        type=int,
+        default=DEFAULT_CELL_TARGET_AREA,
+        help=(
+            "Diện tích (pixel) mong muốn của mỗi ô khi chia nhỏ vùng quá lớn. Mặc định "
+            f"{DEFAULT_CELL_TARGET_AREA} (cạnh ~100px trên canvas 1024). Nhỏ hơn = nhiều ô "
+            "hơn để tô nhưng dễ gây chán."
+        ),
+    )
+    parser.add_argument(
         "--assumed-zoom",
         type=float,
         default=DEFAULT_ASSUMED_ZOOM,
@@ -3536,6 +4082,7 @@ def run_batch(args):
             ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
+        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
         )
         processed_count += 1
@@ -3600,6 +4147,7 @@ def run_batch_single_category(args):
             ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
+        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
         )
         processed_count += 1
@@ -3687,6 +4235,7 @@ def run_batch_source_category(args):
                 ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
+        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
             )
             processed_count += 1
@@ -3748,6 +4297,7 @@ def run_single(args):
         ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
+        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
     )
 
