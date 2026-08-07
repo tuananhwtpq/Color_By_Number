@@ -1,5 +1,7 @@
 package com.example.baseproject.activities
 
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.viewpager2.widget.ViewPager2
 import com.example.baseproject.adapters.MainVPAdapter
@@ -7,15 +9,19 @@ import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivityMainBinding
 import com.example.baseproject.ui.main.MainViewModel
-import com.example.baseproject.utils.animateBottomNavLabel
 import com.example.baseproject.utils.animateBottomNavPress
 import com.example.baseproject.utils.animateBottomNavSelection
-import com.example.baseproject.utils.applyBottomNavRipple
 import com.example.baseproject.utils.enableMarquee
+import com.example.baseproject.utils.setBottomNavLabelSelected
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
 
 class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::inflate) {
+
+    companion object {
+        private const val BOTTOM_NAV_ICON_SELECTED_SCALE = 1.22f
+        private const val BOTTOM_NAV_ICON_SELECTED_LIFT_DP = 2f
+    }
 
     private val viewModel: MainViewModel by viewModels {
         SimpleViewModelFactory { MainViewModel() }
@@ -30,16 +36,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     }
 
     override fun initView() {
-        binding.btnLib.applyBottomNavRipple()
-        binding.btnDaily.applyBottomNavRipple()
-        binding.btnAlbum.applyBottomNavRipple()
-        binding.btnMyWork.applyBottomNavRipple()
-        binding.ivColorRealm.applyBottomNavRipple(center = true)
-        binding.btnLib.enableMarquee()
-        binding.btnDaily.enableMarquee()
+        binding.tvLib.enableMarquee()
+        binding.tvDaily.enableMarquee()
         binding.tvColorRealm.enableMarquee()
-        binding.btnAlbum.enableMarquee()
-        binding.btnMyWork.enableMarquee()
+        binding.tvAlbum.enableMarquee()
+        binding.tvMyWork.enableMarquee()
 
         binding.viewPager2.apply {
             adapter = mAdapter
@@ -66,11 +67,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     override fun initActionView() {
 
         binding.btnLib.setOnUnDoubleClick {
-            binding.btnLib.animateBottomNavPress()
+            binding.ivLib.animateBottomNavPress()
             viewModel.onTabSelected(0)
         }
         binding.btnDaily.setOnUnDoubleClick {
-            binding.btnDaily.animateBottomNavPress()
+            binding.ivDaily.animateBottomNavPress()
             viewModel.onTabSelected(1)
         }
         binding.ivColorRealm.setOnUnDoubleClick {
@@ -78,42 +79,42 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
             viewModel.onTabSelected(2)
         }
         binding.btnAlbum.setOnUnDoubleClick {
-            binding.btnAlbum.animateBottomNavPress()
+            binding.ivAlbum.animateBottomNavPress()
             viewModel.onTabSelected(3)
         }
         binding.btnMyWork.setOnUnDoubleClick {
-            binding.btnMyWork.animateBottomNavPress()
+            binding.ivMyWork.animateBottomNavPress()
             viewModel.onTabSelected(4)
         }
     }
 
     private fun resetItemSelector() {
-        binding.btnLib.animateBottomNavLabel(false)
-        binding.btnDaily.animateBottomNavLabel(false)
-        binding.btnAlbum.animateBottomNavLabel(false)
-        binding.btnMyWork.animateBottomNavLabel(false)
+        setBottomNavItemSelected(binding.ivLib, binding.tvLib, false)
+        setBottomNavItemSelected(binding.ivDaily, binding.tvDaily, false)
+        setBottomNavItemSelected(binding.ivAlbum, binding.tvAlbum, false)
+        setBottomNavItemSelected(binding.ivMyWork, binding.tvMyWork, false)
 
         binding.ivColorRealm.isActivated = false
         binding.ivColorRealm.jumpDrawablesToCurrentState()
         binding.ivColorRealm.refreshDrawableState()
         binding.ivColorRealm.animateBottomNavSelection(false, selectedScale = 1f, liftDp = 0f)
 
-        binding.tvColorRealm.animateBottomNavLabel(false)
+        binding.tvColorRealm.setBottomNavLabelSelected(false)
     }
 
     private fun updateByPosition(position: Int) {
         resetItemSelector()
         when (position) {
             0 -> {
-                binding.btnLib.animateBottomNavLabel(true)
+                setBottomNavItemSelected(binding.ivLib, binding.tvLib, true)
             }
 
             1 -> {
-                binding.btnDaily.animateBottomNavLabel(true)
+                setBottomNavItemSelected(binding.ivDaily, binding.tvDaily, true)
             }
 
             2 -> {
-                binding.tvColorRealm.animateBottomNavLabel(true)
+                binding.tvColorRealm.setBottomNavLabelSelected(true)
                 binding.ivColorRealm.isActivated = true
                 binding.ivColorRealm.jumpDrawablesToCurrentState()
                 binding.ivColorRealm.refreshDrawableState()
@@ -125,13 +126,29 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
             }
 
             3 -> {
-                binding.btnAlbum.animateBottomNavLabel(true)
+                setBottomNavItemSelected(binding.ivAlbum, binding.tvAlbum, true)
             }
 
             else -> {
-                binding.btnMyWork.animateBottomNavLabel(true)
+                setBottomNavItemSelected(binding.ivMyWork, binding.tvMyWork, true)
             }
         }
+    }
+
+    private fun setBottomNavItemSelected(
+        icon: ImageView,
+        label: TextView,
+        selected: Boolean
+    ) {
+        icon.isActivated = selected
+        icon.jumpDrawablesToCurrentState()
+        icon.refreshDrawableState()
+        icon.animateBottomNavSelection(
+            selected = selected,
+            selectedScale = BOTTOM_NAV_ICON_SELECTED_SCALE,
+            liftDp = BOTTOM_NAV_ICON_SELECTED_LIFT_DP
+        )
+        label.setBottomNavLabelSelected(selected)
     }
 
 }

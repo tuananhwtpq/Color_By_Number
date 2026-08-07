@@ -6,6 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_background_main"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:layoutDirection="ltr"
     tools:context=".activities.MainActivity">
 
@@ -36,82 +38,168 @@
         android:layout_width="match_parent"
         android:layout_height="130dp"
         android:background="@drawable/bg_bottom_nav_3x"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:gravity="center"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <TextView
+        <LinearLayout
             android:id="@+id/btnLib"
-            style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
-            android:drawableTop="@drawable/ic_lib_selector"
-            android:drawablePadding="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:gravity="center"
-            android:paddingHorizontal="4dp"
-            android:text="Library"
-            android:textColor="@color/bottom_nav_color" />
+            android:orientation="vertical"
+            android:paddingHorizontal="4dp">
 
-        <TextView
+            <ImageView
+                android:id="@+id/ivLib"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_lib_selector" />
+
+            <TextView
+                android:id="@+id/tvLib"
+                style="@style/ButtonS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="@string/library"
+                android:textColor="@color/bottom_nav_color" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnDaily"
-            style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
-            android:drawableTop="@drawable/ic_daily_selector"
-            android:drawablePadding="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:gravity="center"
-            android:paddingHorizontal="4dp"
-            android:text="Daily"
-            android:textColor="@color/bottom_nav_color" />
+            android:orientation="vertical"
+            android:paddingHorizontal="4dp">
 
-        <TextView
-            android:id="@+id/tvColorRealm"
-            style="@style/ButtonS"
+            <ImageView
+                android:id="@+id/ivDaily"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_daily_selector" />
+
+            <TextView
+                android:id="@+id/tvDaily"
+                style="@style/ButtonS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="@string/daily"
+                android:textColor="@color/bottom_nav_color" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btnColorRealmLabel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
-            android:drawableTop="@drawable/ic_none_item"
-            android:drawablePadding="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:gravity="center"
-            android:paddingHorizontal="4dp"
-            android:singleLine="true"
-            android:text="Color Realm"
-            android:textColor="@color/bottom_nav_color" />
+            android:orientation="vertical"
+            android:paddingHorizontal="4dp">
 
-        <TextView
+            <ImageView
+                android:id="@+id/ivColorRealmPlaceholder"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_none_item" />
+
+            <TextView
+                android:id="@+id/tvColorRealm"
+                style="@style/ButtonS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="@string/color_realm"
+                android:textColor="@color/bottom_nav_color" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnAlbum"
-            style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
-            android:drawableTop="@drawable/ic_album_selector"
-            android:drawablePadding="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:gravity="center"
-            android:paddingHorizontal="4dp"
-            android:text="Album"
-            android:textColor="@color/bottom_nav_color" />
+            android:orientation="vertical"
+            android:paddingHorizontal="4dp">
 
-        <TextView
+            <ImageView
+                android:id="@+id/ivAlbum"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_album_selector" />
+
+            <TextView
+                android:id="@+id/tvAlbum"
+                style="@style/ButtonS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="@string/collection"
+                android:textColor="@color/bottom_nav_color" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnMyWork"
-            style="@style/ButtonS"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:layout_weight="1"
-            android:drawableTop="@drawable/ic_my_work_selector"
-            android:drawablePadding="8dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:gravity="center"
-            android:paddingHorizontal="4dp"
-            android:text="My Work"
-            android:textColor="@color/bottom_nav_color" />
+            android:orientation="vertical"
+            android:paddingHorizontal="4dp">
+
+            <ImageView
+                android:id="@+id/ivMyWork"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_my_work_selector" />
+
+            <TextView
+                android:id="@+id/tvMyWork"
+                style="@style/ButtonS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:ellipsize="marquee"
+                android:gravity="center"
+                android:singleLine="true"
+                android:text="@string/my_work"
+                android:textColor="@color/bottom_nav_color" />
+        </LinearLayout>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

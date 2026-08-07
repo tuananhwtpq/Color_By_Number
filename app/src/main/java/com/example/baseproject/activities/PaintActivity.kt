@@ -32,6 +32,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val GUIDE_STEP_01 = 0
         private const val GUIDE_STEP_02 = 1
         private const val GUIDE_STEP_03 = 2
+        private const val GUIDE_PALETTE_HORIZONTAL_PADDING_DP = 8f
+        private const val GUIDE_PALETTE_VERTICAL_PADDING_DP = 14f
     }
 
     private val viewModel: PaintViewModel by viewModels {
@@ -228,7 +230,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     ?: getViewRectInRoot(binding.rvPalette)
                 binding.guideOverlay.setSpotlight(
                     rect = targetRect,
-                    shape = GuideOverlayView.SpotlightShape.RoundRect,
+                    shape = GuideOverlayView.SpotlightShape.LeftRoundRect,
                     radius = dp(100f)
                 )
             }
@@ -285,8 +287,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
         if (!hasChild) return null
 
-        result.inset(-dp(8f), -dp(8f))
-        val paletteRect = getViewRectInRoot(binding.rvPalette)
+        result.inset(
+            -dp(GUIDE_PALETTE_HORIZONTAL_PADDING_DP),
+            -dp(GUIDE_PALETTE_VERTICAL_PADDING_DP)
+        )
+        val paletteRect = getViewRectInRoot(binding.paletteContainer)
         result.left = result.left.coerceAtLeast(paletteRect.left)
         result.top = result.top.coerceAtLeast(paletteRect.top)
         result.right = result.right.coerceAtMost(paletteRect.right)

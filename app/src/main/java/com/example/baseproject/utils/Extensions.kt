@@ -147,6 +147,8 @@ fun View.pulse() {
 
 fun View.animateBottomNavPress() {
     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+    val reboundScaleX = scaleX.coerceAtLeast(1f)
+    val reboundScaleY = scaleY.coerceAtLeast(1f)
     animate().cancel()
     animate()
         .scaleX(0.92f)
@@ -154,8 +156,8 @@ fun View.animateBottomNavPress() {
         .setDuration(70L)
         .withEndAction {
             animate()
-                .scaleX(1f)
-                .scaleY(1f)
+                .scaleX(reboundScaleX)
+                .scaleY(reboundScaleY)
                 .setDuration(160L)
                 .setInterpolator(OvershootInterpolator(2f))
                 .start()
@@ -188,10 +190,18 @@ fun TextView.animateBottomNavLabel(selected: Boolean) {
     jumpDrawablesToCurrentState()
     refreshDrawableState()
 
+    setBottomNavLabelSelected(selected)
+    animateBottomNavSelection(selected)
+}
+
+fun TextView.setBottomNavLabelSelected(selected: Boolean) {
+    isActivated = selected
+    jumpDrawablesToCurrentState()
+    refreshDrawableState()
+
     val selectedColor = "#FFFFFF".toColorInt()
     val normalColor = "#E7E4E7".toColorInt()
 
-    animateBottomNavSelection(selected)
     setTextColor(if (selected) selectedColor else normalColor)
 }
 

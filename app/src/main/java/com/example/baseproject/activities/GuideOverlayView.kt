@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
@@ -18,6 +19,7 @@ class GuideOverlayView @JvmOverloads constructor(
 
     enum class SpotlightShape {
         RoundRect,
+        LeftRoundRect,
         Oval
     }
 
@@ -31,6 +33,7 @@ class GuideOverlayView @JvmOverloads constructor(
     }
 
     private val spotlightRect = RectF()
+    private val spotlightPath = Path()
     private var hasSpotlight = false
     private var spotlightShape = SpotlightShape.RoundRect
     private var cornerRadius = 0f
@@ -70,6 +73,25 @@ class GuideOverlayView @JvmOverloads constructor(
                     cornerRadius,
                     clearPaint
                 )
+
+                SpotlightShape.LeftRoundRect -> {
+                    spotlightPath.reset()
+                    spotlightPath.addRoundRect(
+                        spotlightRect,
+                        floatArrayOf(
+                            cornerRadius,
+                            cornerRadius,
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            cornerRadius,
+                            cornerRadius
+                        ),
+                        Path.Direction.CW
+                    )
+                    canvas.drawPath(spotlightPath, clearPaint)
+                }
 
                 SpotlightShape.Oval -> canvas.drawOval(spotlightRect, clearPaint)
             }
