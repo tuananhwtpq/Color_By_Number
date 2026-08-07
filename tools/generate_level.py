@@ -1592,6 +1592,33 @@ def subdivide_giant_regions_into_cells(
     return result, seam_pixels, stats
 
 
+def build_display_line_image(render_line_img, seam_pixels):
+    """Ảnh nét mà APP nhân lên khi chơi.
+
+    Đây chính là render_line_img — bản giữ sắc độ anti-alias ở chỗ VẪN là mực nhưng không
+    bao giờ làm tối pixel đã được xếp là vùng tô được. Trước đây nó chỉ được dùng để dựng
+    preview rồi vứt đi, còn app thì bị repository nạp cho debug_source_line.png (ảnh nét
+    GỐC). Hậu quả: mọi mảng mực đặc mà recover_solid_ink_fills vừa khôi phục thành vùng tô
+    được (tóc, áo, mảng tối) vẫn còn tối trong ảnh gốc, nên app nhân màu vùng với giá trị
+    tối đó và bôi đen chúng — trong khi preview hiện đúng màu. Đo trên data: Art/09 có
+    19.8% pixel tô được bị bôi tối, lệch trung bình so với preview 15.9 so với 5.2.
+
+    Seam được vẽ ở đây thay vì để trong line.png nhị phân, vì đây mới là ảnh app nhân lên.
+    Ảnh này có đủ mọi sắc xám nên giá trị mốc CELL_SEAM_LINE_VALUE có thể trùng với sắc xám
+    tự nhiên — đẩy các pixel trùng đó đi 1 nấc để mốc lại trở thành duy nhất, nhờ vậy app
+    vẫn nhận ra seam mà không cần thêm asset.
+    """
+    display = render_line_img.copy()
+    pixels = display.load()
+    width, height = display.size
+    bumped = (CELL_SEAM_LINE_VALUE + 1,) * 3
+    for y in range(height):
+        for x in range(width):
+            if pixels[x, y][:3] == (CELL_SEAM_LINE_VALUE,) * 3:
+                pixels[x, y] = bumped
+    return paint_cell_seams_on_line_image(display, seam_pixels)
+
+
 def paint_cell_seams_on_line_image(line_img, seam_pixels, value=CELL_SEAM_LINE_VALUE):
     """Vẽ đường ranh giữa các ô vào ảnh nét mà app nhân lên.
 
@@ -3436,10 +3463,9 @@ def generate_level_assets(
             f"{cell_subdivision_stats['cell_subdivided_background_count']} vùng là NỀN nên "
             f"dùng ô to gấp {BACKGROUND_CELL_AREA_MULTIPLIER:g} lần)."
         )
-        # CHỈ vẽ vào line.png (ảnh app nhân lên khi chơi), KHÔNG vẽ vào render_line_img.
-        # render_line_img dựng nên preview_colored.png = bức tranh lúc ĐÃ HOÀN THÀNH, mà app
-        # thì ẩn seam đi khi cả hai ô hai bên đều đã tô — nên preview phải sạch seam thì mới
-        # khớp với thứ user thật sự nhìn thấy lúc tô xong.
+        # render_line_img giữ SẠCH seam vì nó dựng nên preview_colored.png = bức tranh lúc
+        # ĐÃ HOÀN THÀNH, mà app thì ẩn seam khi cả hai ô hai bên đều đã tô. Seam chỉ được vẽ
+        # vào bản hiển thị (line_render.png, dựng bên dưới) và vào line.png nhị phân.
         paint_cell_seams_on_line_image(line_img, cell_seam_pixels)
     palette_colors = palette_result["palette_colors"]
     color_to_number = {color: index + 1 for index, color in enumerate(palette_colors)}
@@ -3622,6 +3648,11 @@ def generate_level_assets(
     line_img.save(line_out_path)
     print(f"Đã lưu ảnh Line: {line_out_path}")
 
+    display_line_img = build_display_line_image(render_line_img, cell_seam_pixels)
+    display_line_out_path = os.path.join(output_dir, "line_render.png")
+    display_line_img.save(display_line_out_path)
+    print(f"Đã lưu ảnh Line hiển thị cho app: {display_line_out_path}")
+
     source_line_out_path = os.path.join(output_dir, "debug_source_line.png")
     source_line_img.save(source_line_out_path)
     print(f"Đã lưu ảnh Line gốc để debug: {source_line_out_path}")
@@ -3685,6 +3716,7 @@ def generate_level_assets(
         "width": width,
         "height": height,
         "assets": {
+            "line_render": "line_render.png",
             "line": "line.png",
             "mask": "mask.png",
             "preview": "preview_colored.png",

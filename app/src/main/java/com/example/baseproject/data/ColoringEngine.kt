@@ -37,7 +37,11 @@ class AnimatedFiller(
     val startX: Int,
     val startY: Int,
     maxQueueSize: Int,
-    val onFinished: (Int) -> Unit
+    val onFinished: (Int) -> Unit,
+    // Lớp detail (RGBA) kéo màu phẳng của bảng màu về gần màu ảnh gốc. Không truyền vào thì
+    // lúc loang chỉ thấy màu phẳng rồi mới "nhảy" sang màu đúng khi animation kết thúc — đo
+    // trên data: lệch so với màu gốc 24.1 lúc đang loang so với 4.9 sau khi xong (Art/09).
+    private val detailPixels: IntArray? = null
 ) {
     val localBitmap: Bitmap
     val left: Int
@@ -138,11 +142,31 @@ class AnimatedFiller(
             val idx = indices[i]
             val x = idx % width
             val y = idx / width
-            localPx[(y - top) * bw + (x - left)] = targetColor
+            localPx[(y - top) * bw + (x - left)] = colorWithDetail(idx)
         }
 
         localBitmap = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
         localBitmap.setPixels(localPx, 0, bw, 0, 0, bw, bh)
+    }
+
+    /**
+     * Màu phẳng của bảng màu, đã phủ lớp detail lên trên đúng như lúc tô xong.
+     *
+     * Cùng công thức alpha-over mà PaintCanvasView dùng khi vẽ revealedDetailBitmap, nên
+     * mảng màu lúc đang loang trùng khít với lúc loang xong — không còn cú "nhảy màu".
+     */
+    private fun colorWithDetail(index: Int): Int {
+        val detail = detailPixels ?: return targetColor
+        if (index >= detail.size) return targetColor
+        val packed = detail[index]
+        val alpha = (packed ushr 24) and 0xFF
+        if (alpha == 0) return targetColor
+
+        val inverse = 255 - alpha
+        val r = (((packed shr 16) and 0xFF) * alpha + ((targetColor shr 16) and 0xFF) * inverse) / 255
+        val g = (((packed shr 8) and 0xFF) * alpha + ((targetColor shr 8) and 0xFF) * inverse) / 255
+        val b = ((packed and 0xFF) * alpha + (targetColor and 0xFF) * inverse) / 255
+        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
     }
 
     /**

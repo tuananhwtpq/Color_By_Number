@@ -99,6 +99,9 @@ data class RegionMetadata(
 
 data class LevelAssets(
     @SerializedName("line") val line: String? = null,
+    // Ảnh nét dùng để nhân lúc vẽ (xem AssetLevelRepositoryImpl). Khác "line" — cái đó là
+    // bản đồ nhị phân dùng cho logic tô/loang màu.
+    @SerializedName("line_render") val lineRender: String? = null,
     @SerializedName("mask") val mask: String? = null,
     @SerializedName("preview") val preview: String? = null,
     @SerializedName("detail") val detail: String? = null,

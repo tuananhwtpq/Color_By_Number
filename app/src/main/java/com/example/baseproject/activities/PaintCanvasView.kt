@@ -727,7 +727,8 @@ class PaintCanvasView @JvmOverloads constructor(
             maxQueueSize = maxQueueSize,
             onFinished = {
                 onRegionFilledListener?.invoke(it)
-            }
+            },
+            detailPixels = detailSourcePixelsArray
         )
         activeFillers.add(filler)
 

@@ -22,6 +22,8 @@ from tools.generate_level import (
     MAX_REGION_FRAGMENTS,
     bbox_min_side,
     build_chromatic_mask,
+    build_display_line_image,
+    build_render_line_image,
     is_micro_region,
     region_thickness_diameter,
     update_region_classification,
@@ -1389,6 +1391,42 @@ class GenerateLevelCliTest(unittest.TestCase):
         # Có đường ranh để user phân biệt được ô, và nó nằm trong vùng.
         self.assertTrue(seams)
         self.assertTrue(seams <= set(points))
+
+    def test_display_line_never_darkens_a_fillable_pixel(self):
+        # Bất biến cốt lõi. Mảng mực đặc được recover_solid_ink_fills khôi phục thành vùng tô
+        # được vẫn TỐI trong ảnh nét gốc; nếu app nhân màu vùng với giá trị tối đó thì tóc/áo
+        # bị bôi đen dù preview hiện đúng màu. Đo trên Art/09: 19.8% pixel tô được bị bôi tối.
+        source = Image.new("L", (4, 1))
+        source.putdata([10, 40, 200, 255])
+        # binary: 2 pixel đầu là nét, 2 pixel sau là vùng tô được
+        binary = Image.new("L", (4, 1))
+        binary.putdata([0, 0, 255, 255])
+
+        render = build_render_line_image(source, binary)
+        display = build_display_line_image(render, set())
+        values = [pixel[0] for pixel in display.convert("RGB").getdata()]
+
+        # Chỗ vẫn là nét: giữ nguyên sắc độ gốc (còn anti-alias, không bị ép về 0).
+        self.assertEqual([10, 40], values[:2])
+        # Chỗ đã là vùng tô được: sáng hết mức, không làm tối màu vùng.
+        self.assertEqual([255, 255], values[2:])
+
+    def test_display_line_keeps_the_seam_marker_unique(self):
+        # Ảnh hiển thị có đủ mọi sắc xám nên sắc xám tự nhiên có thể trùng giá trị mốc seam.
+        # Phải đẩy chúng đi 1 nấc, nếu không app sẽ tưởng nhầm nét vẽ là seam rồi xoá trắng.
+        source = Image.new("L", (3, 1))
+        source.putdata([CELL_SEAM_LINE_VALUE, CELL_SEAM_LINE_VALUE, 100])
+        binary = Image.new("L", (3, 1))
+        binary.putdata([0, 0, 0])
+
+        display = build_display_line_image(
+            build_render_line_image(source, binary), {(1, 0)}
+        )
+        values = [pixel[0] for pixel in display.convert("RGB").getdata()]
+
+        self.assertEqual(CELL_SEAM_LINE_VALUE + 1, values[0])  # sắc xám tự nhiên -> đẩy đi
+        self.assertEqual(CELL_SEAM_LINE_VALUE, values[1])      # seam thật -> giữ mốc
+        self.assertEqual(1, values.count(CELL_SEAM_LINE_VALUE))
 
     def test_seam_is_a_faint_line_not_a_real_stroke(self):
         # Vẽ đè lên ảnh nét: seam phải là xám nhạt (thấy được khi chơi, gần như chìm trên
