@@ -57,6 +57,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var shouldStartGuideWhenContentReady: Boolean = false
     private var isLoadingVisible: Boolean = false
     private var isFullColorPreviewVisible: Boolean = false
+    private var isFillAllPreviewActive: Boolean = false
     private var fullPreviewBitmap: Bitmap? = null
     private var fullPreviewRenderKey: String? = null
     private val guideRectBuffer = Rect()
@@ -85,6 +86,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.btnBack.setOnClickListener { finish() }
         binding.btnHint.setOnClickListener { viewModel.onHintRequested() }
         binding.btnPreviewFull.setOnClickListener { toggleFullColorPreview() }
+        binding.btnFillAll.setOnClickListener { toggleFillAllOnCanvas() }
         binding.btnCloseFullPreview.setOnClickListener { hideFullColorPreview() }
         binding.fullPreviewOverlay.setOnClickListener { hideFullColorPreview() }
         binding.ivFullPreview.setOnClickListener { }
@@ -151,6 +153,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             if (currentRenderKey != newRenderKey) {
                 currentRenderKey = newRenderKey
                 resetFullPreviewCache(newRenderKey)
+                exitFillAllPreviewState()
                 lifecycleScope.launch {
                     ensureFullPreviewBitmap(renderData)
                     binding.paintCanvas.setBitmapsSuspend(
@@ -168,7 +171,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     showPendingGuideIfNeeded()
                     binding.root.post { updateGuideOverlayForCurrentStep() }
                 }
-            } else {
+            } else if (!isFillAllPreviewActive) {
+                // Đang xem bản tô đầy thì bỏ qua: mọi lệnh vẽ ở đây sẽ đè lên lớp preview
+                // (ví dụ chọn màu khác trên palette sẽ bật lại highlight giữa ảnh đã tô).
                 if (lastCompletedMaskColors.isNotEmpty() && state.completedMaskColors.isEmpty()) {
                     binding.paintCanvas.setCompletedRegions(emptySet())
                     binding.paintCanvas.resetProgress()
@@ -326,6 +331,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.paintCanvas.visibility = visibility
         binding.paletteContainer.visibility = visibility
         binding.btnPreviewFull.visibility = visibility
+        binding.btnFillAll.visibility = visibility
         binding.progressBar.visibility =
             if (isVisible && isLoadingVisible && !isGuideVisible) View.VISIBLE else View.GONE
         updateFullPreviewVisibility()
@@ -337,6 +343,52 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.llGuide.visibility = View.GONE
         binding.guideOverlay.clearSpotlight()
         setMainContentVisible(true)
+    }
+
+    /**
+     * Tô sẵn mọi vùng ngay trên canvas để soi chất lượng màu thật (có zoom/pan), khác với nút
+     * "Full" chỉ hiện ảnh preview dựng sẵn trong một ImageView.
+     *
+     * Đây là chế độ XEM: tiến trình đã lưu không bị đụng tới, bấm lần nữa là quay về đúng
+     * trạng thái đang tô dở.
+     */
+    private fun toggleFillAllOnCanvas() {
+        val state = viewModel.uiState.value
+        val renderData = state.renderData
+        if (renderData == null || state.isLoading) {
+            Toast.makeText(this, "Ảnh chưa sẵn sàng", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (isFillAllPreviewActive) {
+            isFillAllPreviewActive = false
+            binding.btnFillAll.text = "Fill"
+            lifecycleScope.launch {
+                binding.paintCanvas.resetProgress()
+                if (state.completedColorMap.isNotEmpty()) {
+                    binding.paintCanvas.restoreProgressSuspend(state.completedColorMap)
+                }
+                binding.paintCanvas.setCompletedRegions(state.completedMaskColors)
+                // Chỉ mở lại số sau khi lớp pixel đã về đúng tiến trình thật, nếu không sẽ
+                // thấy số hiện đè lên ảnh vẫn còn đang tô đầy trong vài frame.
+                binding.paintCanvas.setPreviewFillMode(false)
+                binding.paintCanvas.highlightNumber(state.highlightMaskColors)
+            }
+        } else {
+            isFillAllPreviewActive = true
+            binding.btnFillAll.text = "Undo"
+            binding.paintCanvas.setPreviewFillMode(true)
+            binding.paintCanvas.highlightNumber(emptyList())
+            lifecycleScope.launch {
+                binding.paintCanvas.fillAllSuspend(renderData.allMaskColorsToTargetColors)
+            }
+        }
+    }
+
+    private fun exitFillAllPreviewState() {
+        if (!isFillAllPreviewActive) return
+        isFillAllPreviewActive = false
+        binding.btnFillAll.text = "Fill"
+        binding.paintCanvas.setPreviewFillMode(false)
     }
 
     private fun toggleFullColorPreview() {
@@ -449,6 +501,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     override fun onPause() {
         super.onPause()
+        // Đang xem bản tô đầy thì canvas không phản ánh tiến trình thật — lưu lúc này sẽ ghi
+        // đè thumbnail bằng ảnh đã hoàn thiện dù người dùng mới tô được vài mảng.
+        if (isFillAllPreviewActive) return
         viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(400))
     }
 

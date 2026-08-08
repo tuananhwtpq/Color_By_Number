@@ -18,12 +18,10 @@ from tools.generate_level import (
     LevelQualityGateError,
     absorb_small_region_colors,
     absorb_isolated_unreadable_regions_by_proximity,
-    CELL_SEAM_LINE_VALUE,
     MAX_REGION_FRAGMENTS,
     bbox_min_side,
     build_chromatic_mask,
     build_display_line_image,
-    build_render_line_image,
     is_micro_region,
     region_thickness_diameter,
     update_region_classification,
@@ -44,11 +42,7 @@ from tools.generate_level import (
     merge_small_attached_regions,
     merge_label_hidden_regions_for_gate,
     merge_tiny_regions_into_neighbors,
-    paint_cell_seams_on_line_image,
     reclaim_non_ink_pixels_into_regions,
-    region_looks_like_background,
-    subdivide_giant_regions_into_cells,
-    subdivide_region_into_cells,
     resolve_generation_profile,
     resolve_generation_profile_settings,
     resolve_target_unique_colors,
@@ -1279,182 +1273,40 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(5.0, anchor["y"])
         self.assertEqual(0.0, anchor["radius"])
 
-    def test_subdivide_splits_big_region_into_contiguous_cells_of_target_size(self):
-        # Mảng vuông 300x300 = 90.000px, ô mục tiêu 10.000px -> khoảng 9 ô.
-        points = [(x, y) for y in range(300) for x in range(300)]
+    def test_display_line_changes_nothing_except_recovered_ink(self):
+        """BẤT BIẾN CHỐNG REGRESSION — đọc kỹ trước khi sửa build_display_line_image.
 
-        cells = subdivide_region_into_cells(points, target_cell_area=10000)
+        Ảnh hiển thị phải bằng ĐÚNG ảnh nét gốc ở mọi pixel, TRỪ các pixel thuộc mặt nạ
+        ink-recovery. Bản trước vi phạm điều này: nó lấy max(ảnh gốc, binary), mà binary là
+        bản đồ phân vùng sinh bằng ngưỡng độ sáng, nên mọi nét sáng hơn ngưỡng bị đẩy lên
+        trắng tinh — đo trên Animal/01 là 48.4% pixel nét bị xoá, nét đứt thành nét gạch.
+        """
+        source = Image.new("L", (5, 1))
+        source.putdata([10, 95, 150, 200, 243])
+        # Chỉ pixel thứ 2 (index 1) là mảng mực đặc được khôi phục.
+        recovered = Image.new("L", (5, 1))
+        recovered.putdata([0, 255, 0, 0, 0])
 
-        self.assertGreaterEqual(len(cells), 6)
-        self.assertLessEqual(len(cells), 12)
-        # Phủ đúng một lần, không mất cũng không trùng pixel nào.
-        flat = [p for cell in cells for p in cell]
-        self.assertEqual(len(points), len(flat))
-        self.assertEqual(set(points), set(flat))
-        # Mỗi ô phải LIỀN MẠCH — nếu không, một số lại ứng với nhiều mẩu rời rạc.
-        for cell in cells:
-            self.assertTrue(self.is_contiguous(cell), f"ô {len(cell)}px bị đứt rời")
+        display = build_display_line_image(source, recovered)
+        values = [pixel[0] for pixel in display.convert("RGB").getdata()]
 
-    def test_subdivide_leaves_no_cell_too_small_to_tap(self):
-        # Hình chữ L lõm: lưới hạt giống chắc chắn để lại mẩu vụn ở rìa, phải được gộp lại.
-        points = [(x, y) for y in range(200) for x in range(200) if x < 90 or y < 90]
+        self.assertEqual(255, values[1], "pixel ink-recovery phải được làm trắng")
+        # Mọi pixel còn lại giữ NGUYÊN sắc độ gốc — kể cả nét nhạt (150, 200) vốn bị bản
+        # trước xoá trắng, và nền giấy 243 vốn bị ép lên 255.
+        self.assertEqual([10, 150, 200, 243], [values[0], values[2], values[3], values[4]])
 
-        cells = subdivide_region_into_cells(points, target_cell_area=10000)
+    def test_display_line_without_recovery_is_exactly_the_source(self):
+        # Ảnh không có mảng mực đặc nào để khôi phục thì ảnh hiển thị phải trùng khít ảnh nét
+        # gốc — tức bằng đúng hành vi vốn chạy tốt trước khi có line_render.png.
+        source = Image.new("L", (6, 1))
+        source.putdata([0, 60, 120, 180, 240, 255])
 
-        for cell in cells:
-            self.assertGreaterEqual(
-                len(cell), 10000 // 3, f"còn ô {len(cell)}px — quá nhỏ để tap"
-            )
-
-    def test_background_is_recognised_by_hugging_the_canvas_edges(self):
-        # Nền: khung bao quanh, chạm cả 4 cạnh canvas.
-        canvas = 300
-        background = [
-            (x, y)
-            for y in range(canvas)
-            for x in range(canvas)
-            if x < 40 or x >= canvas - 40 or y < 40 or y >= canvas - 40
-        ]
-
-        self.assertTrue(region_looks_like_background(background, canvas, canvas))
-
-    def test_huge_centred_subject_is_not_mistaken_for_background(self):
-        # Ca quyết định, lấy từ data thật: Animal/05 có vùng chiếm 44.3% canvas nhưng là
-        # THÂN CON VẬT nằm giữa tranh — chỉ chạm 1 cạnh. "To" một mình không đủ kết luận là
-        # nền, nếu không chủ thể sẽ bị chia thành ô thưa và mất hết chi tiết đáng tô.
-        canvas = 300
-        subject = [(x, y) for y in range(20, 290) for x in range(20, 280)]
-
-        self.assertGreater(len(subject) * 100.0 / (canvas * canvas), 44)
-        self.assertFalse(region_looks_like_background(subject, canvas, canvas))
-
-    def test_background_cells_are_larger_than_subject_cells(self):
-        canvas = 400
-        background = [
-            (x, y)
-            for y in range(canvas)
-            for x in range(canvas)
-            if x < 70 or x >= canvas - 70 or y < 70 or y >= canvas - 70
-        ]
-        info = self.make_region_info(background, (200, 210, 220))
-
-        cells, _, stats = subdivide_giant_regions_into_cells(
-            region_infos=[info],
-            target_cell_area=5000,
-            min_region_area=120,
-            tiny_area_threshold=100,
-            tiny_side_threshold=10,
-            tiny_merge_min_area=48,
-            tiny_merge_min_side=6,
-            canvas_width=canvas,
-            canvas_height=canvas,
-            background_multiplier=3.0,
-        )
-
-        self.assertEqual(1, stats["cell_subdivided_background_count"])
-        # Ô nền phải to xấp xỉ 3 lần ô mục tiêu thường, tức số ô ít đi tương ứng.
-        average_cell_area = len(background) / len(cells)
-        self.assertGreater(average_cell_area, 5000 * 1.8)
-
-    def test_subdivide_leaves_small_region_alone(self):
-        points = [(x, y) for y in range(50) for x in range(50)]
+        display = build_display_line_image(source, None)
 
         self.assertEqual(
-            [points], subdivide_region_into_cells(points, target_cell_area=10000)
+            list(source.getdata()),
+            [pixel[0] for pixel in display.convert("RGB").getdata()],
         )
-
-    def test_subdivided_cells_keep_parent_colour_so_they_share_one_number(self):
-        # Các ô con phải giữ NGUYÊN màu vùng gốc. Nếu đo lại màu từng ô, mỗi ô sẽ lệch một
-        # chút rồi rơi vào số khác nhau, biến mảng nền phẳng thành đám loang lổ.
-        points = [(x, y) for y in range(200) for x in range(200)]
-        parent = self.make_region_info(points, (33, 77, 190))
-        parent["representative_color"] = (33, 77, 190)
-
-        cells, seams, stats = subdivide_giant_regions_into_cells(
-            region_infos=[parent],
-            target_cell_area=10000,
-            min_region_area=120,
-            tiny_area_threshold=100,
-            tiny_side_threshold=10,
-            tiny_merge_min_area=48,
-            tiny_merge_min_side=6,
-            canvas_width=600,
-            canvas_height=600,
-        )
-
-        self.assertEqual(1, stats["cell_subdivided_region_count"])
-        # Mảng 200x200 nằm gọn giữa canvas 600x600 -> không chạm cạnh nào, là chủ thể.
-        self.assertEqual(0, stats["cell_subdivided_background_count"])
-        self.assertGreater(len(cells), 1)
-        for cell in cells:
-            self.assertEqual((33, 77, 190), cell["target_color"])
-        # Có đường ranh để user phân biệt được ô, và nó nằm trong vùng.
-        self.assertTrue(seams)
-        self.assertTrue(seams <= set(points))
-
-    def test_display_line_never_darkens_a_fillable_pixel(self):
-        # Bất biến cốt lõi. Mảng mực đặc được recover_solid_ink_fills khôi phục thành vùng tô
-        # được vẫn TỐI trong ảnh nét gốc; nếu app nhân màu vùng với giá trị tối đó thì tóc/áo
-        # bị bôi đen dù preview hiện đúng màu. Đo trên Art/09: 19.8% pixel tô được bị bôi tối.
-        source = Image.new("L", (4, 1))
-        source.putdata([10, 40, 200, 255])
-        # binary: 2 pixel đầu là nét, 2 pixel sau là vùng tô được
-        binary = Image.new("L", (4, 1))
-        binary.putdata([0, 0, 255, 255])
-
-        render = build_render_line_image(source, binary)
-        display = build_display_line_image(render, set())
-        values = [pixel[0] for pixel in display.convert("RGB").getdata()]
-
-        # Chỗ vẫn là nét: giữ nguyên sắc độ gốc (còn anti-alias, không bị ép về 0).
-        self.assertEqual([10, 40], values[:2])
-        # Chỗ đã là vùng tô được: sáng hết mức, không làm tối màu vùng.
-        self.assertEqual([255, 255], values[2:])
-
-    def test_display_line_keeps_the_seam_marker_unique(self):
-        # Ảnh hiển thị có đủ mọi sắc xám nên sắc xám tự nhiên có thể trùng giá trị mốc seam.
-        # Phải đẩy chúng đi 1 nấc, nếu không app sẽ tưởng nhầm nét vẽ là seam rồi xoá trắng.
-        source = Image.new("L", (3, 1))
-        source.putdata([CELL_SEAM_LINE_VALUE, CELL_SEAM_LINE_VALUE, 100])
-        binary = Image.new("L", (3, 1))
-        binary.putdata([0, 0, 0])
-
-        display = build_display_line_image(
-            build_render_line_image(source, binary), {(1, 0)}
-        )
-        values = [pixel[0] for pixel in display.convert("RGB").getdata()]
-
-        self.assertEqual(CELL_SEAM_LINE_VALUE + 1, values[0])  # sắc xám tự nhiên -> đẩy đi
-        self.assertEqual(CELL_SEAM_LINE_VALUE, values[1])      # seam thật -> giữ mốc
-        self.assertEqual(1, values.count(CELL_SEAM_LINE_VALUE))
-
-    def test_seam_is_a_faint_line_not_a_real_stroke(self):
-        # Vẽ đè lên ảnh nét: seam phải là xám nhạt (thấy được khi chơi, gần như chìm trên
-        # tranh hoàn thành), và KHÔNG được ghi đè nét mực thật đang có.
-        line = Image.new("RGB", (10, 10), (255, 255, 255))
-        line.putpixel((0, 0), (0, 0, 0))
-
-        paint_cell_seams_on_line_image(line, {(0, 0), (5, 5)})
-
-        self.assertEqual((0, 0, 0), line.getpixel((0, 0)))
-        seam = line.getpixel((5, 5))
-        self.assertEqual((CELL_SEAM_LINE_VALUE,) * 3, seam)
-        self.assertLess(seam[0], 255)
-        self.assertGreater(seam[0], 200)
-
-    def is_contiguous(self, points):
-        remaining = set(points)
-        start = next(iter(remaining))
-        queue = [start]
-        remaining.discard(start)
-        while queue:
-            x, y = queue.pop()
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                neighbor = (x + dx, y + dy)
-                if neighbor in remaining:
-                    remaining.discard(neighbor)
-                    queue.append(neighbor)
-        return not remaining
 
     def test_find_label_anchor_picks_roomy_blob_not_long_thin_strip(self):
         # Hình chữ L: khối vuông 21x21 rộng rãi ở góc trên-trái, nối bằng cuống mảnh xuống

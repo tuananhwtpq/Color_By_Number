@@ -314,14 +314,25 @@ def recover_solid_ink_fills(
             min_chroma_spread=min_chroma_spread,
         )
 
-    ink_core = build_ink_mask(binary_img).filter(
-        ImageFilter.MinFilter(ink_core_radius * 2 + 1)
-    )
-    recovered = ImageChops.multiply(ink_core, chromatic_mask)
-    recovered_pixel_count = count_mask_pixels(recovered)
+    recovered = build_recovered_ink_mask(binary_img, chromatic_mask, ink_core_radius)
+    recovered_pixel_count = count_mask_pixels(recovered) if recovered else 0
     if recovered_pixel_count == 0:
         return binary_img, 0
     return ImageChops.lighter(binary_img, recovered), recovered_pixel_count
+
+
+def build_recovered_ink_mask(binary_img, chromatic_mask, ink_core_radius):
+    """Mặt nạ 255 tại các pixel mực đặc được khôi phục thành vùng tô được.
+
+    Tách riêng khỏi recover_solid_ink_fills vì ảnh nét dùng để HIỂN THỊ cần đúng mặt nạ này:
+    chỉ những pixel ở đây mới được làm trắng, còn lại giữ nguyên sắc độ ảnh nét gốc.
+    """
+    if ink_core_radius < 1 or chromatic_mask is None:
+        return None
+    ink_core = build_ink_mask(binary_img).filter(
+        ImageFilter.MinFilter(ink_core_radius * 2 + 1)
+    )
+    return ImageChops.multiply(ink_core, chromatic_mask)
 
 
 def load_binary_fill_map(line_art_path, brightness_threshold, line_close_radius):
@@ -611,18 +622,26 @@ def select_binary_fill_map(
         # trên đúng bản đồ vùng sẽ dùng thật, và để shortlist không loại nhầm candidate chỉ
         # vì bản chưa khôi phục của nó trông ít vùng hơn.
         recovered_ink_pixel_count = 0
+        recovered_mask = None
         if chromatic_mask is not None:
-            binary, recovered_ink_pixel_count = recover_solid_ink_fills(
-                binary,
-                chromatic_mask=chromatic_mask,
-                ink_core_radius=ink_core_radius,
+            recovered_mask = build_recovered_ink_mask(
+                binary, chromatic_mask, ink_core_radius
             )
+            recovered_ink_pixel_count = (
+                count_mask_pixels(recovered_mask) if recovered_mask else 0
+            )
+            if recovered_ink_pixel_count:
+                binary = ImageChops.lighter(binary, recovered_mask)
+            else:
+                recovered_mask = None
         cheap_report = score_preprocessing_candidate(binary, playability_profile=playability_profile)
         cheap_candidates.append({
             **candidate,
             **cheap_report,
             "raw_total_regions": cheap_report["total_regions"],
             "recovered_ink_pixel_count": recovered_ink_pixel_count,
+            # Ảnh, không phải dữ liệu báo cáo — bị lọc khỏi selected_report bên dưới.
+            "recovered_mask": recovered_mask,
             "lost_color_pct": (
                 None if chromatic_mask is None else measure_lost_color_pct(binary, chromatic_mask)
             ),
@@ -657,18 +676,21 @@ def select_binary_fill_map(
         scored_candidates = cheap_candidates
 
     selected = select_preprocessing_candidate(scored_candidates)
-    selected_report = {key: value for key, value in selected.items() if key != "binary"}
+    image_keys = ("binary", "recovered_mask")
+    selected_report = {
+        key: value for key, value in selected.items() if key not in image_keys
+    }
     selected_report["candidate_count"] = len(cheap_candidates)
     selected_report["candidate_rescored_count"] = len(scored_candidates)
     selected_report["candidate_top"] = [
-        {key: value for key, value in candidate.items() if key != "binary"}
+        {key: value for key, value in candidate.items() if key not in image_keys}
         for candidate in sorted(
             scored_candidates,
             key=preprocessing_candidate_sort_key,
             reverse=True,
         )[:3]
     ]
-    return line_img, selected["binary"], selected_report
+    return line_img, selected["binary"], selected.get("recovered_mask"), selected_report
 
 
 def make_runtime_preprocessing_report(selected_preprocessing):
@@ -1235,404 +1257,26 @@ def find_label_anchor(region, bbox, centroid):
     return {"x": float(best_point[0]), "y": float(best_point[1]), "radius": radius}
 
 
-# Diện tích mong muốn của một ô sau khi chia nhỏ vùng khổng lồ. 10.000px (cạnh ~100px trên
-# canvas 1024) đúng bằng p90 của phân bố vùng hiện có, nên ô mới sinh ra có cùng cỡ với các
-# vùng "to nhưng bình thường" đang có sẵn — nhìn đồng nhất chứ không lộ ra là cắt máy móc.
-# Đo trên data: mảng nền 48% của Animal/09 thành ~46 ô, tổng số vùng toàn bộ +30%.
-# Nhỏ hơn (5.000px) cho ra 94 ô cho riêng một mảng nền — lặp và chán.
-DEFAULT_CELL_TARGET_AREA = 10000
-
-# Nền được chia thành ô TO HƠN hẳn chủ thể. Chia nền nhỏ như chủ thể thì user phải tap hàng
-# chục ô cho một mảng phẳng chẳng có gì để nhìn — vừa lâu vừa chán, trong khi công sức đó bỏ
-# vào chủ thể mới đáng. Hệ số 3 nghĩa là nền 45% canvas ra ~15 ô thay vì ~46 ô.
-BACKGROUND_CELL_AREA_MULTIPLIER = 3.0
-
-# Ngưỡng nhận diện nền. Đo trên data thật (mask trước khi chia ô), hai nhóm tách bạch hẳn:
-#   nền     — chạm 3-4 cạnh canvas, chiếm 32-100% chu vi
-#   chủ thể — chạm 0-2 cạnh, kể cả vùng CHIẾM TỚI 44% canvas (thân con vật nằm giữa tranh)
-# Nên "to" một mình không đủ để kết luận là nền; phải là bao quanh, tức chạm nhiều cạnh.
-BACKGROUND_MIN_BORDER_SIDES = 3
-BACKGROUND_MIN_BORDER_PCT = 25.0
-
-
-def region_border_contact(region_points, canvas_width, canvas_height):
-    """(phần trăm chu vi canvas vùng này chiếm, số cạnh canvas nó chạm tới)."""
-    last_x = canvas_width - 1
-    last_y = canvas_height - 1
-    sides = set()
-    border_pixels = 0
-    for x, y in region_points:
-        on_border = False
-        if x == 0:
-            sides.add("L")
-            on_border = True
-        elif x == last_x:
-            sides.add("R")
-            on_border = True
-        if y == 0:
-            sides.add("T")
-            on_border = True
-        elif y == last_y:
-            sides.add("B")
-            on_border = True
-        if on_border:
-            border_pixels += 1
-
-    perimeter = max(1, 2 * (canvas_width + canvas_height))
-    return border_pixels * 100.0 / perimeter, len(sides)
-
-
-def region_looks_like_background(region_points, canvas_width, canvas_height):
-    border_pct, side_count = region_border_contact(
-        region_points, canvas_width, canvas_height
-    )
-    return (
-        side_count >= BACKGROUND_MIN_BORDER_SIDES
-        and border_pct >= BACKGROUND_MIN_BORDER_PCT
-    )
-
-# Chỉ chia vùng lớn hơn ngần này lần ô mục tiêu, để không băm nhỏ vùng cỡ vừa.
-CELL_SUBDIVIDE_MIN_MULTIPLIER = 2
-
-# Độ sáng của đường ranh giữa 2 ô cùng màu, vẽ vào line.png (app nhân ảnh này lên). Hai ô
-# cạnh nhau có CÙNG màu nên khi chưa tô đều trắng, không có gì phân định — không có đường
-# ranh thì user không biết ô tiếp theo nằm đâu. 235/255 làm tối ~8%: đủ thấy khi đang chơi,
-# gần như chìm hẳn trên tranh đã hoàn thành.
-CELL_SEAM_LINE_VALUE = 235
-
-
-def subdivide_region_into_cells(region_points, target_cell_area):
-    """Chia một vùng lớn thành các ô nhỏ liền mạch, cỡ xấp xỉ target_cell_area.
-
-    Dùng BFS đa nguồn từ các hạt giống rải đều (Voronoi trắc địa): mỗi ô lớn dần từ hạt
-    giống của nó và dừng khi chạm ô khác. Chọn cách này thay vì k-means vì:
-      - O(số pixel) thay vì O(số pixel × số ô) mỗi vòng lặp — vùng 500k pixel chia 50 ô thì
-        k-means tốn 25 triệu phép mỗi vòng, quá chậm trong Python thuần;
-      - mỗi ô LIỀN MẠCH theo đúng định nghĩa (lan từ 1 hạt giống), không cần bước tách
-        connected component vá lại;
-      - ranh giới đi theo hình dạng thật của vùng (khoảng cách trắc địa, không phải khoảng
-        cách thẳng), nên ô ôm theo mảng màu thay vì bị cắt vuông vức như chia lưới.
-
-    Trả về danh sách các list điểm. Vùng nhỏ hơn ngưỡng thì trả về nguyên vẹn.
-    """
-    area = len(region_points)
-    cell_count = int(round(area / float(target_cell_area)))
-    if cell_count < 2:
-        return [region_points]
-
-    point_set = set(region_points)
-    left = min(x for x, _ in region_points)
-    right = max(x for x, _ in region_points)
-    top = min(y for _, y in region_points)
-    bottom = max(y for _, y in region_points)
-
-    # Rải hạt giống trên một lưới có bước ~cạnh ô mong muốn, rồi kéo mỗi hạt về pixel gần
-    # nhất THUỘC vùng — vùng lõm/hình vành khăn có ô lưới rơi ra ngoài, bỏ qua chúng.
-    spacing = max(2, int(round(math.sqrt(target_cell_area))))
-    # Xô lệch hạt giống khỏi vị trí lưới. Không xô lệch thì trong một mảng phẳng rộng,
-    # Voronoi từ lưới đều chính là các ô VUÔNG đều tăm tắp — nền hiện ra như giấy kẻ ô, lộ
-    # ngay là cắt bằng máy. Lệch tối đa ~1/3 bước lưới là đủ để ô méo tự nhiên mà vẫn giữ
-    # được kích thước đồng đều. Dùng hàm băm của chính toạ độ nên kết quả TẤT ĐỊNH: sinh lại
-    # cùng một ảnh luôn ra cùng một cách chia.
-    jitter = max(1, spacing // 3)
-
-    def jittered(value, salt):
-        noise = (value * 73856093 + salt * 19349663) & 0xFFFF
-        return value + (noise % (2 * jitter + 1)) - jitter
-
-    seeds = []
-    grid_y = top + spacing // 2
-    while grid_y <= bottom:
-        grid_x = left + spacing // 2
-        while grid_x <= right:
-            seed = (jittered(grid_x, grid_y), jittered(grid_y, grid_x))
-            if seed in point_set:
-                seeds.append(seed)
-            elif (grid_x, grid_y) in point_set:
-                seeds.append((grid_x, grid_y))
-            grid_x += spacing
-        grid_y += spacing
-
-    # Lan bằng Dijkstra với chi phí mỗi bước = 2 hoặc 3 tuỳ nhiễu băm của toạ độ, thay cho
-    # BFS chi phí đều. BFS đều cho ra ranh giới Voronoi THẲNG, nên mảng phẳng lớn hiện ra
-    # thành lưới đa giác đều đặn trông rất máy móc. Cho chi phí nhấp nhô nhẹ thì ranh giới
-    # men theo đường rẻ nhất và lượn tự nhiên, trong khi kích thước ô vẫn đồng đều vì chênh
-    # lệch chi phí chỉ 1.5 lần. Nhiễu lấy từ hàm băm toạ độ nên vẫn TẤT ĐỊNH.
-    #
-    # Dùng hàng đợi theo xô (bucket queue) thay vì heapq: chi phí là số nguyên nhỏ nên đây
-    # là Dijkstra O(số pixel), không có log, đủ nhanh cho vùng vài trăm nghìn pixel.
-    owner = {}
-    best_cost = {}
-    buckets = defaultdict(list)
-    for seed_index, seed in enumerate(seeds):
-        owner[seed] = seed_index
-        best_cost[seed] = 0
-        buckets[0].append(seed)
-
-    def step_cost(x, y):
-        return 2 + (((x * 374761393 + y * 668265263) >> 7) & 1)
-
-    cursor = 0
-    remaining = len(seeds)
-    while remaining > 0:
-        bucket = buckets.pop(cursor, None)
-        if bucket is None:
-            cursor += 1
-            continue
-        for point in bucket:
-            cost = best_cost.get(point)
-            if cost is None or cost != cursor:
-                continue
-            remaining -= 1
-            px_, py_ = point
-            current_owner = owner[point]
-            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                neighbor = (px_ + dx, py_ + dy)
-                if neighbor not in point_set:
-                    continue
-                candidate = cost + step_cost(neighbor[0], neighbor[1])
-                known = best_cost.get(neighbor)
-                if known is not None and known <= candidate:
-                    continue
-                if known is None:
-                    remaining += 1
-                best_cost[neighbor] = candidate
-                owner[neighbor] = current_owner
-                buckets[candidate].append(neighbor)
-        cursor += 1
-
-    cells = [[] for _ in seeds]
-    # Pixel không hạt giống nào với tới được: nằm trong mảnh rời khác của vùng (một vùng có
-    # thể gồm tới MAX_REGION_FRAGMENTS mảnh) và mảnh đó không chứa ô lưới nào. TUYỆT ĐỐI
-    # không gieo hạt mới cho từng pixel như vậy — làm thế sinh ra hàng chục "ô" 2 pixel,
-    # radius 0, không thể tap cũng không thể nhìn thấy. Chúng được gom lại rồi gắn vào ô gần
-    # nhất ở dưới, đúng như trước khi chia chúng vốn đã thuộc cùng một vùng.
-    stranded = []
-    for point in region_points:
-        cell_index = owner.get(point)
-        if cell_index is None:
-            stranded.append(point)
-        else:
-            cells[cell_index].append(point)
-
-    cells = [cell for cell in cells if cell]
-    if not cells:
-        return [region_points]
-
-    cells = absorb_undersized_cells(cells, max(1, target_cell_area // 3))
-
-    if stranded:
-        centroids = [get_region_centroid(cell) for cell in cells]
-        for point in stranded:
-            nearest = min(
-                range(len(cells)),
-                key=lambda index: (centroids[index]["x"] - point[0]) ** 2
-                + (centroids[index]["y"] - point[1]) ** 2,
-            )
-            cells[nearest].append(point)
-
-    return cells
-
-
-def absorb_undersized_cells(cells, min_cell_area):
-    """Gộp ô quá nhỏ vào ô liền kề lớn nhất.
-
-    BFS từ lưới hạt giống để lại ô vụn ở rìa vùng (chỗ hình dạng lõm, hoặc ô lưới rơi sát
-    biên). Không dọn thì chúng thành vùng riêng không tap được — đúng loại lỗi mà cả pipeline
-    đang cố loại bỏ.
-    """
-    working = [list(cell) for cell in cells]
-    cell_of = {}
-    for index, cell in enumerate(working):
-        for point in cell:
-            cell_of[point] = index
-
-    while True:
-        candidates = [
-            index
-            for index, cell in enumerate(working)
-            if cell and len(cell) < min_cell_area
-        ]
-        if not candidates:
-            break
-        smallest = min(candidates, key=lambda index: len(working[index]))
-
-        neighbors = Counter()
-        for x, y in working[smallest]:
-            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                other = cell_of.get((x + dx, y + dy))
-                if other is not None and other != smallest and working[other]:
-                    neighbors[other] += 1
-        if not neighbors:
-            break
-
-        target = max(neighbors, key=lambda index: (neighbors[index], len(working[index])))
-        for point in working[smallest]:
-            cell_of[point] = target
-        working[target].extend(working[smallest])
-        working[smallest] = []
-
-    return [cell for cell in working if cell]
-
-
-def collect_cell_seam_pixels(cells):
-    """Pixel nằm dọc ranh giới GIỮA HAI Ô của cùng một vùng gốc.
-
-    Chỉ lấy phía có chỉ số ô nhỏ hơn để ra đường dày 1px thay vì 2px. Ranh giới với vùng
-    khác thì đã có nét mực thật rồi, không đụng tới ở đây.
-    """
-    cell_of = {}
-    for cell_index, cell in enumerate(cells):
-        for point in cell:
-            cell_of[point] = cell_index
-
-    seam = set()
-    for point, cell_index in cell_of.items():
-        x, y = point
-        for dx, dy in ((1, 0), (0, 1)):
-            neighbor_cell = cell_of.get((x + dx, y + dy))
-            if neighbor_cell is not None and neighbor_cell != cell_index:
-                seam.add(point)
-                break
-    return seam
-
-
-def subdivide_giant_regions_into_cells(
-    region_infos,
-    target_cell_area,
-    min_region_area,
-    tiny_area_threshold,
-    tiny_side_threshold,
-    tiny_merge_min_area,
-    tiny_merge_min_side,
-    canvas_width,
-    canvas_height,
-    min_multiplier=CELL_SUBDIVIDE_MIN_MULTIPLIER,
-    background_multiplier=BACKGROUND_CELL_AREA_MULTIPLIER,
-):
-    """Chia mọi vùng quá lớn thành các ô cỡ target_cell_area.
-
-    Các ô con GIỮ NGUYÊN target_color của vùng gốc nên chúng nhận cùng một số trong bảng
-    màu — user chọn số đó, cả mảng sáng lên, rồi tap từng ô. Mỗi ô có label_anchor riêng nên
-    ô nào cũng có số hiển thị.
-
-    Khác hẳn split_remaining_giant_regions (tách theo MÀU): mảng nền lớn gần như đồng màu
-    (đo được độ lệch nội bộ 0.8-2.8) nên tách theo màu vỡ vụn thành hàng nghìn mảnh và bị
-    guard chặn lại — đúng. Chia theo HÌNH HỌC mới là công cụ hợp cho trường hợp đó.
-    """
-    result = []
-    seam_pixels = set()
-    subdivided_count = 0
-    background_count = 0
-    new_cell_count = 0
-
-    for info in region_infos:
-        is_background = region_looks_like_background(
-            info["region"], canvas_width, canvas_height
-        )
-        # Nền dùng ô to hơn nên NGƯỠNG chia cũng phải to lên theo, nếu không một mảng nền
-        # cỡ vừa sẽ bị chia thành đúng 2 ô — vô nghĩa.
-        region_cell_area = (
-            int(round(target_cell_area * background_multiplier))
-            if is_background
-            else target_cell_area
-        )
-        if info["area"] < region_cell_area * min_multiplier:
-            result.append(info)
-            continue
-
-        cells = subdivide_region_into_cells(info["region"], region_cell_area)
-        if len(cells) <= 1:
-            result.append(info)
-            continue
-
-        subdivided_count += 1
-        if is_background:
-            background_count += 1
-        new_cell_count += len(cells)
-        seam_pixels |= collect_cell_seam_pixels(cells)
-        for cell in cells:
-            bbox = get_region_bbox(cell)
-            centroid = get_region_centroid(cell)
-            result.append(
-                update_region_classification(
-                    info={
-                        "region": cell,
-                        "area": len(cell),
-                        "bbox": bbox,
-                        "centroid": centroid,
-                        "label_anchor": find_label_anchor(cell, bbox, centroid),
-                        # GIỮ NGUYÊN màu của vùng gốc chứ không đo lại màu từng ô: các ô
-                        # phải cùng một màu để nhận CÙNG MỘT SỐ trong bảng màu. Đo lại sẽ
-                        # cho mỗi ô một sắc hơi khác rồi rơi vào các số khác nhau, biến một
-                        # mảng nền phẳng thành đám loang lổ nhiều màu.
-                        "target_color": info["target_color"],
-                        "representative_color": info.get(
-                            "representative_color", info["target_color"]
-                        ),
-                        "merged_region_count": 1,
-                        "fragment_count": 1,
-                    },
-                    min_region_area=min_region_area,
-                    tiny_area_threshold=tiny_area_threshold,
-                    tiny_side_threshold=tiny_side_threshold,
-                    tiny_merge_min_area=tiny_merge_min_area,
-                    tiny_merge_min_side=tiny_merge_min_side,
-                    unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
-                )
-            )
-
-    stats = {
-        "cell_subdivided_region_count": subdivided_count,
-        "cell_subdivided_background_count": background_count,
-        "cell_subdivision_cell_count": new_cell_count,
-        "cell_target_area": target_cell_area,
-        "cell_background_area_multiplier": background_multiplier,
-    }
-    return result, seam_pixels, stats
-
-
-def build_display_line_image(render_line_img, seam_pixels):
+def build_display_line_image(source_line_img, recovered_ink_mask):
     """Ảnh nét mà APP nhân lên khi chơi.
 
-    Đây chính là render_line_img — bản giữ sắc độ anti-alias ở chỗ VẪN là mực nhưng không
-    bao giờ làm tối pixel đã được xếp là vùng tô được. Trước đây nó chỉ được dùng để dựng
-    preview rồi vứt đi, còn app thì bị repository nạp cho debug_source_line.png (ảnh nét
-    GỐC). Hậu quả: mọi mảng mực đặc mà recover_solid_ink_fills vừa khôi phục thành vùng tô
-    được (tóc, áo, mảng tối) vẫn còn tối trong ảnh gốc, nên app nhân màu vùng với giá trị
-    tối đó và bôi đen chúng — trong khi preview hiện đúng màu. Đo trên data: Art/09 có
-    19.8% pixel tô được bị bôi tối, lệch trung bình so với preview 15.9 so với 5.2.
+    Bắt đầu từ ĐÚNG ảnh nét gốc, chỉ làm trắng các pixel thuộc mặt nạ ink-recovery. Nói cách
+    khác: giống hệt debug_source_line.png ở mọi pixel, TRỪ các mảng mực đặc đã được khôi
+    phục thành vùng tô được. Nhờ vậy nét vẽ giữ nguyên độ sắc và anti-alias như bản vốn chạy
+    tốt, mà vẫn hết cảnh tóc/áo bị nhân với giá trị tối rồi bôi đen.
 
-    Seam được vẽ ở đây thay vì để trong line.png nhị phân, vì đây mới là ảnh app nhân lên.
-    Ảnh này có đủ mọi sắc xám nên giá trị mốc CELL_SEAM_LINE_VALUE có thể trùng với sắc xám
-    tự nhiên — đẩy các pixel trùng đó đi 1 nấc để mốc lại trở thành duy nhất, nhờ vậy app
-    vẫn nhận ra seam mà không cần thêm asset.
+    KHÔNG dùng lại render_line_img (= max(ảnh gốc, binary)) nữa. binary là bản đồ PHÂN VÙNG
+    sinh ra bằng một ngưỡng độ sáng, nên `max` đẩy mọi pixel nét sáng hơn ngưỡng lên trắng
+    tinh: đo trên Animal/01 (ngưỡng 90) thì 48.4% pixel nét nhìn thấy được bị xoá trắng, 82%
+    trong số đó chỉ vì sáng hơn ngưỡng chứ không phải do ink-recovery. Hậu quả là nét đứt
+    thành nét gạch và mất 2/3 anti-alias. Ngưỡng đó được tinh chỉnh cho việc flood-fill, dùng
+    nó để quyết định HIỂN THỊ là sai.
+
     """
-    display = render_line_img.copy()
-    pixels = display.load()
-    width, height = display.size
-    bumped = (CELL_SEAM_LINE_VALUE + 1,) * 3
-    for y in range(height):
-        for x in range(width):
-            if pixels[x, y][:3] == (CELL_SEAM_LINE_VALUE,) * 3:
-                pixels[x, y] = bumped
-    return paint_cell_seams_on_line_image(display, seam_pixels)
-
-
-def paint_cell_seams_on_line_image(line_img, seam_pixels, value=CELL_SEAM_LINE_VALUE):
-    """Vẽ đường ranh giữa các ô vào ảnh nét mà app nhân lên.
-
-    line.png vốn chỉ có 0 (mực) và 255 (giấy); seam dùng giá trị trung gian nên hiện ra như
-    một đường rất nhạt chứ không phải nét vẽ thật.
-    """
-    if not seam_pixels:
-        return line_img
-    pixels = line_img.load()
-    seam_rgb = (value, value, value)
-    for x, y in seam_pixels:
-        if pixels[x, y] != (0, 0, 0):
-            pixels[x, y] = seam_rgb
-    return line_img
+    display = source_line_img.convert("L")
+    if recovered_ink_mask is not None:
+        display = ImageChops.lighter(display, recovered_ink_mask)
+    return display.convert("RGB")
 
 
 def estimate_difficulty(total_regions, unique_numbers, small_regions_count):
@@ -2976,7 +2620,6 @@ def generate_level_assets(
     assumed_zoom=DEFAULT_ASSUMED_ZOOM,
     untouchable_merge_color_threshold=None,
     ink_gap_attach_px=DEFAULT_INK_GAP_ATTACH_PX,
-    cell_target_area=DEFAULT_CELL_TARGET_AREA,
 ):
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
     resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
@@ -3022,9 +2665,6 @@ def generate_level_assets(
     # Ô mục tiêu cũng là ngưỡng DIỆN TÍCH nên phải nhân bình phương screen_scale, giống các
     # khoá trong SCREEN_SCALE_AREA_KEYS — nếu không, ảnh nguồn 2048px sẽ bị chia thành số ô
     # gấp 4 lần cần thiết.
-    cell_target_area = max(
-        1000, int(round(cell_target_area * max(1.0, screen_scale) ** 2))
-    )
 
     # Deprecated/no-op. Kept only so old CLI invocations do not fail.
     _ = tiny_merge_attach_distance
@@ -3058,7 +2698,7 @@ def generate_level_assets(
         "ink_gap_attach_px": ink_gap_attach_px,
     }
 
-    source_line_img, binary_img, selected_preprocessing = select_binary_fill_map(
+    source_line_img, binary_img, recovered_ink_mask, selected_preprocessing = select_binary_fill_map(
         line_art_path,
         brightness_threshold=brightness_threshold,
         line_close_radius=line_close_radius,
@@ -3444,29 +3084,6 @@ def generate_level_assets(
     # tra bảng vẫn ra đúng một màu/một số, mà bảng màu không bị lệch vì bỗng dưng có thêm
     # hàng chục vùng cùng màu (build_palette_with_adaptive_merge cân nhắc theo số vùng và
     # diện tích, thêm bản sao sẽ làm màu đó có vẻ quan trọng hơn thực tế).
-    region_infos, cell_seam_pixels, cell_subdivision_stats = subdivide_giant_regions_into_cells(
-        region_infos=region_infos,
-        target_cell_area=cell_target_area,
-        min_region_area=min_region_area,
-        tiny_area_threshold=hide_small_label_threshold,
-        tiny_side_threshold=tiny_region_side_threshold,
-        tiny_merge_min_area=tiny_merge_min_area,
-        tiny_merge_min_side=tiny_merge_min_side,
-        canvas_width=width,
-        canvas_height=height,
-    )
-    if cell_subdivision_stats["cell_subdivided_region_count"]:
-        print(
-            f"Đã chia {cell_subdivision_stats['cell_subdivided_region_count']} vùng quá lớn "
-            f"thành {cell_subdivision_stats['cell_subdivision_cell_count']} ô nhỏ "
-            f"(ô mục tiêu {cell_target_area}px, trong đó "
-            f"{cell_subdivision_stats['cell_subdivided_background_count']} vùng là NỀN nên "
-            f"dùng ô to gấp {BACKGROUND_CELL_AREA_MULTIPLIER:g} lần)."
-        )
-        # render_line_img giữ SẠCH seam vì nó dựng nên preview_colored.png = bức tranh lúc
-        # ĐÃ HOÀN THÀNH, mà app thì ẩn seam khi cả hai ô hai bên đều đã tô. Seam chỉ được vẽ
-        # vào bản hiển thị (line_render.png, dựng bên dưới) và vào line.png nhị phân.
-        paint_cell_seams_on_line_image(line_img, cell_seam_pixels)
     palette_colors = palette_result["palette_colors"]
     color_to_number = {color: index + 1 for index, color in enumerate(palette_colors)}
 
@@ -3614,11 +3231,6 @@ def generate_level_assets(
         "recovered_ink_pixel_count": recovered_ink_pixel_count,
         "lost_color_pct": selected_preprocessing.get("lost_color_pct"),
         "selected_preprocessing": selected_preprocessing,
-        **cell_subdivision_stats,
-        # Giá trị mốc để app nhận ra pixel seam ngay trong line.png: ảnh đó vốn chỉ có 0
-        # (mực) và 255 (giấy), nên đây là giá trị trung gian DUY NHẤT. Nhờ vậy không cần
-        # thêm asset hay thêm bộ nhớ để biết seam nằm ở đâu.
-        "cell_seam_line_value": CELL_SEAM_LINE_VALUE,
         "has_detail": True,
         "detail_mode": "reference_lerp_rgba",
         "detail_alpha": detail_alpha,
@@ -3648,7 +3260,7 @@ def generate_level_assets(
     line_img.save(line_out_path)
     print(f"Đã lưu ảnh Line: {line_out_path}")
 
-    display_line_img = build_display_line_image(render_line_img, cell_seam_pixels)
+    display_line_img = build_display_line_image(source_line_img, recovered_ink_mask)
     display_line_out_path = os.path.join(output_dir, "line_render.png")
     display_line_img.save(display_line_out_path)
     print(f"Đã lưu ảnh Line hiển thị cho app: {display_line_out_path}")
@@ -3664,7 +3276,7 @@ def generate_level_assets(
         mask_to_target_rgb=mask_to_target_rgb,
     )
     flat_preview_out_path = os.path.join(output_dir, "debug_preview_flat.png")
-    apply_line_overlay(flat_preview_img, render_line_img).save(flat_preview_out_path)
+    apply_line_overlay(flat_preview_img, display_line_img).save(flat_preview_out_path)
     print(f"Đã lưu ảnh Preview flat để debug: {flat_preview_out_path}")
 
     detail_img = make_detail_overlay_image(
@@ -3683,7 +3295,7 @@ def generate_level_assets(
         width=width,
         height=height,
         mask_img=mask_img,
-        line_img=render_line_img,
+        line_img=display_line_img,
         mask_to_target_rgb=mask_to_target_rgb,
         detail_img=detail_img,
     )
@@ -3930,16 +3542,6 @@ def create_parser():
         help=(
             "Kích thước chạm tối thiểu (dp) để một vùng được coi là bấm được. Vùng nhỏ hơn sẽ "
             "bị gộp vào lân cận thay vì để user mò tìm chấm gần như vô hình."
-        ),
-    )
-    parser.add_argument(
-        "--cell-target-area",
-        type=int,
-        default=DEFAULT_CELL_TARGET_AREA,
-        help=(
-            "Diện tích (pixel) mong muốn của mỗi ô khi chia nhỏ vùng quá lớn. Mặc định "
-            f"{DEFAULT_CELL_TARGET_AREA} (cạnh ~100px trên canvas 1024). Nhỏ hơn = nhiều ô "
-            "hơn để tô nhưng dễ gây chán."
         ),
     )
     parser.add_argument(
@@ -4216,7 +3818,6 @@ def run_batch(args):
             ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
-        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
         )
         processed_count += 1
@@ -4281,7 +3882,6 @@ def run_batch_single_category(args):
             ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
-        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
         )
         processed_count += 1
@@ -4369,7 +3969,6 @@ def run_batch_source_category(args):
                 ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
-        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
             )
             processed_count += 1
@@ -4431,7 +4030,6 @@ def run_single(args):
         ink_min_chroma_spread=args.ink_min_chroma_spread,
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
-        cell_target_area=args.cell_target_area,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
     )
 
