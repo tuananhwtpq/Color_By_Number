@@ -22,6 +22,8 @@ if [[ $# -lt 1 ]]; then
   echo "     bash tools/import_category_from_data.sh Data/Animals"
   echo "  4) Neu chi muon import 1 item:"
   echo "     bash tools/import_from_data.sh Animals 01"
+  echo "  5) Sau khi import xong, export package cho BE:"
+  echo "     python3 tools/export_backend_content.py app/src/main/assets --output-dir outputs/backend_content --zip"
   echo
 fi
 

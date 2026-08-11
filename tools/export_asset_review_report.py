@@ -1,7 +1,12 @@
 import argparse
+import base64
 import csv
+import io
 import json
 import os
+from html import escape
+
+from PIL import Image
 
 try:
     from validate_assets import (
@@ -299,6 +304,8 @@ def collect_rows(assets_path, data_root, require_reference=False):
 
 
 COMPACT_FIELDS = [
+    "priority",
+    "designer_action",
     "level_key",
     "decision",
     "issue_tags",
@@ -314,6 +321,8 @@ COMPACT_FIELDS = [
 
 def compact_row(row):
     return {
+        "priority": row.get("priority", ""),
+        "designer_action": row.get("designer_action", ""),
         "level_key": row.get("level_key", ""),
         "decision": row.get("decision", ""),
         "issue_tags": row.get("issue_tags", ""),
@@ -325,6 +334,309 @@ def compact_row(row):
         "region_count_drop_pct": format_number(row.get("region_count_drop_pct"), digits=1),
         "hidden_label_pct": format_number(row.get("hidden_label_pct"), digits=1),
     }
+
+
+# Bản dịch chỉ dùng để HIỂN THỊ trong HTML. CSV vẫn giữ nguyên mã tiếng Anh để lọc/sort và
+# để không phá các script khác đang đọc những giá trị này.
+DECISION_VI = {
+    "replace_or_redraw": "Cần vẽ lại hoặc đổi ảnh",
+    "designer_review": "Designer xem lại",
+    "quick_review": "Liếc qua một lượt",
+    "keep": "Dùng được",
+}
+
+ISSUE_TAG_VI = {
+    "large_regions": "Có mảng màu quá to",
+    "large_region_review": "Mảng màu hơi to, nên xem",
+    "overmerge": "Các vùng bị gộp quá nhiều",
+    "overmerge_review": "Có dấu hiệu gộp vùng, nên xem",
+    "tiny_regions": "Quá nhiều vùng vụn li ti",
+    "many_hidden_labels": "Nhiều vùng nhỏ tới mức không hiện được số",
+    "too_few_regions": "Quá ít vùng, tô vài nốt là xong",
+    "low_region_count": "Số vùng hơi ít",
+    "color_fidelity": "Màu lệch so với ảnh gốc",
+    "flat_background_possible": "Nền phẳng, có thể là chủ ý",
+    "ok": "Không có vấn đề gì",
+}
+
+ACTION_VI = {
+    "Keep": "Giữ nguyên, dùng được.",
+    "Optional review; likely usable":
+        "Xem cũng được mà không xem cũng không sao, nhiều khả năng vẫn dùng tốt.",
+    "Inspect debug_regions against source before accepting":
+        "So bản đồ vùng với ảnh gốc trước khi duyệt.",
+    "Review/fix source line separation; do not accept based on preview similarity":
+        "Sửa nét ở ảnh gốc cho các mảng tách hẳn nhau. Đừng duyệt chỉ vì ảnh preview trông "
+        "giống bản gốc.",
+    "Designer confirm background is intended; mark exception if yes":
+        "Xác nhận xem mảng nền lớn này có phải chủ ý không. Nếu đúng thì đánh dấu ngoại lệ.",
+    "Fix/close line separation or simplify background region":
+        "Khép kín nét bị hở, hoặc làm đơn giản lại vùng nền.",
+    "Inspect source; decide exception vs line fix":
+        "Xem lại ảnh gốc rồi quyết định: cho qua như ngoại lệ, hay sửa nét.",
+    "Quick visual check for background/merged region":
+        "Nhìn nhanh xem phần nền và mấy vùng bị gộp có ổn không.",
+    "Simplify/remove micro details or replace source; generator should not over-merge to pass":
+        "Bớt hoặc bỏ các chi tiết li ti, hoặc đổi ảnh gốc. Không nên để máy gộp vùng cho đạt "
+        "chuẩn.",
+    "Check max-zoom playability; fix source if truly unreadable/tiny":
+        "Zoom hết cỡ thử xem có tô được không. Nếu vẫn quá nhỏ thì sửa ảnh gốc.",
+    "Compare preview against color source": "So ảnh preview với ảnh màu gốc.",
+}
+
+
+def to_vietnamese(mapping, value):
+    """Chưa có bản dịch thì trả nguyên văn — thêm mã mới sẽ hiện tiếng Anh chứ không mất chữ."""
+    value = (value or "").strip()
+    return mapping.get(value, value)
+
+
+PRIORITY_ORDER = {"P1": 0, "P2": 1, "P3": 2, "P4": 3}
+THUMB_SIZE = 400
+REGION_MAP_ZOOM_SIZE = 1600
+THUMB_QUALITY = 92
+GALLERY_IMAGES = (
+    ("preview_colored.png", "preview", "Preview đã tô"),
+    ("debug_regions.png", "regions", "Bản đồ vùng"),
+)
+
+
+def sort_rows_for_review(rows):
+    """Level cần sửa gấp nhất lên đầu: P1 trước, cùng priority thì điểm thấp trước."""
+    return sorted(
+        rows,
+        key=lambda row: (
+            PRIORITY_ORDER.get(text(row, "priority"), len(PRIORITY_ORDER)),
+            number(row, "score", 999.0),
+            text(row, "level_key"),
+        ),
+    )
+
+
+def safe_file_name(name):
+    """Giữ nguyên dấu cách của tên category, chỉ thay ký tự filesystem không nhận."""
+    for bad in ("/", "\\", ":"):
+        name = name.replace(bad, "_")
+    return name.strip() or "unknown"
+
+
+def encode_image_data_uri(source_path, size=THUMB_SIZE):
+    """Thu nhỏ ảnh rồi trả về data URI base64 để nhúng thẳng vào HTML.
+
+    Nhúng chứ không ghi ra file rời: designer chỉ nhận đúng 1 file .html qua chat/mail là
+    xem được ngay, không phải giải nén và không có đường dẫn nào trỏ về máy khác.
+    """
+    if not os.path.exists(source_path):
+        return None
+
+    buffer = io.BytesIO()
+    with Image.open(source_path) as image:
+        image = image.convert("RGB")
+        image.thumbnail((size, size), Image.LANCZOS)
+        # WEBP q92 thay vì PNG: cùng độ nét ở biên vùng (designer cần soi đúng chỗ này)
+        # nhưng 77KB thay vì 320KB, nên nhúng base64 vào HTML vẫn gửi được.
+        image.save(buffer, "WEBP", quality=THUMB_QUALITY, method=6)
+
+    payload = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/webp;base64,{payload}"
+
+
+def gallery_cell(row, file_name, suffix, caption):
+    """Một ô ảnh: thumbnail nhúng sẵn, click phóng to, kèm đường dẫn asset dạng chữ."""
+    category = text(row, "category")
+    level = text(row, "level")
+    source_path = os.path.abspath(os.path.join(text(row, "path"), file_name))
+    asset_ref = f"{category}/{level}/{file_name}"
+
+    data_uri = encode_image_data_uri(source_path)
+    if data_uri is None:
+        return (
+            f'<figure class="shot missing"><div class="ph">thiếu {escape(file_name)}</div>'
+            f"<figcaption>{escape(caption)}</figcaption>"
+            f'<div class="path">{escape(asset_ref)}</div></figure>'
+        )
+
+    full_src = ""
+    if file_name == "debug_regions.png":
+        zoom_uri = encode_image_data_uri(source_path, size=REGION_MAP_ZOOM_SIZE)
+        if zoom_uri is not None:
+            full_src = f' data-full-src="{escape(zoom_uri, quote=True)}"'
+
+    return (
+        f'<figure class="shot"><img src="{data_uri}"{full_src} '
+        f'alt="{escape(caption)} {escape(level)}" loading="lazy">'
+        f"<figcaption>{escape(caption)}</figcaption>"
+        f'<div class="path">{escape(asset_ref)}</div></figure>'
+    )
+
+
+GALLERY_CSS = """
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+       background: #f6f6f8; color: #1c1c1e; }
+@media (prefers-color-scheme: dark) { body { background: #16161a; color: #ececf1; } }
+header { position: sticky; top: 0; z-index: 5; padding: 16px 24px;
+         background: inherit; border-bottom: 1px solid #8883; }
+h1 { margin: 0 0 4px; font-size: 20px; }
+.sub { opacity: .7; font-size: 13px; }
+.filters { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.filters button { padding: 6px 14px; border-radius: 999px; cursor: pointer;
+                  border: 1px solid #8886; background: transparent; color: inherit; font: inherit; }
+.filters button[aria-pressed="true"] { background: #6c5ce7; border-color: #6c5ce7; color: #fff; }
+main { padding: 20px 24px 60px; display: flex; flex-direction: column; gap: 18px; }
+.level { display: flex; flex-wrap: wrap; gap: 20px; padding: 16px; border-radius: 14px;
+         background: #fff; border: 1px solid #8882; }
+@media (prefers-color-scheme: dark) { .level { background: #202027; } }
+.level[hidden] { display: none; }
+.shots { display: flex; gap: 14px; }
+.shot { margin: 0; }
+.shot img { display: block; width: 260px; height: auto; border-radius: 8px; background: #fff;
+            cursor: zoom-in; }
+.path { margin-top: 3px; font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        text-align: center; opacity: .5; user-select: all; }
+#lightbox { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+            background: #000c; cursor: zoom-out; }
+#lightbox[hidden] { display: none; }
+#lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 8px; }
+.shot .ph { width: 260px; height: 260px; display: grid; place-items: center;
+            border: 1px dashed #8886; border-radius: 8px; opacity: .6; font-size: 12px; }
+figcaption { margin-top: 6px; font-size: 12px; opacity: .65; text-align: center; }
+.meta { flex: 1 1 260px; min-width: 240px; }
+.key { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.badge { padding: 3px 10px; border-radius: 6px; font-size: 12px; background: #8882; }
+.badge.P1 { background: #ff4757; color: #fff; }
+.badge.P2 { background: #ffa502; color: #1c1c1e; }
+.badge.P3 { background: #70a1ff; color: #1c1c1e; }
+.badge.P4 { background: #2ed573; color: #1c1c1e; }
+table { border-collapse: collapse; font-size: 13px; }
+td { padding: 2px 0; vertical-align: top; }
+td:first-child { opacity: .6; padding-right: 14px; white-space: nowrap; }
+.tags { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { padding: 3px 10px; border-radius: 6px; font-size: 12px; background: #ffa50226;
+       border: 1px solid #ffa50255; }
+.action { margin-top: 8px; padding: 10px 12px; border-radius: 8px; background: #8881;
+          font-size: 13px; overflow-wrap: anywhere; }
+"""
+
+GALLERY_JS = """
+// Ảnh nhúng dạng data: URI, mà Chrome chặn mở thẳng data: URL ở tab mới -> phải dựng lại
+// thành blob. Popup bị chặn thì rơi về lớp phủ xem ngay trong trang, không im lặng chết.
+function openFullSize(img) {
+  const source = img.dataset.fullSrc || img.src;
+  const [meta, payload] = source.split(',');
+  const mime = meta.slice(5).split(';')[0];
+  const bytes = Uint8Array.from(atob(payload), char => char.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+  if (!window.open(url, '_blank')) {
+    const box = document.getElementById('lightbox');
+    box.querySelector('img').src = url;
+    box.hidden = false;
+  }
+}
+
+document.querySelectorAll('.shot img').forEach(img => {
+  img.addEventListener('click', () => openFullSize(img));
+});
+
+document.getElementById('lightbox').addEventListener('click', event => {
+  event.currentTarget.hidden = true;
+});
+
+const buttons = document.querySelectorAll('.filters button');
+buttons.forEach(button => button.addEventListener('click', () => {
+  const wanted = button.dataset.decision;
+  buttons.forEach(other => other.setAttribute('aria-pressed', other === button));
+  document.querySelectorAll('.level').forEach(level => {
+    level.hidden = wanted !== 'all' && level.dataset.decision !== wanted;
+  });
+}));
+"""
+
+METRIC_LABELS = (
+    ("final_region_count", "Số vùng", 0),
+    ("largest_region_pct", "Vùng lớn nhất %", 1),
+    ("top_2_region_pct", "Top 2 vùng %", 1),
+    ("region_count_drop_pct", "Giảm số vùng %", 1),
+    ("hidden_label_pct", "Số bị ẩn %", 1),
+)
+
+
+def write_category_html(rows, category, output_dir):
+    """Trang xem nhanh 1 category: 2 ảnh cạnh nhau + metric, sắp theo priority."""
+    decisions = sorted({text(row, "decision") or "unknown" for row in rows})
+    filters = ['<button data-decision="all" aria-pressed="true">Tất cả</button>']
+    filters += [
+        f'<button data-decision="{escape(decision)}">'
+        f"{escape(to_vietnamese(DECISION_VI, decision))}</button>"
+        for decision in decisions
+    ]
+
+    cards = []
+    for row in rows:
+        priority = text(row, "priority") or "P4"
+        shots = "".join(
+            gallery_cell(row, file_name, suffix, caption)
+            for file_name, suffix, caption in GALLERY_IMAGES
+        )
+        metrics = "".join(
+            f"<tr><td>{escape(label)}</td><td>{escape(format_number(row.get(key), digits))}</td></tr>"
+            for key, label, digits in METRIC_LABELS
+        )
+        tags = "".join(
+            f'<span class="tag">{escape(to_vietnamese(ISSUE_TAG_VI, tag))}</span>'
+            for tag in text(row, "issue_tags").split(";")
+            if tag.strip()
+        )
+        cards.append(
+            f'<article class="level" data-decision="{escape(text(row, "decision") or "unknown")}">'
+            f'<div class="shots">{shots}</div>'
+            f'<div class="meta"><div class="key">{escape(text(row, "level_key"))}</div>'
+            f'<div class="badges"><span class="badge {escape(priority)}">{escape(priority)}</span>'
+            f'<span class="badge">{escape(to_vietnamese(DECISION_VI, text(row, "decision")))}</span>'
+            f'<span class="badge">hạng {escape(text(row, "grade"))}</span>'
+            f'<span class="badge">điểm {escape(format_number(row.get("score"), 0))}</span></div>'
+            f"<table>{metrics}</table>"
+            f'<div class="tags">{tags}</div>'
+            f'<div class="action">{escape(to_vietnamese(ACTION_VI, text(row, "designer_action")))}'
+            f"</div></div></article>"
+        )
+
+    html = (
+        "<!doctype html><html lang=\"vi\"><head><meta charset=\"utf-8\">"
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        f"<title>{escape(category)} — asset review</title>"
+        f"<style>{GALLERY_CSS}</style></head><body>"
+        f"<header><h1>{escape(category)}</h1>"
+        f'<div class="sub">{len(rows)} level · xếp theo mức ưu tiên · bấm vào ảnh để phóng to</div>'
+        f'<div class="filters">{"".join(filters)}</div></header>'
+        f'<main>{"".join(cards)}</main>'
+        f'<div id="lightbox" hidden><img alt="Ảnh phóng to"></div>'
+        f"<script>{GALLERY_JS}</script></body></html>"
+    )
+
+    output_path = os.path.join(output_dir, f"{safe_file_name(category)}.html")
+    with open(output_path, "w", encoding="utf-8") as output_file:
+        output_file.write(html)
+    return output_path
+
+
+def write_per_category(rows, output_dir, compact=True):
+    """Mỗi category một cặp CSV + HTML, tên file lấy đúng tên folder category."""
+    os.makedirs(os.path.abspath(output_dir), exist_ok=True)
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(text(row, "category") or "unknown", []).append(row)
+
+    written = []
+    for category in sorted(grouped):
+        sorted_rows = sort_rows_for_review(grouped[category])
+        csv_path = os.path.join(output_dir, f"{safe_file_name(category)}.csv")
+        write_csv(sorted_rows, csv_path, compact=compact)
+        html_path = write_category_html(sorted_rows, category, output_dir)
+        written.append((category, len(sorted_rows), csv_path, html_path))
+    return written
 
 
 def write_csv(rows, output_path, compact=True):
@@ -413,13 +725,33 @@ def main():
     parser.add_argument(
         "--wide",
         action="store_true",
-        help="Xuất CSV đầy đủ tất cả metric cũ. Mặc định là bản gọn 10 cột để lọc designer.",
+        help="Xuất CSV đầy đủ tất cả metric cũ. Mặc định là bản gọn 12 cột để lọc designer.",
+    )
+    parser.add_argument(
+        "--per-category",
+        action="store_true",
+        help="Mỗi category một CSV (Animal.csv, Manga.csv…) kèm HTML gallery để designer xem "
+             "preview_colored và debug_regions cạnh nhau.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=os.path.join("outputs", "color_by_number_asset_review"),
+        help="Thư mục output cho chế độ --per-category.",
     )
     args = parser.parse_args()
 
     rows = collect_rows(args.assets_path, args.data_root, require_reference=args.require_reference)
     if not rows:
         raise SystemExit("Không tìm thấy level asset nào để export.")
+
+    if args.per_category:
+        written = write_per_category(rows, args.output_dir, compact=not args.wide)
+        print(f"Đã ghi {len(written)} category vào {args.output_dir}")
+        for category, count, csv_path, html_path in written:
+            print(f"  - {category}: {count} level")
+            print(f"      {os.path.basename(csv_path)} / {os.path.basename(html_path)}")
+        return
+
     write_csv(rows, args.output, compact=not args.wide)
 
     counts = {}

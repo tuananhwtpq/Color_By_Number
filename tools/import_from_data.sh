@@ -40,6 +40,10 @@ if [[ $# -lt 2 ]]; then
   echo "bash tools/import_category_from_data.sh "Data/Fairy Tail" --overwrite --allow-low-quality --continue-on-error"
   # sinh bảng review sau khi import all data xong
   echo "python3 tools/export_asset_review_report.py app/src/main/assets --data-root Data --output outputs/color_by_number_asset_review/color_by_number_designer_review.csv"
+  # run data preview csv
+  echo "python3 tools/export_asset_review_report.py --per-category"
+  # export runtime package cho backend import
+  echo "python3 tools/export_backend_content.py app/src/main/assets --output-dir outputs/backend_content --zip"
   exit 1
 
 fi
