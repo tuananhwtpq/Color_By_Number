@@ -115,6 +115,10 @@ class AssetQualityTest(unittest.TestCase):
         self.assertEqual(30.0, metrics["config_hidden_label_pct"])
         self.assertEqual(10, metrics["hidden_label_count"])
         self.assertEqual(100.0, metrics["hidden_label_pct"])
+        self.assertEqual(0, metrics["protected_detail_hidden_label_count"])
+        self.assertEqual(0.0, metrics["protected_detail_hidden_label_pct"])
+        self.assertEqual(10, metrics["actionable_hidden_label_count"])
+        self.assertEqual(100.0, metrics["actionable_hidden_label_pct"])
         self.assertEqual(75.0, metrics["median_region_area"])
         self.assertEqual(10, metrics["p10_region_area"])
         self.assertEqual(30, metrics["p25_region_area"])
@@ -142,9 +146,67 @@ class AssetQualityTest(unittest.TestCase):
         self.assertEqual(25.0, metrics["config_hidden_label_pct"])
         self.assertEqual(2, metrics["estimated_hidden_label_count"])
         self.assertEqual(50.0, metrics["estimated_hidden_label_pct"])
+        self.assertEqual(0, metrics["protected_detail_hidden_label_count"])
+        self.assertEqual(2, metrics["actionable_hidden_label_count"])
+        self.assertEqual(50.0, metrics["actionable_hidden_label_pct"])
         self.assertEqual(25, metrics["label_min_screen_radius_px"])
         self.assertEqual(metrics["estimated_hidden_label_count"], metrics["hidden_label_count"])
         self.assertEqual(metrics["estimated_hidden_label_pct"], metrics["hidden_label_pct"])
+
+    def test_protected_detail_hidden_labels_are_not_actionable_hidden_labels(self):
+        metrics = analyze_region_playability(
+            total_pixels=10000,
+            regions=[
+                {
+                    "area": 36,
+                    "number": 1,
+                    "hide_number": True,
+                    "radius": 2,
+                    "quality": {"protected_detail": True},
+                },
+                {
+                    "area": 42,
+                    "number": 1,
+                    "hide_number": True,
+                    "radius": 2,
+                    "protected_detail": True,
+                },
+                {"area": 64, "number": 2, "hide_number": True, "radius": 2},
+                {"area": 900, "number": 3, "hide_number": False, "radius": 30},
+            ],
+            canvas_width=100,
+            canvas_height=100,
+            default_view_width=100,
+            default_view_height=100,
+        )
+
+        self.assertEqual(3, metrics["hidden_label_count"])
+        self.assertEqual(75.0, metrics["hidden_label_pct"])
+        self.assertEqual(2, metrics["protected_detail_hidden_label_count"])
+        self.assertEqual(50.0, metrics["protected_detail_hidden_label_pct"])
+        self.assertEqual(1, metrics["actionable_hidden_label_count"])
+        self.assertEqual(25.0, metrics["actionable_hidden_label_pct"])
+
+    def test_hidden_labels_with_visible_same_number_are_palette_assisted(self):
+        metrics = analyze_region_playability(
+            total_pixels=10000,
+            regions=[
+                {"area": 36, "number": 7, "hide_number": True, "radius": 2},
+                {"area": 42, "number": 7, "hide_number": True, "radius": 2},
+                {"area": 900, "number": 7, "hide_number": False, "radius": 30},
+                {"area": 64, "number": 8, "hide_number": True, "radius": 2},
+            ],
+            canvas_width=100,
+            canvas_height=100,
+            default_view_width=100,
+            default_view_height=100,
+        )
+
+        self.assertEqual(3, metrics["hidden_label_count"])
+        self.assertEqual(2, metrics["palette_assisted_hidden_label_count"])
+        self.assertEqual(50.0, metrics["palette_assisted_hidden_label_pct"])
+        self.assertEqual(2, metrics["non_actionable_hidden_label_count"])
+        self.assertEqual(1, metrics["actionable_hidden_label_count"])
 
     def test_hard_level_with_many_regions_but_low_tiny_pct_does_not_fail_tiny_gate(self):
         metrics = analyze_region_playability(
@@ -188,6 +250,41 @@ class AssetQualityTest(unittest.TestCase):
 
         warning_codes = {issue["code"] for issue in quality["warnings"]}
         self.assertIn("TINY_REGION_DENSITY_WARNING", warning_codes)
+
+    def test_quality_warning_uses_actionable_hidden_label_pct(self):
+        metrics = analyze_region_playability(
+            total_pixels=1000000,
+            regions=[
+                {
+                    "area": 80,
+                    "number": index % 5,
+                    "hide_number": True,
+                    "quality": {"protected_detail": True},
+                }
+                for index in range(85)
+            ]
+            + [
+                {"area": 500, "number": index % 5, "hide_number": False, "radius": 30}
+                for index in range(15)
+            ],
+            profile="casual",
+        )
+        quality = score_quality(
+            {
+                "total_regions": 100,
+                "unique_numbers": 5,
+                "preview_mae": 10,
+                "mask_config_mismatch_count": 0,
+                **metrics,
+                "tiny_region_pct_lt_100": 0,
+                "tiny_region_pct_lt_200": 0,
+            }
+        )
+
+        warning_codes = {issue["code"] for issue in quality["warnings"]}
+        self.assertEqual(85.0, metrics["hidden_label_pct"])
+        self.assertEqual(0.0, metrics["actionable_hidden_label_pct"])
+        self.assertNotIn("TINY_REGION_DENSITY_WARNING", warning_codes)
 
     def test_profile_aliases_and_thresholds_for_tiny_density_gate(self):
         self.assertEqual("medium", normalize_profile("standard"))
@@ -764,6 +861,129 @@ class AssetQualityTest(unittest.TestCase):
         )
         self.assertIn("REGENERATE_AUTO", recommendation["reasons"])
         self.assertNotIn("ACCEPT_FLAT_BACKGROUND", recommendation["reasons"])
+
+    def test_evaluate_level_dir_exports_line_generation_metrics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = make_base_config()
+            config["generation_params"] = {
+                "segmentation_line_mode": "selected_preprocessing_candidate",
+                "segmentation_line_report": {
+                    "selected_profile": "thin_dark",
+                    "brightness_threshold": 170,
+                    "line_close_radius": 2,
+                    "evaluation_mode": "line_segmentation",
+                    "quality_score": 91.5,
+                    "playable_score": 87.0,
+                    "lost_color_pct": 3.25,
+                },
+                "display_line_mode": "source_similarity_guard",
+                "display_line_uses_segmentation_score": False,
+                "display_line_report": {
+                    "selected": "source",
+                    "fallback_to_source": True,
+                    "uses_segmentation_score": False,
+                    "candidate_mae": 13.5,
+                    "candidate_changed_pct": 11.25,
+                    "source_changed_pct": 0.0,
+                    "stroke_lightened_pct": 18.5,
+                    "stroke_lightened_mae": 22.0,
+                    "stroke_pixel_count": 120,
+                    "stroke_guard_failed": True,
+                    "ink_recovery_overreach": True,
+                    "recovered_ink_pixel_pct": 14.0,
+                },
+                "recovered_ink_pixel_pct": 14.0,
+                "ink_recovery_overreach": True,
+                "protected_detail_candidate_count": 7,
+                "protected_detail_region_count": 6,
+                "protected_detail_merge_policy": "skip_all_region_merge_passes",
+            }
+            write_json(os.path.join(tmp, "config.json"), config)
+            reference_path = save_level_images(
+                tmp,
+                [[(1, 1, 1) for _ in range(8)] for _ in range(8)],
+            )
+
+            report = evaluate_level_dir(tmp, reference_path=reference_path)
+            metrics = report["metrics"]
+
+            self.assertEqual(
+                "selected_preprocessing_candidate",
+                metrics["segmentation_line_mode"],
+            )
+            self.assertEqual("thin_dark", metrics["segmentation_selected_profile"])
+            self.assertEqual(2, metrics["segmentation_line_close_radius"])
+            self.assertEqual("source_similarity_guard", metrics["display_line_mode"])
+            self.assertEqual("source", metrics["display_line_selected"])
+            self.assertTrue(metrics["display_line_fallback_to_source"])
+            self.assertFalse(metrics["display_line_uses_segmentation_score"])
+            self.assertEqual(11.25, metrics["display_line_candidate_changed_pct"])
+            self.assertEqual(18.5, metrics["display_line_stroke_lightened_pct"])
+            self.assertEqual(22.0, metrics["display_line_stroke_lightened_mae"])
+            self.assertEqual(120, metrics["display_line_stroke_pixel_count"])
+            self.assertTrue(metrics["display_line_stroke_guard_failed"])
+            self.assertEqual(7, metrics["generation_protected_detail_candidate_count"])
+            self.assertEqual(6, metrics["generation_protected_detail_region_count"])
+            self.assertEqual(
+                "skip_all_region_merge_passes",
+                metrics["generation_protected_detail_merge_policy"],
+            )
+            self.assertEqual(14.0, metrics["recovered_ink_pixel_pct"])
+            self.assertTrue(metrics["ink_recovery_overreach"])
+
+    def test_evaluate_level_dir_flags_small_color_island_inside_large_region(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "schema_version": 2,
+                "width": 32,
+                "height": 32,
+                "assets": {
+                    "line": "line.png",
+                    "mask": "mask.png",
+                    "preview": "preview_colored.png",
+                },
+                "palette": [{"number": 1, "target_color": "#ff3030"}],
+                "regions": [
+                    {
+                        "id": 1,
+                        "mask_color": "#000001",
+                        "number": 1,
+                        "target_color": "#ff3030",
+                        "fill_color": "#ff3030",
+                        "representative_color": "#ff3030",
+                        "area": 1024,
+                        "bbox": {"left": 0, "top": 0, "right": 31, "bottom": 31},
+                        "hide_number": False,
+                        "quality": {"merged_region_count": 2},
+                    }
+                ],
+                "stats": {"total_regions": 1, "unique_numbers": 1},
+            }
+            write_json(os.path.join(tmp, "config.json"), config)
+            Image.new("RGB", (32, 32), (0, 0, 1)).save(os.path.join(tmp, "mask.png"))
+            Image.new("RGB", (32, 32), "white").save(os.path.join(tmp, "line.png"))
+            Image.new("RGB", (32, 32), (255, 48, 48)).save(
+                os.path.join(tmp, "preview_colored.png")
+            )
+            reference = Image.new("RGB", (32, 32), (255, 48, 48))
+            reference_pixels = reference.load()
+            for y in range(12, 18):
+                for x in range(12, 18):
+                    reference_pixels[x, y] = (35, 5, 25)
+            reference_path = os.path.join(tmp, "color.png")
+            reference.save(reference_path)
+
+            report = evaluate_level_dir(tmp, reference_path=reference_path)
+            metrics = report["metrics"]
+
+            self.assertTrue(metrics["protected_detail_audit_available"])
+            self.assertEqual(1, metrics["protected_detail_candidate_count"])
+            self.assertEqual(1, metrics["small_island_color_drift_count"])
+            self.assertGreater(metrics["small_island_max_color_distance"], 200)
+            self.assertIn(
+                "SMALL_ISLAND_COLOR_DRIFT",
+                {warning["code"] for warning in report["warnings"]},
+            )
 
 
 if __name__ == "__main__":

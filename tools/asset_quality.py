@@ -16,6 +16,10 @@ BACKGROUND_MASK_COLORS = {(0, 0, 0)}
 PLAYABLE_REGION_MIN_AREA = 200
 DEFAULT_VIEW_SIZE = (1080, 1080)
 ANDROID_LABEL_MIN_SCREEN_RADIUS_PX = 25
+SMALL_ISLAND_MIN_AREA = 20
+SMALL_ISLAND_MAX_AREA = 600
+SMALL_ISLAND_MAX_SIDE = 40
+SMALL_ISLAND_COLOR_DRIFT_THRESHOLD = 45.0
 
 # Độ phân giải ảnh nguồn phổ biến nhất hiện có trong Data/ — các ngưỡng vùng nhỏ trong
 # GENERATION_PROFILE_DEFAULTS (generate_level.py) vốn được tinh chỉnh dựa trên ảnh cỡ này.
@@ -39,6 +43,15 @@ def screen_size_scale_factor(canvas_width, canvas_height, reference_size=REFEREN
         return 1.0
     reference_scale = canvas_fit_scale(reference_size, reference_size)
     return reference_scale / canvas_scale
+
+
+def is_protected_detail_region(region):
+    quality = region.get("quality") or {}
+    return bool(
+        region.get("protected_detail")
+        or region.get("is_protected_detail")
+        or quality.get("protected_detail")
+    )
 
 
 def rgb_to_int(rgb):
@@ -142,6 +155,10 @@ def calculate_detail_dependency_score(flat_similarity, preview_similarity):
 
 def rgb_luminance(rgb):
     return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+
+
+def color_distance(c1, c2):
+    return math.sqrt(sum((int(a) - int(b)) ** 2 for a, b in zip(c1, c2)))
 
 
 def measure_luminance_preservation_score(reference_path, preview_path):
@@ -351,12 +368,38 @@ def analyze_region_playability(
         estimate_region_screen_radius(region, fit_scale)
         for region in normalized_regions
     ]
-    estimated_hidden_label_count = sum(
-        1
-        for region, screen_radius in zip(normalized_regions, screen_radii)
-        if region.get("hide_number") is True
+    hidden_label_flags = [
+        region.get("hide_number") is True
         or region.get("hide_label") is True
         or screen_radius < label_min_screen_radius_px
+        for region, screen_radius in zip(normalized_regions, screen_radii)
+    ]
+    estimated_hidden_label_count = sum(1 for hidden in hidden_label_flags if hidden)
+    numbers_with_visible_label = {
+        region.get("number")
+        for region, hidden in zip(normalized_regions, hidden_label_flags)
+        if not hidden
+    }
+    protected_detail_hidden_label_count = sum(
+        1
+        for region, hidden in zip(normalized_regions, hidden_label_flags)
+        if hidden and is_protected_detail_region(region)
+    )
+    palette_assisted_hidden_label_count = sum(
+        1
+        for region, hidden in zip(normalized_regions, hidden_label_flags)
+        if (
+            hidden
+            and not is_protected_detail_region(region)
+            and region.get("number") in numbers_with_visible_label
+        )
+    )
+    non_actionable_hidden_label_count = (
+        protected_detail_hidden_label_count + palette_assisted_hidden_label_count
+    )
+    actionable_hidden_label_count = max(
+        0,
+        estimated_hidden_label_count - non_actionable_hidden_label_count,
     )
 
     tiny_by_number = Counter()
@@ -393,6 +436,14 @@ def analyze_region_playability(
         "config_hidden_label_pct": pct(config_hidden_label_count),
         "estimated_hidden_label_count": estimated_hidden_label_count,
         "estimated_hidden_label_pct": pct(estimated_hidden_label_count),
+        "protected_detail_hidden_label_count": protected_detail_hidden_label_count,
+        "protected_detail_hidden_label_pct": pct(protected_detail_hidden_label_count),
+        "palette_assisted_hidden_label_count": palette_assisted_hidden_label_count,
+        "palette_assisted_hidden_label_pct": pct(palette_assisted_hidden_label_count),
+        "non_actionable_hidden_label_count": non_actionable_hidden_label_count,
+        "non_actionable_hidden_label_pct": pct(non_actionable_hidden_label_count),
+        "actionable_hidden_label_count": actionable_hidden_label_count,
+        "actionable_hidden_label_pct": pct(actionable_hidden_label_count),
         "hidden_label_count": estimated_hidden_label_count,
         "hidden_label_pct": pct(estimated_hidden_label_count),
         "label_min_screen_radius_px": label_min_screen_radius_px,
@@ -550,14 +601,17 @@ def measure_mask_config(level_dir, config, mask_path):
         )
         color_area_totals[region_numbers_by_id.get(entry["id"])] += actual_area
         region = region_by_mask_color.get(entry["mask_color"], {})
+        label_anchor = region.get("label_anchor") or {}
         region_summaries.append(
             {
                 "area": actual_area,
                 "number": region.get("number"),
                 "hide_number": region.get("hide_number"),
                 "hide_label": region.get("hide_label"),
-                "radius": region.get("radius"),
+                "radius": region.get("radius", label_anchor.get("radius")),
                 "bbox": region.get("bbox"),
+                "quality": region.get("quality"),
+                "protected_detail": is_protected_detail_region(region),
             }
         )
     configured_colors = {entry["mask_color"] for entry in config_entries}
@@ -820,6 +874,30 @@ def score_quality(metrics):
         )
         score -= 10
 
+    small_island_drift_count = metrics.get("small_island_color_drift_count") or 0
+    if small_island_drift_count:
+        warnings.append(
+            make_issue(
+                "SMALL_ISLAND_COLOR_DRIFT",
+                "Có đảo màu nhỏ khác rõ nằm trong region lớn; chi tiết nhỏ có thể đã bị merge sai.",
+                small_island_drift_count,
+                0,
+            )
+        )
+        score -= min(12, small_island_drift_count * 2)
+
+    merged_protected_detail_count = metrics.get("merged_protected_detail_count") or 0
+    if merged_protected_detail_count:
+        warnings.append(
+            make_issue(
+                "PROTECTED_DETAIL_MERGED",
+                "Có region nhỏ đã merge dù màu đại diện khác rõ với màu target.",
+                merged_protected_detail_count,
+                0,
+            )
+        )
+        score -= min(8, merged_protected_detail_count * 2)
+
     preview_mae = metrics.get("preview_mae")
     if preview_mae is not None:
         if preview_mae > 70:
@@ -932,9 +1010,13 @@ def score_quality(metrics):
     tiny_pct_100 = metrics.get("tiny_region_pct_lt_100") or 0
     tiny_pct_200 = metrics.get("tiny_region_pct_lt_200") or 0
     hidden_label_pct = (
-        metrics.get("estimated_hidden_label_pct")
-        if metrics.get("estimated_hidden_label_pct") is not None
-        else metrics.get("hidden_label_pct")
+        metrics.get("actionable_hidden_label_pct")
+        if metrics.get("actionable_hidden_label_pct") is not None
+        else (
+            metrics.get("estimated_hidden_label_pct")
+            if metrics.get("estimated_hidden_label_pct") is not None
+            else metrics.get("hidden_label_pct")
+        )
     ) or 0
     median_area = metrics.get("median_region_area") or 0
     if (
@@ -949,7 +1031,11 @@ def score_quality(metrics):
                 {
                     "tiny_lt_100_pct": tiny_pct_100,
                     "tiny_lt_200_pct": tiny_pct_200,
-                    "hidden_label_pct": hidden_label_pct,
+                    "actionable_hidden_label_pct": hidden_label_pct,
+                    "hidden_label_pct": metrics.get("hidden_label_pct"),
+                    "protected_detail_hidden_label_pct": metrics.get(
+                        "protected_detail_hidden_label_pct"
+                    ),
                     "median_region_area": median_area,
                 },
                 {
@@ -1191,6 +1277,182 @@ def measure_giant_region_legitimacy(
     }
 
 
+def component_bbox_width_height(bbox):
+    left, top, right, bottom = bbox
+    return right - left + 1, bottom - top + 1
+
+
+def small_island_zero_metrics(available=False):
+    return {
+        "protected_detail_audit_available": available,
+        "protected_detail_candidate_count": 0,
+        "small_island_color_drift_count": 0,
+        "merged_protected_detail_count": 0,
+        "small_island_max_color_distance": 0.0,
+        "small_island_color_drift_examples": [],
+        "merged_protected_detail_examples": [],
+    }
+
+
+def measure_small_island_color_drift(config, reference_path, mask_path):
+    """Find small high-contrast color islands that survived inside a larger final region.
+
+    This is an audit-only signal for cases like watermelon seeds: if the final mask says a
+    pixel belongs to a red flesh region but the reference image has a small black connected
+    island there, the merge policy probably swallowed a meaningful detail.
+    """
+    if not reference_path or not os.path.exists(reference_path) or not os.path.exists(mask_path):
+        return small_island_zero_metrics()
+
+    region_by_mask_color = {}
+    for region in config.get("regions", []):
+        mask_color = parse_hex_color(region.get("mask_color"))
+        target_color = parse_hex_color(region.get("target_color") or region.get("fill_color"))
+        if mask_color is None or target_color is None:
+            continue
+        region_by_mask_color[mask_color] = {
+            "id": region.get("id"),
+            "area": int(region.get("area", 0) or 0),
+            "target_color": target_color,
+            "target_hex": rgb_to_hex(target_color),
+        }
+
+    if not region_by_mask_color:
+        return small_island_zero_metrics(available=True)
+
+    merged_examples = []
+    for region in config.get("regions", []):
+        quality = region.get("quality") or {}
+        merged_count = int(quality.get("merged_region_count", 1) or 1)
+        if merged_count <= 1:
+            continue
+        target = parse_hex_color(region.get("target_color") or region.get("fill_color"))
+        representative = parse_hex_color(region.get("representative_color"))
+        if target is None or representative is None:
+            continue
+        bbox = region.get("bbox") or {}
+        width = int(bbox.get("right", 0)) - int(bbox.get("left", 0)) + 1
+        height = int(bbox.get("bottom", 0)) - int(bbox.get("top", 0)) + 1
+        area = int(region.get("area", 0) or 0)
+        if (
+            area > SMALL_ISLAND_MAX_AREA
+            or max(width, height) > SMALL_ISLAND_MAX_SIDE
+        ):
+            continue
+        distance = color_distance(target, representative)
+        if distance < SMALL_ISLAND_COLOR_DRIFT_THRESHOLD:
+            continue
+        merged_examples.append(
+            {
+                "region_id": region.get("id"),
+                "area": area,
+                "bbox": bbox,
+                "merged_region_count": merged_count,
+                "target_color": rgb_to_hex(target),
+                "representative_color": rgb_to_hex(representative),
+                "color_distance": round(distance, 2),
+            }
+        )
+
+    with Image.open(mask_path).convert("RGB") as mask_img:
+        with Image.open(reference_path).convert("RGB") as reference_img:
+            if reference_img.size != mask_img.size:
+                reference_img = reference_img.resize(mask_img.size, Image.Resampling.BILINEAR)
+            width, height = mask_img.size
+            mask_pixels = mask_img.load()
+            reference_pixels = reference_img.load()
+            visited = bytearray(width * height)
+            examples = []
+            max_distance = 0.0
+
+            def is_drift_pixel(x, y, mask_color=None):
+                color = mask_color if mask_color is not None else mask_pixels[x, y]
+                region = region_by_mask_color.get(color)
+                if region is None:
+                    return False, 0.0, None
+                distance = color_distance(reference_pixels[x, y], region["target_color"])
+                return distance >= SMALL_ISLAND_COLOR_DRIFT_THRESHOLD, distance, region
+
+            for y in range(height):
+                for x in range(width):
+                    index = y * width + x
+                    if visited[index]:
+                        continue
+                    mask_color = mask_pixels[x, y]
+                    is_drift, distance, region = is_drift_pixel(x, y, mask_color)
+                    if not is_drift:
+                        continue
+
+                    visited[index] = 1
+                    queue = [(x, y)]
+                    area = 0
+                    distance_sum = 0.0
+                    component_max_distance = 0.0
+                    bbox = [x, y, x, y]
+                    while queue:
+                        px, py = queue.pop()
+                        area += 1
+                        _, pixel_distance, _ = is_drift_pixel(px, py, mask_color)
+                        distance_sum += pixel_distance
+                        component_max_distance = max(component_max_distance, pixel_distance)
+                        bbox[0] = min(bbox[0], px)
+                        bbox[1] = min(bbox[1], py)
+                        bbox[2] = max(bbox[2], px)
+                        bbox[3] = max(bbox[3], py)
+                        for nx, ny in (
+                            (px - 1, py),
+                            (px + 1, py),
+                            (px, py - 1),
+                            (px, py + 1),
+                        ):
+                            if nx < 0 or ny < 0 or nx >= width or ny >= height:
+                                continue
+                            neighbor_index = ny * width + nx
+                            if visited[neighbor_index] or mask_pixels[nx, ny] != mask_color:
+                                continue
+                            neighbor_drift, _, _ = is_drift_pixel(nx, ny, mask_color)
+                            if not neighbor_drift:
+                                continue
+                            visited[neighbor_index] = 1
+                            queue.append((nx, ny))
+
+                    bbox_width, bbox_height = component_bbox_width_height(bbox)
+                    if (
+                        area < SMALL_ISLAND_MIN_AREA
+                        or area > SMALL_ISLAND_MAX_AREA
+                        or max(bbox_width, bbox_height) > SMALL_ISLAND_MAX_SIDE
+                        or region["area"] < area * 3
+                    ):
+                        continue
+                    max_distance = max(max_distance, component_max_distance)
+                    examples.append(
+                        {
+                            "region_id": region["id"],
+                            "region_area": region["area"],
+                            "component_area": area,
+                            "bbox": {
+                                "left": bbox[0],
+                                "top": bbox[1],
+                                "right": bbox[2],
+                                "bottom": bbox[3],
+                            },
+                            "target_color": region["target_hex"],
+                            "mean_color_distance": round(distance_sum / max(1, area), 2),
+                            "max_color_distance": round(component_max_distance, 2),
+                        }
+                    )
+
+    return {
+        "protected_detail_audit_available": True,
+        "protected_detail_candidate_count": len(examples) + len(merged_examples),
+        "small_island_color_drift_count": len(examples),
+        "merged_protected_detail_count": len(merged_examples),
+        "small_island_max_color_distance": round(max_distance, 2),
+        "small_island_color_drift_examples": examples[:50],
+        "merged_protected_detail_examples": merged_examples[:50],
+    }
+
+
 def calculate_region_count_drop_pct(raw_region_count, final_region_count):
     if raw_region_count is None or final_region_count is None:
         return None
@@ -1239,6 +1501,8 @@ def classify_overmerge_risk(metrics):
 
 def collect_generation_merge_metrics(config):
     generation = config.get("generation_params") or config.get("generation") or {}
+    display_line_report = generation.get("display_line_report") or {}
+    segmentation_line_report = generation.get("segmentation_line_report") or {}
     stats = config.get("stats") or {}
     raw_region_count = generation.get("raw_region_count")
     final_region_count = stats.get("total_regions") or config.get("total_regions") or len(
@@ -1255,11 +1519,67 @@ def collect_generation_merge_metrics(config):
         ),
         "merged_hidden_label_region_count": generation.get("merged_hidden_label_region_count", 0),
     }
+    line_metrics = {
+        "segmentation_line_mode": generation.get("segmentation_line_mode", ""),
+        "segmentation_selected_profile": segmentation_line_report.get("selected_profile", ""),
+        "segmentation_brightness_threshold": segmentation_line_report.get(
+            "brightness_threshold", ""
+        ),
+        "segmentation_line_close_radius": segmentation_line_report.get(
+            "line_close_radius",
+            segmentation_line_report.get("close_radius", ""),
+        ),
+        "segmentation_evaluation_mode": segmentation_line_report.get("evaluation_mode", ""),
+        "segmentation_quality_score": segmentation_line_report.get("quality_score", ""),
+        "segmentation_playable_score": segmentation_line_report.get("playable_score", ""),
+        "segmentation_lost_color_pct": segmentation_line_report.get("lost_color_pct", ""),
+        "display_line_mode": generation.get("display_line_mode", ""),
+        "display_line_selected": display_line_report.get("selected", ""),
+        "display_line_fallback_to_source": display_line_report.get("fallback_to_source", ""),
+        "display_line_uses_segmentation_score": display_line_report.get(
+            "uses_segmentation_score",
+            generation.get("display_line_uses_segmentation_score", ""),
+        ),
+        "display_line_candidate_mae": display_line_report.get("candidate_mae", ""),
+        "display_line_candidate_changed_pct": display_line_report.get(
+            "candidate_changed_pct", ""
+        ),
+        "display_line_source_changed_pct": display_line_report.get("source_changed_pct", ""),
+        "display_line_stroke_lightened_pct": display_line_report.get(
+            "stroke_lightened_pct", ""
+        ),
+        "display_line_stroke_lightened_mae": display_line_report.get(
+            "stroke_lightened_mae", ""
+        ),
+        "display_line_stroke_pixel_count": display_line_report.get("stroke_pixel_count", ""),
+        "display_line_stroke_guard_failed": display_line_report.get(
+            "stroke_guard_failed", ""
+        ),
+        "generation_protected_detail_candidate_count": generation.get(
+            "protected_detail_candidate_count", ""
+        ),
+        "generation_protected_detail_region_count": generation.get(
+            "protected_detail_region_count",
+            stats.get("protected_detail_region_count", ""),
+        ),
+        "generation_protected_detail_merge_policy": generation.get(
+            "protected_detail_merge_policy", ""
+        ),
+        "recovered_ink_pixel_pct": generation.get(
+            "recovered_ink_pixel_pct",
+            display_line_report.get("recovered_ink_pixel_pct", ""),
+        ),
+        "ink_recovery_overreach": generation.get(
+            "ink_recovery_overreach",
+            display_line_report.get("ink_recovery_overreach", ""),
+        ),
+    }
     return {
         "raw_region_count": raw_region_count,
         "final_region_count": final_region_count,
         "region_count_drop_pct": calculate_region_count_drop_pct(raw_region_count, final_region_count),
         **stage_counts,
+        **line_metrics,
     }
 
 
@@ -1292,6 +1612,7 @@ def evaluate_level_dir(level_dir, reference_path=None, require_reference=False):
     detail_path = resolve_asset_path(level_dir, config, "detail", "detail.png")
     metrics["has_detail"] = os.path.exists(detail_path)
     metrics.update(measure_giant_region_legitimacy(config, reference_path, mask_path))
+    metrics.update(measure_small_island_color_drift(config, reference_path, mask_path))
     metrics["overmerge_risk"] = classify_overmerge_risk(metrics)
 
     quality = score_quality(metrics)

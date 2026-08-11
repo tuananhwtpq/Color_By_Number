@@ -55,9 +55,15 @@ def has_issue(row, code):
     return code in (text(row, "fail_reasons") + "," + text(row, "warnings"))
 
 
+def is_truthy_cell(value):
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y"}
+
+
 def classify_for_designer(row):
     largest = number(row, "largest_region_pct")
-    hidden = number(row, "estimated_hidden_label_pct")
+    hidden = number(row, "actionable_hidden_label_pct") or number(row, "estimated_hidden_label_pct")
     tiny100 = number(row, "tiny_region_pct_lt_100")
     tiny200 = number(row, "tiny_region_pct_lt_200")
     untouchable = number(row, "untouchable_region_count")
@@ -176,16 +182,27 @@ def classify_for_designer(row):
 def classify_compact_issue(row):
     largest = number(row, "largest_region_pct")
     top2 = number(row, "top_2_region_pct")
-    hidden = number(row, "estimated_hidden_label_pct") or number(row, "hidden_label_pct")
+    hidden = (
+        number(row, "actionable_hidden_label_pct")
+        or number(row, "estimated_hidden_label_pct")
+        or number(row, "hidden_label_pct")
+    )
     tiny100 = number(row, "tiny_region_pct_lt_100")
     region_drop = number(row, "region_count_drop_pct")
     final_regions = number(row, "final_region_count") or number(row, "regions")
     similarity = number(row, "preview_similarity_score")
     overmerge_risk = text(row, "overmerge_risk")
     legitimacy = text(row, "giant_region_legitimacy")
+    flat_background = legitimacy == "intentional_flat_background"
+    source_changed = number(row, "source_line_changed_pct") or number(
+        row, "debug_source_line_changed_pct"
+    )
 
     tags = []
-    if largest >= 25 or top2 >= 45:
+    if flat_background and (largest >= 25 or top2 >= 45):
+        tags.append("flat_background_possible")
+        tags.append("large_background_ok")
+    elif largest >= 25 or top2 >= 45:
         tags.append("large_regions")
     elif largest >= 18:
         tags.append("large_region_review")
@@ -208,13 +225,41 @@ def classify_compact_issue(row):
     if similarity and similarity < 93:
         tags.append("color_fidelity")
 
-    if legitimacy == "intentional_flat_background" and "large_regions" in tags:
-        tags.append("flat_background_possible")
+    if is_truthy_cell(row.get("line_display_degraded")):
+        tags.append("line_display_degraded")
+    if is_truthy_cell(row.get("segmentation_line_aggressive")):
+        tags.append("segmentation_line_aggressive")
+    if is_truthy_cell(row.get("ink_recovery_overreach")):
+        tags.append("ink_recovery_overreach")
+    if is_truthy_cell(row.get("display_line_stroke_guard_failed")):
+        tags.append("thin_stroke_loss")
+    if is_truthy_cell(row.get("display_line_fallback_to_source")):
+        tags.append("display_line_fallback_source")
+    if source_changed > 1.0:
+        tags.append("debug_source_line_mismatch")
+    if number(row, "small_island_color_drift_count") > 0:
+        tags.append("small_island_color_drift")
+    if number(row, "merged_protected_detail_count") > 0:
+        tags.append("protected_detail_merged")
 
-    if "large_regions" in tags and "overmerge" in tags:
+    line_data_issue_tags = {
+        "debug_source_line_mismatch",
+        "segmentation_line_aggressive",
+        "ink_recovery_overreach",
+        "thin_stroke_loss",
+        "small_island_color_drift",
+        "protected_detail_merged",
+    }
+    ux_issue_tags = {"line_display_degraded"}
+
+    if "debug_source_line_mismatch" in tags:
         decision = "replace_or_redraw"
     elif "tiny_regions" in tags or "too_few_regions" in tags:
         decision = "replace_or_redraw"
+    elif "large_regions" in tags and "overmerge" in tags:
+        decision = "replace_or_redraw"
+    elif any(tag in tags for tag in line_data_issue_tags | ux_issue_tags):
+        decision = "designer_review"
     elif any(tag in tags for tag in ("large_regions", "overmerge", "many_hidden_labels")):
         decision = "designer_review"
     elif any(tag.endswith("_review") for tag in tags) or "low_region_count" in tags:
@@ -293,6 +338,53 @@ def collect_rows(assets_path, data_root, require_reference=False):
         flat["hidden_label_pct"] = metrics.get("hidden_label_pct", "")
         flat["tiny_region_pct_lt_100"] = metrics.get("tiny_region_pct_lt_100", "")
         flat["overmerge_risk"] = metrics.get("overmerge_risk", "")
+        for key in (
+            "segmentation_line_mode",
+            "segmentation_selected_profile",
+            "segmentation_brightness_threshold",
+            "segmentation_line_close_radius",
+            "segmentation_evaluation_mode",
+            "segmentation_quality_score",
+            "segmentation_playable_score",
+            "segmentation_lost_color_pct",
+            "display_line_mode",
+            "display_line_selected",
+            "display_line_fallback_to_source",
+            "display_line_uses_segmentation_score",
+            "display_line_candidate_mae",
+            "display_line_candidate_changed_pct",
+            "display_line_source_changed_pct",
+            "display_line_stroke_lightened_pct",
+            "display_line_stroke_lightened_mae",
+            "display_line_stroke_pixel_count",
+            "display_line_stroke_guard_failed",
+            "generation_protected_detail_candidate_count",
+            "generation_protected_detail_region_count",
+            "generation_protected_detail_merge_policy",
+            "recovered_ink_pixel_pct",
+            "ink_recovery_overreach",
+            "protected_detail_audit_available",
+            "protected_detail_candidate_count",
+            "protected_detail_hidden_label_count",
+            "protected_detail_hidden_label_pct",
+            "palette_assisted_hidden_label_count",
+            "palette_assisted_hidden_label_pct",
+            "non_actionable_hidden_label_count",
+            "non_actionable_hidden_label_pct",
+            "actionable_hidden_label_count",
+            "actionable_hidden_label_pct",
+            "small_island_color_drift_count",
+            "merged_protected_detail_count",
+            "small_island_max_color_distance",
+            "small_island_color_drift_examples",
+            "merged_protected_detail_examples",
+        ):
+            value = metrics.get(key, "")
+            flat[key] = (
+                json.dumps(value, ensure_ascii=False)
+                if isinstance(value, (list, dict))
+                else value
+            )
         flat["level_key"] = f"{category}/{level}"
         flat.update(top_region_stats(level_dir))
         if not flat.get("final_region_count") and flat.get("final_region_count_from_config"):
@@ -356,6 +448,15 @@ ISSUE_TAG_VI = {
     "low_region_count": "Số vùng hơi ít",
     "color_fidelity": "Màu lệch so với ảnh gốc",
     "flat_background_possible": "Nền phẳng, có thể là chủ ý",
+    "large_background_ok": "Mảng nền lớn phẳng, có thể chấp nhận",
+    "line_display_degraded": "Nét hiển thị bị mờ hoặc mất so với line gốc",
+    "segmentation_line_aggressive": "Line phân vùng khác line gốc quá mạnh",
+    "debug_source_line_mismatch": "Line gốc trong assets lệch với Data",
+    "ink_recovery_overreach": "Ink recovery có dấu hiệu xoá quá nhiều nét",
+    "thin_stroke_loss": "Nét mảnh bị làm sáng hoặc xoá trên display line",
+    "display_line_fallback_source": "Display line đã fallback về line gốc",
+    "small_island_color_drift": "Đảo màu nhỏ có thể đã bị merge vào vùng lớn",
+    "protected_detail_merged": "Chi tiết nhỏ khác màu đã bị merge",
     "ok": "Không có vấn đề gì",
 }
 
@@ -677,7 +778,46 @@ def write_csv(rows, output_path, compact=True):
         "tiny_region_pct_lt_100",
         "tiny_region_pct_lt_200",
         "estimated_hidden_label_pct",
+        "protected_detail_hidden_label_count",
+        "protected_detail_hidden_label_pct",
+        "palette_assisted_hidden_label_count",
+        "palette_assisted_hidden_label_pct",
+        "non_actionable_hidden_label_count",
+        "non_actionable_hidden_label_pct",
+        "actionable_hidden_label_count",
+        "actionable_hidden_label_pct",
         "overmerge_risk",
+        "segmentation_line_mode",
+        "segmentation_selected_profile",
+        "segmentation_brightness_threshold",
+        "segmentation_line_close_radius",
+        "segmentation_evaluation_mode",
+        "segmentation_quality_score",
+        "segmentation_playable_score",
+        "segmentation_lost_color_pct",
+        "display_line_mode",
+        "display_line_selected",
+        "display_line_fallback_to_source",
+        "display_line_uses_segmentation_score",
+        "display_line_candidate_mae",
+        "display_line_candidate_changed_pct",
+        "display_line_source_changed_pct",
+        "display_line_stroke_lightened_pct",
+        "display_line_stroke_lightened_mae",
+        "display_line_stroke_pixel_count",
+        "display_line_stroke_guard_failed",
+        "generation_protected_detail_candidate_count",
+        "generation_protected_detail_region_count",
+        "generation_protected_detail_merge_policy",
+        "recovered_ink_pixel_pct",
+        "ink_recovery_overreach",
+        "protected_detail_audit_available",
+        "protected_detail_candidate_count",
+        "small_island_color_drift_count",
+        "merged_protected_detail_count",
+        "small_island_max_color_distance",
+        "small_island_color_drift_examples",
+        "merged_protected_detail_examples",
         "untouchable_region_count",
         "regions",
         "colors",

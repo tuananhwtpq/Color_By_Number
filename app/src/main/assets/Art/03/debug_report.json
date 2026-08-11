@@ -1,13 +1,14 @@
 {
   "schema_version": 1,
   "stats": {
-    "total_regions": 195,
-    "raw_region_count": 2102,
-    "final_region_count": 195,
-    "region_count_drop_pct": 90.72,
-    "unique_numbers": 64,
+    "total_regions": 692,
+    "raw_region_count": 6150,
+    "final_region_count": 692,
+    "region_count_drop_pct": 88.75,
+    "unique_numbers": 46,
     "estimated_difficulty": 10,
-    "small_regions_count": 2,
+    "small_regions_count": 18,
+    "protected_detail_region_count": 35,
     "giant_regions_count": 0
   },
   "generation_params": {
@@ -22,15 +23,15 @@
     "small_region_merge_mode": "shared_boundary_adjacency",
     "small_color_absorb_mode": "shared_boundary_adjacency",
     "tiny_region_merge_mode": "shared_boundary_adjacency",
-    "raw_region_count": 2102,
-    "final_region_count": 195,
-    "region_count_drop_pct": 90.72,
+    "raw_region_count": 6150,
+    "final_region_count": 692,
+    "region_count_drop_pct": 88.75,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
     "tiny_merge_rejected_non_adjacent": 0,
-    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_color_distance": 3033,
     "tiny_merge_rejected_giant_target": 0,
-    "tiny_merge_rejected_fragment_cap": 326,
+    "tiny_merge_rejected_fragment_cap": 781,
     "tiny_merge_profile": "medium",
     "adaptive_palette": true,
     "quantize_method": "mediancut",
@@ -42,111 +43,266 @@
     "assumed_zoom": 6.0,
     "min_touch_bbox_side": 12,
     "untouchable_merge_color_threshold": 45.0,
-    "merged_untouchable_region_count": 131,
-    "merged_unreadable_region_count": 0,
-    "forced_unreadable_region_merges_count": 0,
-    "absorbed_isolated_unreadable_region_count": 101,
+    "merged_untouchable_region_count": 404,
+    "merged_unreadable_region_count": 58,
+    "forced_unreadable_region_merges_count": 54,
+    "absorbed_isolated_unreadable_region_count": 35,
     "label_gate_canvas_radius_px": 23.704,
     "merged_hidden_label_region_count": 0,
-    "remaining_hidden_label_region_count": 193,
+    "remaining_hidden_label_region_count": 690,
+    "protected_detail_candidate_count": 35,
+    "protected_detail_region_count": 35,
+    "protected_detail_merge_policy": "skip_all_region_merge_passes",
+    "ink_recovery_enabled": false,
     "ink_core_radius": 1,
     "ink_min_chroma_value": 60,
     "ink_min_chroma_spread": 18,
-    "recovered_ink_pixel_count": 397,
-    "lost_color_pct": 12.01,
-    "selected_preprocessing": {
-      "profile": "mandala",
-      "brightness_threshold": 100,
+    "recovered_ink_pixel_count": 0,
+    "recovered_ink_pixel_pct": 0.0,
+    "ink_recovery_overreach": false,
+    "segmentation_line_mode": "selected_preprocessing_candidate",
+    "segmentation_line_report": {
+      "mode": "selected_preprocessing_candidate",
+      "selected_profile": "standard",
+      "brightness_threshold": 120,
       "line_close_radius": 0,
-      "score": 75,
       "evaluation_mode": "pre_generation_proxy_post_merge",
-      "candidate_proxy_score": 75,
+      "quality_score": 55,
+      "playable_score": 100,
+      "raw_total_regions": 3728,
+      "estimated_final_regions": 1360,
+      "largest_region_pct": 3.12,
+      "candidate_count": 17,
+      "candidate_rescored_count": 6,
+      "lost_color_pct": 17.98,
+      "recovered_ink_pixel_count": 0
+    },
+    "display_line_mode": "safe_source_fallback",
+    "display_line_uses_segmentation_score": false,
+    "display_line_report": {
+      "candidate_mae": 0.0,
+      "candidate_changed_pct": 0.0,
+      "changed_pct_threshold": 10.0,
+      "mae_threshold": 12.0,
+      "stroke_lightened_pct_threshold": 10.0,
+      "stroke_pixel_count": 317425,
+      "stroke_lightened_count": 0,
+      "stroke_lightened_pct": 0.0,
+      "stroke_lightened_mae": 0.0,
+      "stroke_guard_failed": false,
+      "fallback_to_source": false,
+      "selected": "source_line",
+      "reason": "ink_recovery_disabled",
+      "ink_recovery_overreach": false,
+      "mode": "source_similarity_guard",
+      "candidate_source": "source_line_no_ink_recovery",
+      "uses_segmentation_score": false,
+      "recovered_ink_pixel_pct": 0.0,
+      "recovered_ink_overreach_threshold_pct": 12.0
+    },
+    "lost_color_pct": 17.98,
+    "selected_preprocessing": {
+      "profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0,
+      "score": 55,
+      "evaluation_mode": "pre_generation_proxy_post_merge",
+      "candidate_proxy_score": 55,
       "candidate_proxy_grade": "D",
       "candidate_playable_score": 100,
-      "quality_score": 75,
+      "quality_score": 55,
       "quality_grade": "D",
       "fail_reasons": [
         {
           "code": "UNTOUCHABLE_REGIONS",
           "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
           "value": {
-            "untouchable_region_pct": 68.1,
-            "min_touch_target_at_default_zoom": 1.49
+            "untouchable_region_pct": 74.4,
+            "min_touch_target_at_default_zoom": 2.11
           },
           "threshold": 18
         }
       ],
-      "warnings": [],
-      "total_regions": 543,
-      "largest_region_pct": 20.33,
-      "top_3_region_pct": 28.0,
-      "playable_region_count": 291,
+      "warnings": [
+        {
+          "code": "TOO_MANY_REGIONS",
+          "message": "Số vùng tô rất cao so với profile medium; level có thể nặng và khó thao tác trên mobile.",
+          "value": 1360,
+          "threshold": 800
+        },
+        {
+          "code": "TINY_REGION_DENSITY_WARNING",
+          "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+          "value": {
+            "tiny_lt_100_pct": 25.5,
+            "tiny_lt_200_pct": 46.4,
+            "actionable_hidden_label_pct": 100.0,
+            "hidden_label_pct": null,
+            "protected_detail_hidden_label_pct": 0.0,
+            "median_region_area": 225.5
+          },
+          "threshold": {
+            "tiny_lt_100_pct": 45,
+            "tiny_lt_200_pct": 60,
+            "hidden_label_pct": 80
+          }
+        }
+      ],
+      "total_regions": 1360,
+      "largest_region_pct": 3.12,
+      "top_3_region_pct": 7.46,
+      "playable_region_count": 729,
       "giant_region_count": 0,
       "single_tap_completion_risk": "none",
       "playable_score": 100,
-      "tiny_region_count_lt_50": 90,
+      "tiny_region_count_lt_50": 82,
       "preview_mae": null,
       "preview_mae_reason": "not_available_before_full_generation",
-      "raw_total_regions": 1142,
-      "recovered_ink_pixel_count": 397,
-      "lost_color_pct": 12.01,
+      "raw_total_regions": 3728,
+      "recovered_ink_pixel_count": 0,
+      "lost_color_pct": 17.98,
       "candidate_count": 17,
       "candidate_rescored_count": 6,
       "candidate_top": [
         {
+          "profile": "standard",
+          "brightness_threshold": 120,
+          "line_close_radius": 0,
+          "score": 55,
+          "evaluation_mode": "pre_generation_proxy_post_merge",
+          "candidate_proxy_score": 55,
+          "candidate_proxy_grade": "D",
+          "candidate_playable_score": 100,
+          "quality_score": 55,
+          "quality_grade": "D",
+          "fail_reasons": [
+            {
+              "code": "UNTOUCHABLE_REGIONS",
+              "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
+              "value": {
+                "untouchable_region_pct": 74.4,
+                "min_touch_target_at_default_zoom": 2.11
+              },
+              "threshold": 18
+            }
+          ],
+          "warnings": [
+            {
+              "code": "TOO_MANY_REGIONS",
+              "message": "Số vùng tô rất cao so với profile medium; level có thể nặng và khó thao tác trên mobile.",
+              "value": 1360,
+              "threshold": 800
+            },
+            {
+              "code": "TINY_REGION_DENSITY_WARNING",
+              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+              "value": {
+                "tiny_lt_100_pct": 25.5,
+                "tiny_lt_200_pct": 46.4,
+                "actionable_hidden_label_pct": 100.0,
+                "hidden_label_pct": null,
+                "protected_detail_hidden_label_pct": 0.0,
+                "median_region_area": 225.5
+              },
+              "threshold": {
+                "tiny_lt_100_pct": 45,
+                "tiny_lt_200_pct": 60,
+                "hidden_label_pct": 80
+              }
+            }
+          ],
+          "total_regions": 1360,
+          "largest_region_pct": 3.12,
+          "top_3_region_pct": 7.46,
+          "playable_region_count": 729,
+          "giant_region_count": 0,
+          "single_tap_completion_risk": "none",
+          "playable_score": 100,
+          "tiny_region_count_lt_50": 82,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation",
+          "raw_total_regions": 3728,
+          "recovered_ink_pixel_count": 0,
+          "lost_color_pct": 17.98
+        },
+        {
           "profile": "mandala",
           "brightness_threshold": 100,
           "line_close_radius": 0,
-          "score": 75,
+          "score": 55,
           "evaluation_mode": "pre_generation_proxy_post_merge",
-          "candidate_proxy_score": 75,
+          "candidate_proxy_score": 55,
           "candidate_proxy_grade": "D",
           "candidate_playable_score": 100,
-          "quality_score": 75,
+          "quality_score": 55,
           "quality_grade": "D",
           "fail_reasons": [
             {
               "code": "UNTOUCHABLE_REGIONS",
               "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
               "value": {
-                "untouchable_region_pct": 68.1,
-                "min_touch_target_at_default_zoom": 1.49
+                "untouchable_region_pct": 74.4,
+                "min_touch_target_at_default_zoom": 2.11
               },
               "threshold": 18
             }
           ],
-          "warnings": [],
-          "total_regions": 543,
-          "largest_region_pct": 20.33,
-          "top_3_region_pct": 28.0,
-          "playable_region_count": 291,
+          "warnings": [
+            {
+              "code": "TOO_MANY_REGIONS",
+              "message": "Số vùng tô rất cao so với profile medium; level có thể nặng và khó thao tác trên mobile.",
+              "value": 1360,
+              "threshold": 800
+            },
+            {
+              "code": "TINY_REGION_DENSITY_WARNING",
+              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+              "value": {
+                "tiny_lt_100_pct": 25.5,
+                "tiny_lt_200_pct": 46.4,
+                "actionable_hidden_label_pct": 100.0,
+                "hidden_label_pct": null,
+                "protected_detail_hidden_label_pct": 0.0,
+                "median_region_area": 225.5
+              },
+              "threshold": {
+                "tiny_lt_100_pct": 45,
+                "tiny_lt_200_pct": 60,
+                "hidden_label_pct": 80
+              }
+            }
+          ],
+          "total_regions": 1360,
+          "largest_region_pct": 3.12,
+          "top_3_region_pct": 7.46,
+          "playable_region_count": 729,
           "giant_region_count": 0,
           "single_tap_completion_risk": "none",
           "playable_score": 100,
-          "tiny_region_count_lt_50": 90,
+          "tiny_region_count_lt_50": 82,
           "preview_mae": null,
           "preview_mae_reason": "not_available_before_full_generation",
-          "raw_total_regions": 1142,
-          "recovered_ink_pixel_count": 397,
-          "lost_color_pct": 12.01
+          "raw_total_regions": 3728,
+          "recovered_ink_pixel_count": 0,
+          "lost_color_pct": 17.98
         },
         {
           "profile": "poster",
-          "brightness_threshold": 130,
-          "line_close_radius": 2,
-          "score": 63,
+          "brightness_threshold": 90,
+          "line_close_radius": 1,
+          "score": 55,
           "evaluation_mode": "pre_generation_proxy_post_merge",
-          "candidate_proxy_score": 63,
+          "candidate_proxy_score": 55,
           "candidate_proxy_grade": "D",
           "candidate_playable_score": 100,
-          "quality_score": 63,
+          "quality_score": 55,
           "quality_grade": "D",
           "fail_reasons": [
             {
               "code": "UNTOUCHABLE_REGIONS",
               "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
               "value": {
-                "untouchable_region_pct": 77.4,
+                "untouchable_region_pct": 74.8,
                 "min_touch_target_at_default_zoom": 1.49
               },
               "threshold": 18
@@ -156,67 +312,40 @@
             {
               "code": "TOO_MANY_REGIONS",
               "message": "Số vùng tô rất cao so với profile medium; level có thể nặng và khó thao tác trên mobile.",
-              "value": 1463,
+              "value": 1403,
               "threshold": 800
-            }
-          ],
-          "total_regions": 1463,
-          "largest_region_pct": 2.92,
-          "top_3_region_pct": 7.95,
-          "playable_region_count": 750,
-          "giant_region_count": 0,
-          "single_tap_completion_risk": "none",
-          "playable_score": 100,
-          "tiny_region_count_lt_50": 28,
-          "preview_mae": null,
-          "preview_mae_reason": "not_available_before_full_generation",
-          "raw_total_regions": 2889,
-          "recovered_ink_pixel_count": 210427,
-          "lost_color_pct": 10.94
-        },
-        {
-          "profile": "thin-line",
-          "brightness_threshold": 150,
-          "line_close_radius": 2,
-          "score": 63,
-          "evaluation_mode": "pre_generation_proxy_post_merge",
-          "candidate_proxy_score": 63,
-          "candidate_proxy_grade": "D",
-          "candidate_playable_score": 100,
-          "quality_score": 63,
-          "quality_grade": "D",
-          "fail_reasons": [
+            },
             {
-              "code": "UNTOUCHABLE_REGIONS",
-              "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
+              "code": "TINY_REGION_DENSITY_WARNING",
+              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
               "value": {
-                "untouchable_region_pct": 76.4,
-                "min_touch_target_at_default_zoom": 1.49
+                "tiny_lt_100_pct": 24.6,
+                "tiny_lt_200_pct": 46.3,
+                "actionable_hidden_label_pct": 100.0,
+                "hidden_label_pct": null,
+                "protected_detail_hidden_label_pct": 0.0,
+                "median_region_area": 222.0
               },
-              "threshold": 18
+              "threshold": {
+                "tiny_lt_100_pct": 45,
+                "tiny_lt_200_pct": 60,
+                "hidden_label_pct": 80
+              }
             }
           ],
-          "warnings": [
-            {
-              "code": "TOO_MANY_REGIONS",
-              "message": "Số vùng tô rất cao so với profile medium; level có thể nặng và khó thao tác trên mobile.",
-              "value": 1468,
-              "threshold": 800
-            }
-          ],
-          "total_regions": 1468,
-          "largest_region_pct": 2.89,
-          "top_3_region_pct": 7.95,
-          "playable_region_count": 770,
+          "total_regions": 1403,
+          "largest_region_pct": 3.05,
+          "top_3_region_pct": 7.39,
+          "playable_region_count": 753,
           "giant_region_count": 0,
           "single_tap_completion_risk": "none",
           "playable_score": 100,
-          "tiny_region_count_lt_50": 20,
+          "tiny_region_count_lt_50": 49,
           "preview_mae": null,
           "preview_mae_reason": "not_available_before_full_generation",
-          "raw_total_regions": 2876,
-          "recovered_ink_pixel_count": 223846,
-          "lost_color_pct": 11.06
+          "raw_total_regions": 2811,
+          "recovered_ink_pixel_count": 0,
+          "lost_color_pct": 21.37
         }
       ]
     },
@@ -229,78 +358,110 @@
       "code": "MANY_TINY_REGIONS",
       "message": "Số vùng quá nhỏ cao; level có thể khó chạm hoặc khó đọc số.",
       "region_ids": [
-        18,
-        20,
-        28,
+        1,
+        2,
+        3,
+        4,
+        7,
+        10,
+        12,
+        13,
+        17,
+        22,
+        23,
+        27,
         30,
         31,
+        32,
         34,
-        35,
         36,
         37,
         38,
-        40,
+        39,
+        41,
         42,
         43,
+        44,
         45,
-        46,
         47,
-        48,
         50,
         51,
         52,
-        56,
-        57,
-        59,
-        61,
+        53,
+        54,
+        55,
+        58,
+        60,
+        62,
+        65,
+        66,
+        67,
+        69,
+        70,
+        71,
+        72,
         73,
+        74,
         75,
         76,
-        83,
-        87,
-        88,
-        93,
-        94,
-        95,
-        100,
-        123,
-        124,
-        125,
-        126,
-        127,
-        128,
-        130,
-        131,
-        132,
-        137,
-        138,
-        139,
-        147,
-        148,
-        151,
-        154
+        77,
+        78,
+        80,
+        81
       ]
     },
     {
       "code": "OVERMERGE_RISK_WARNING",
       "message": "Có dấu hiệu mask bị đơn giản hóa; cần review debug_regions trước khi nhận level.",
       "value": {
-        "raw_region_count": 2102,
-        "final_region_count": 195,
-        "region_count_drop_pct": 90.72,
-        "detail_dependency_score": 4.9
+        "raw_region_count": 6150,
+        "final_region_count": 692,
+        "region_count_drop_pct": 88.75,
+        "detail_dependency_score": 3.25
       },
       "threshold": "low"
+    },
+    {
+      "code": "SMALL_ISLAND_COLOR_DRIFT",
+      "message": "Có đảo màu nhỏ khác rõ nằm trong region lớn; chi tiết nhỏ có thể đã bị merge sai.",
+      "value": 1061,
+      "threshold": 0
+    },
+    {
+      "code": "TINY_REGION_DENSITY_WARNING",
+      "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+      "value": {
+        "tiny_lt_100_pct": 0,
+        "tiny_lt_200_pct": 12.1,
+        "actionable_hidden_label_pct": 89.6,
+        "hidden_label_pct": 99.7,
+        "protected_detail_hidden_label_pct": 5.1,
+        "median_region_area": 639.5
+      },
+      "threshold": {
+        "tiny_lt_100_pct": 45,
+        "tiny_lt_200_pct": 60,
+        "hidden_label_pct": 80
+      }
+    },
+    {
+      "code": "UNTOUCHABLE_REGIONS_WARNING",
+      "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
+      "value": {
+        "untouchable_region_pct": 28.3,
+        "min_touch_target_at_default_zoom": 5.27
+      },
+      "threshold": 18
     }
   ],
-  "quality_grade": "B",
-  "quality_score": 90,
+  "quality_grade": "C",
+  "quality_score": 58,
   "fail_reasons": [],
   "metrics": {
-    "total_regions": 195,
-    "unique_numbers": 64,
-    "tiny_region_count_lt_50": 1,
-    "tiny_region_count_lt_200": 5,
+    "total_regions": 692,
+    "unique_numbers": 46,
+    "tiny_region_count_lt_50": 0,
+    "tiny_region_count_lt_200": 84,
     "mask_config_mismatch_count": 0,
     "mask_missing_config_colors": [],
     "config_missing_mask_colors": [],
@@ -309,61 +470,799 @@
     "duplicate_region_palette_mask_colors": [],
     "region_area_mismatch_count": 0,
     "region_area_mismatches": [],
-    "largest_region_pct": 20.33,
-    "max_region_pct": 20.33,
-    "top_3_region_pct": 28.02,
-    "max_color_pct": 20.38,
-    "top_3_color_pct": 31.95,
-    "tiny_region_count_lt_100": 1,
-    "tiny_region_pct_lt_50": 0.5,
-    "tiny_region_pct_lt_100": 0.5,
-    "tiny_region_pct_lt_200": 2.6,
-    "config_hidden_label_count": 1,
-    "config_hidden_label_pct": 0.5,
-    "estimated_hidden_label_count": 66,
-    "estimated_hidden_label_pct": 33.8,
-    "hidden_label_count": 66,
-    "hidden_label_pct": 33.8,
+    "largest_region_pct": 3.16,
+    "max_region_pct": 3.16,
+    "top_3_region_pct": 7.87,
+    "max_color_pct": 10.59,
+    "top_3_color_pct": 25.27,
+    "tiny_region_count_lt_100": 0,
+    "tiny_region_pct_lt_50": 0.0,
+    "tiny_region_pct_lt_100": 0.0,
+    "tiny_region_pct_lt_200": 12.1,
+    "config_hidden_label_count": 0,
+    "config_hidden_label_pct": 0.0,
+    "estimated_hidden_label_count": 690,
+    "estimated_hidden_label_pct": 99.7,
+    "protected_detail_hidden_label_count": 35,
+    "protected_detail_hidden_label_pct": 5.1,
+    "palette_assisted_hidden_label_count": 35,
+    "palette_assisted_hidden_label_pct": 5.1,
+    "non_actionable_hidden_label_count": 70,
+    "non_actionable_hidden_label_pct": 10.1,
+    "actionable_hidden_label_count": 620,
+    "actionable_hidden_label_pct": 89.6,
+    "hidden_label_count": 690,
+    "hidden_label_pct": 99.7,
     "label_min_screen_radius_px": 25,
-    "median_region_area": 1553.0,
-    "p10_region_area": 448,
-    "p25_region_area": 774,
-    "region_density_by_canvas_size": 185.97,
-    "tiny_region_by_number_lt_100": {
-      "33": 1
-    },
-    "untouchable_region_count": 11,
-    "untouchable_region_pct": 5.6,
-    "min_touch_target_at_default_zoom": 6.33,
-    "playable_region_count": 190,
+    "median_region_area": 639.5,
+    "p10_region_area": 180,
+    "p25_region_area": 313,
+    "region_density_by_canvas_size": 659.94,
+    "tiny_region_by_number_lt_100": {},
+    "untouchable_region_count": 196,
+    "untouchable_region_pct": 28.3,
+    "min_touch_target_at_default_zoom": 5.27,
+    "playable_region_count": 608,
     "giant_region_count": 0,
     "background_region_candidate": false,
     "playability_profile": "medium",
     "single_tap_completion_risk": "none",
     "playable_score": 100,
-    "raw_region_count": 2102,
-    "final_region_count": 195,
-    "region_count_drop_pct": 90.72,
-    "merged_tiny_regions_count": 700,
-    "forced_tiny_region_merges_count": 534,
-    "merged_small_regions_count": 15,
-    "merged_untouchable_region_count": 131,
-    "merged_unreadable_region_count": 0,
-    "absorbed_isolated_unreadable_region_count": 101,
+    "raw_region_count": 6150,
+    "final_region_count": 692,
+    "region_count_drop_pct": 88.75,
+    "merged_tiny_regions_count": 3779,
+    "forced_tiny_region_merges_count": 2041,
+    "merged_small_regions_count": 39,
+    "merged_untouchable_region_count": 404,
+    "merged_unreadable_region_count": 58,
+    "absorbed_isolated_unreadable_region_count": 35,
     "merged_hidden_label_region_count": 0,
-    "line_dark_pct": 15.11,
-    "line_ink_pct": 15.11,
+    "segmentation_line_mode": "selected_preprocessing_candidate",
+    "segmentation_selected_profile": "standard",
+    "segmentation_brightness_threshold": 120,
+    "segmentation_line_close_radius": 0,
+    "segmentation_evaluation_mode": "pre_generation_proxy_post_merge",
+    "segmentation_quality_score": 55,
+    "segmentation_playable_score": 100,
+    "segmentation_lost_color_pct": 17.98,
+    "display_line_mode": "safe_source_fallback",
+    "display_line_selected": "source_line",
+    "display_line_fallback_to_source": false,
+    "display_line_uses_segmentation_score": false,
+    "display_line_candidate_mae": 0.0,
+    "display_line_candidate_changed_pct": 0.0,
+    "display_line_source_changed_pct": "",
+    "display_line_stroke_lightened_pct": 0.0,
+    "display_line_stroke_lightened_mae": 0.0,
+    "display_line_stroke_pixel_count": 317425,
+    "display_line_stroke_guard_failed": false,
+    "generation_protected_detail_candidate_count": 35,
+    "generation_protected_detail_region_count": 35,
+    "generation_protected_detail_merge_policy": "skip_all_region_merge_passes",
+    "recovered_ink_pixel_pct": 0.0,
+    "ink_recovery_overreach": false,
+    "line_dark_pct": 22.09,
+    "line_ink_pct": 22.09,
     "reference_missing": false,
     "reference_required": false,
-    "preview_mae": 19.64,
-    "color_mae": 19.64,
-    "preview_similarity_score": 92.3,
-    "flat_similarity_score": 87.4,
-    "detail_dependency_score": 4.9,
-    "shading_preservation_score": 92.59,
+    "preview_mae": 19.15,
+    "color_mae": 19.15,
+    "preview_similarity_score": 92.49,
+    "flat_similarity_score": 89.24,
+    "detail_dependency_score": 3.25,
+    "shading_preservation_score": 92.9,
     "has_detail": true,
     "giant_region_legitimacy": null,
     "giant_region_reference_color_std": null,
+    "protected_detail_audit_available": true,
+    "protected_detail_candidate_count": 1061,
+    "small_island_color_drift_count": 1061,
+    "merged_protected_detail_count": 0,
+    "small_island_max_color_distance": 360.84,
+    "small_island_color_drift_examples": [
+      {
+        "region_id": 5,
+        "region_area": 2338,
+        "component_area": 21,
+        "bbox": {
+          "left": 98,
+          "top": 12,
+          "right": 110,
+          "bottom": 14
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 65.12,
+        "max_color_distance": 93.64
+      },
+      {
+        "region_id": 42,
+        "region_area": 1281,
+        "component_area": 26,
+        "bbox": {
+          "left": 196,
+          "top": 12,
+          "right": 211,
+          "bottom": 14
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 71.83,
+        "max_color_distance": 131.03
+      },
+      {
+        "region_id": 1,
+        "region_area": 195,
+        "component_area": 40,
+        "bbox": {
+          "left": 298,
+          "top": 12,
+          "right": 307,
+          "bottom": 16
+        },
+        "target_color": "#986760",
+        "mean_color_distance": 114.25,
+        "max_color_distance": 160.66
+      },
+      {
+        "region_id": 9,
+        "region_area": 910,
+        "component_area": 43,
+        "bbox": {
+          "left": 332,
+          "top": 12,
+          "right": 348,
+          "bottom": 16
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 85.73,
+        "max_color_distance": 143.42
+      },
+      {
+        "region_id": 10,
+        "region_area": 565,
+        "component_area": 24,
+        "bbox": {
+          "left": 391,
+          "top": 12,
+          "right": 395,
+          "bottom": 20
+        },
+        "target_color": "#695866",
+        "mean_color_distance": 77.26,
+        "max_color_distance": 160.54
+      },
+      {
+        "region_id": 11,
+        "region_area": 1499,
+        "component_area": 119,
+        "bbox": {
+          "left": 468,
+          "top": 12,
+          "right": 487,
+          "bottom": 28
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 78.63,
+        "max_color_distance": 114.21
+      },
+      {
+        "region_id": 48,
+        "region_area": 2442,
+        "component_area": 91,
+        "bbox": {
+          "left": 559,
+          "top": 12,
+          "right": 571,
+          "bottom": 34
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 102.91,
+        "max_color_distance": 198.54
+      },
+      {
+        "region_id": 14,
+        "region_area": 516,
+        "component_area": 59,
+        "bbox": {
+          "left": 599,
+          "top": 12,
+          "right": 616,
+          "bottom": 25
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 91.54,
+        "max_color_distance": 125.1
+      },
+      {
+        "region_id": 13,
+        "region_area": 354,
+        "component_area": 27,
+        "bbox": {
+          "left": 629,
+          "top": 12,
+          "right": 638,
+          "bottom": 16
+        },
+        "target_color": "#a87e6d",
+        "mean_color_distance": 75.06,
+        "max_color_distance": 190.71
+      },
+      {
+        "region_id": 17,
+        "region_area": 562,
+        "component_area": 87,
+        "bbox": {
+          "left": 713,
+          "top": 12,
+          "right": 743,
+          "bottom": 21
+        },
+        "target_color": "#88787a",
+        "mean_color_distance": 125.15,
+        "max_color_distance": 175.85
+      },
+      {
+        "region_id": 10,
+        "region_area": 565,
+        "component_area": 115,
+        "bbox": {
+          "left": 405,
+          "top": 14,
+          "right": 444,
+          "bottom": 36
+        },
+        "target_color": "#695866",
+        "mean_color_distance": 78.75,
+        "max_color_distance": 151.37
+      },
+      {
+        "region_id": 24,
+        "region_area": 2572,
+        "component_area": 254,
+        "bbox": {
+          "left": 873,
+          "top": 16,
+          "right": 905,
+          "bottom": 44
+        },
+        "target_color": "#65424d",
+        "mean_color_distance": 67.31,
+        "max_color_distance": 96.44
+      },
+      {
+        "region_id": 25,
+        "region_area": 791,
+        "component_area": 246,
+        "bbox": {
+          "left": 19,
+          "top": 17,
+          "right": 49,
+          "bottom": 52
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 77.8,
+        "max_color_distance": 133.35
+      },
+      {
+        "region_id": 16,
+        "region_area": 369,
+        "component_area": 55,
+        "bbox": {
+          "left": 673,
+          "top": 18,
+          "right": 683,
+          "bottom": 27
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 69.11,
+        "max_color_distance": 92.6
+      },
+      {
+        "region_id": 29,
+        "region_area": 543,
+        "component_area": 78,
+        "bbox": {
+          "left": 986,
+          "top": 18,
+          "right": 1004,
+          "bottom": 34
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 59.0,
+        "max_color_distance": 76.23
+      },
+      {
+        "region_id": 2,
+        "region_area": 305,
+        "component_area": 22,
+        "bbox": {
+          "left": 328,
+          "top": 19,
+          "right": 341,
+          "bottom": 27
+        },
+        "target_color": "#986760",
+        "mean_color_distance": 107.33,
+        "max_color_distance": 155.73
+      },
+      {
+        "region_id": 11,
+        "region_area": 1499,
+        "component_area": 55,
+        "bbox": {
+          "left": 412,
+          "top": 19,
+          "right": 419,
+          "bottom": 27
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 69.43,
+        "max_color_distance": 103.45
+      },
+      {
+        "region_id": 20,
+        "region_area": 2225,
+        "component_area": 27,
+        "bbox": {
+          "left": 960,
+          "top": 19,
+          "right": 968,
+          "bottom": 23
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 83.61,
+        "max_color_distance": 133.9
+      },
+      {
+        "region_id": 29,
+        "region_area": 543,
+        "component_area": 39,
+        "bbox": {
+          "left": 980,
+          "top": 20,
+          "right": 985,
+          "bottom": 34
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 56.15,
+        "max_color_distance": 83.1
+      },
+      {
+        "region_id": 29,
+        "region_area": 543,
+        "component_area": 48,
+        "bbox": {
+          "left": 974,
+          "top": 21,
+          "right": 978,
+          "bottom": 38
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 62.71,
+        "max_color_distance": 87.93
+      },
+      {
+        "region_id": 2,
+        "region_area": 305,
+        "component_area": 60,
+        "bbox": {
+          "left": 328,
+          "top": 22,
+          "right": 354,
+          "bottom": 31
+        },
+        "target_color": "#986760",
+        "mean_color_distance": 68.25,
+        "max_color_distance": 118.33
+      },
+      {
+        "region_id": 27,
+        "region_area": 693,
+        "component_area": 28,
+        "bbox": {
+          "left": 496,
+          "top": 22,
+          "right": 500,
+          "bottom": 31
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 67.88,
+        "max_color_distance": 102.39
+      },
+      {
+        "region_id": 48,
+        "region_area": 2442,
+        "component_area": 64,
+        "bbox": {
+          "left": 564,
+          "top": 22,
+          "right": 578,
+          "bottom": 43
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 118.81,
+        "max_color_distance": 207.22
+      },
+      {
+        "region_id": 5,
+        "region_area": 2338,
+        "component_area": 35,
+        "bbox": {
+          "left": 10,
+          "top": 23,
+          "right": 14,
+          "bottom": 33
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 100.8,
+        "max_color_distance": 167.41
+      },
+      {
+        "region_id": 19,
+        "region_area": 31677,
+        "component_area": 29,
+        "bbox": {
+          "left": 1010,
+          "top": 23,
+          "right": 1013,
+          "bottom": 32
+        },
+        "target_color": "#232745",
+        "mean_color_distance": 121.35,
+        "max_color_distance": 188.3
+      },
+      {
+        "region_id": 17,
+        "region_area": 562,
+        "component_area": 23,
+        "bbox": {
+          "left": 712,
+          "top": 25,
+          "right": 723,
+          "bottom": 27
+        },
+        "target_color": "#88787a",
+        "mean_color_distance": 67.04,
+        "max_color_distance": 94.2
+      },
+      {
+        "region_id": 13,
+        "region_area": 354,
+        "component_area": 56,
+        "bbox": {
+          "left": 594,
+          "top": 26,
+          "right": 618,
+          "bottom": 35
+        },
+        "target_color": "#a87e6d",
+        "mean_color_distance": 74.75,
+        "max_color_distance": 124.99
+      },
+      {
+        "region_id": 24,
+        "region_area": 2572,
+        "component_area": 180,
+        "bbox": {
+          "left": 932,
+          "top": 26,
+          "right": 965,
+          "bottom": 50
+        },
+        "target_color": "#65424d",
+        "mean_color_distance": 60.85,
+        "max_color_distance": 106.89
+      },
+      {
+        "region_id": 11,
+        "region_area": 1499,
+        "component_area": 29,
+        "bbox": {
+          "left": 445,
+          "top": 27,
+          "right": 451,
+          "bottom": 41
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 100.36,
+        "max_color_distance": 162.78
+      },
+      {
+        "region_id": 41,
+        "region_area": 828,
+        "component_area": 29,
+        "bbox": {
+          "left": 820,
+          "top": 28,
+          "right": 825,
+          "bottom": 34
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 94.4,
+        "max_color_distance": 168.54
+      },
+      {
+        "region_id": 48,
+        "region_area": 2442,
+        "component_area": 26,
+        "bbox": {
+          "left": 619,
+          "top": 29,
+          "right": 627,
+          "bottom": 40
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 103.93,
+        "max_color_distance": 164.59
+      },
+      {
+        "region_id": 17,
+        "region_area": 562,
+        "component_area": 23,
+        "bbox": {
+          "left": 709,
+          "top": 29,
+          "right": 714,
+          "bottom": 35
+        },
+        "target_color": "#88787a",
+        "mean_color_distance": 112.96,
+        "max_color_distance": 173.47
+      },
+      {
+        "region_id": 8,
+        "region_area": 1683,
+        "component_area": 50,
+        "bbox": {
+          "left": 292,
+          "top": 30,
+          "right": 306,
+          "bottom": 37
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 68.52,
+        "max_color_distance": 104.01
+      },
+      {
+        "region_id": 59,
+        "region_area": 1074,
+        "component_area": 80,
+        "bbox": {
+          "left": 342,
+          "top": 30,
+          "right": 352,
+          "bottom": 46
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 73.27,
+        "max_color_distance": 155.1
+      },
+      {
+        "region_id": 20,
+        "region_area": 2225,
+        "component_area": 29,
+        "bbox": {
+          "left": 963,
+          "top": 30,
+          "right": 968,
+          "bottom": 41
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 64.65,
+        "max_color_distance": 101.12
+      },
+      {
+        "region_id": 5,
+        "region_area": 2338,
+        "component_area": 21,
+        "bbox": {
+          "left": 56,
+          "top": 31,
+          "right": 59,
+          "bottom": 39
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 56.77,
+        "max_color_distance": 79.75
+      },
+      {
+        "region_id": 40,
+        "region_area": 350,
+        "component_area": 56,
+        "bbox": {
+          "left": 701,
+          "top": 33,
+          "right": 710,
+          "bottom": 44
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 90.67,
+        "max_color_distance": 182.73
+      },
+      {
+        "region_id": 41,
+        "region_area": 828,
+        "component_area": 22,
+        "bbox": {
+          "left": 798,
+          "top": 33,
+          "right": 804,
+          "bottom": 37
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 84.52,
+        "max_color_distance": 149.57
+      },
+      {
+        "region_id": 44,
+        "region_area": 534,
+        "component_area": 24,
+        "bbox": {
+          "left": 110,
+          "top": 35,
+          "right": 117,
+          "bottom": 40
+        },
+        "target_color": "#695866",
+        "mean_color_distance": 59.83,
+        "max_color_distance": 94.04
+      },
+      {
+        "region_id": 44,
+        "region_area": 534,
+        "component_area": 87,
+        "bbox": {
+          "left": 139,
+          "top": 35,
+          "right": 161,
+          "bottom": 50
+        },
+        "target_color": "#695866",
+        "mean_color_distance": 68.1,
+        "max_color_distance": 112.76
+      },
+      {
+        "region_id": 50,
+        "region_area": 2576,
+        "component_area": 30,
+        "bbox": {
+          "left": 495,
+          "top": 35,
+          "right": 505,
+          "bottom": 44
+        },
+        "target_color": "#695866",
+        "mean_color_distance": 93.94,
+        "max_color_distance": 175.54
+      },
+      {
+        "region_id": 41,
+        "region_area": 828,
+        "component_area": 20,
+        "bbox": {
+          "left": 831,
+          "top": 35,
+          "right": 835,
+          "bottom": 39
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 82.66,
+        "max_color_distance": 126.66
+      },
+      {
+        "region_id": 53,
+        "region_area": 342,
+        "component_area": 49,
+        "bbox": {
+          "left": 863,
+          "top": 35,
+          "right": 875,
+          "bottom": 44
+        },
+        "target_color": "#695866",
+        "mean_color_distance": 57.28,
+        "max_color_distance": 92.79
+      },
+      {
+        "region_id": 10,
+        "region_area": 565,
+        "component_area": 29,
+        "bbox": {
+          "left": 359,
+          "top": 36,
+          "right": 372,
+          "bottom": 41
+        },
+        "target_color": "#695866",
+        "mean_color_distance": 82.81,
+        "max_color_distance": 127.6
+      },
+      {
+        "region_id": 8,
+        "region_area": 1683,
+        "component_area": 21,
+        "bbox": {
+          "left": 284,
+          "top": 37,
+          "right": 288,
+          "bottom": 46
+        },
+        "target_color": "#3c405c",
+        "mean_color_distance": 57.31,
+        "max_color_distance": 77.08
+      },
+      {
+        "region_id": 43,
+        "region_area": 661,
+        "component_area": 23,
+        "bbox": {
+          "left": 533,
+          "top": 37,
+          "right": 540,
+          "bottom": 45
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 54.08,
+        "max_color_distance": 71.13
+      },
+      {
+        "region_id": 33,
+        "region_area": 1471,
+        "component_area": 29,
+        "bbox": {
+          "left": 908,
+          "top": 37,
+          "right": 914,
+          "bottom": 44
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 65.28,
+        "max_color_distance": 77.67
+      },
+      {
+        "region_id": 25,
+        "region_area": 791,
+        "component_area": 78,
+        "bbox": {
+          "left": 18,
+          "top": 38,
+          "right": 36,
+          "bottom": 53
+        },
+        "target_color": "#8b3d43",
+        "mean_color_distance": 75.79,
+        "max_color_distance": 136.09
+      },
+      {
+        "region_id": 41,
+        "region_area": 828,
+        "component_area": 21,
+        "bbox": {
+          "left": 820,
+          "top": 38,
+          "right": 825,
+          "bottom": 42
+        },
+        "target_color": "#9c564a",
+        "mean_color_distance": 94.57,
+        "max_color_distance": 167.75
+      },
+      {
+        "region_id": 24,
+        "region_area": 2572,
+        "component_area": 32,
+        "bbox": {
+          "left": 920,
+          "top": 38,
+          "right": 925,
+          "bottom": 48
+        },
+        "target_color": "#65424d",
+        "mean_color_distance": 51.61,
+        "max_color_distance": 66.48
+      }
+    ],
+    "merged_protected_detail_examples": [],
     "overmerge_risk": "medium"
   },
   "recommendation": {

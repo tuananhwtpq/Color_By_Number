@@ -22,6 +22,7 @@ from tools.generate_level import (
     bbox_min_side,
     build_chromatic_mask,
     build_display_line_image,
+    build_safe_display_line_image,
     is_micro_region,
     region_thickness_diameter,
     update_region_classification,
@@ -42,6 +43,8 @@ from tools.generate_level import (
     merge_small_attached_regions,
     merge_label_hidden_regions_for_gate,
     merge_tiny_regions_into_neighbors,
+    mark_protected_detail_regions,
+    preserve_source_strokes_as_walls,
     reclaim_non_ink_pixels_into_regions,
     resolve_generation_profile,
     resolve_generation_profile_settings,
@@ -189,6 +192,106 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(1, remaining)
         self.assertEqual(2, len(merged))
         self.assertTrue(any(info["area"] == 5 and info["target_color"] == (0, 0, 250) for info in merged))
+
+    def test_hidden_high_contrast_speck_is_not_protected_from_merge(self):
+        seed = self.make_region_info(
+            [(x, y) for y in range(5, 11) for x in range(5, 11)],
+            (35, 5, 25),
+            hide_number=True,
+        )
+        flesh = self.make_region_info(
+            [(x, y) for y in range(5, 21) for x in range(11, 23)],
+            (255, 48, 48),
+        )
+        region_infos = [seed, flesh]
+
+        protected_count = mark_protected_detail_regions(
+            region_infos,
+            attach_distance=0,
+        )
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=region_infos,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=12,
+            tiny_merge_min_area=50,
+            tiny_merge_min_side=12,
+            attach_distance=0,
+            color_threshold=10,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(0, protected_count)
+        self.assertFalse(seed.get("protect_from_merge", False))
+        self.assertEqual(1, merged_count)
+        self.assertEqual(1, forced_count)
+        self.assertEqual(1, len(merged))
+
+    def test_readable_high_contrast_detail_is_still_protected(self):
+        detail = self.make_region_info(
+            [(x, y) for y in range(5, 17) for x in range(5, 17)],
+            (35, 5, 25),
+            hide_number=False,
+        )
+        detail["is_micro_region"] = False
+        detail["is_tiny_display_region"] = False
+        detail["label_anchor"]["radius"] = 6.0
+        parent = self.make_region_info(
+            [(x, y) for y in range(5, 21) for x in range(17, 29)],
+            (255, 48, 48),
+        )
+        region_infos = [detail, parent]
+
+        protected_count = mark_protected_detail_regions(
+            region_infos,
+            attach_distance=0,
+        )
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=region_infos,
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=12,
+            tiny_merge_min_area=50,
+            tiny_merge_min_side=12,
+            attach_distance=0,
+            color_threshold=10,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(1, protected_count)
+        self.assertTrue(detail["protect_from_merge"])
+        self.assertEqual(0, merged_count)
+        self.assertEqual(0, forced_count)
+        self.assertEqual(0, remaining)
+        self.assertEqual(2, len(merged))
+        self.assertTrue(any(info["target_color"] == (35, 5, 25) for info in merged))
+
+    def test_unprotected_high_contrast_hidden_tiny_region_is_forced_merged(self):
+        seed = self.make_region_info(
+            [(x, y) for y in range(5, 11) for x in range(5, 11)],
+            (35, 5, 25),
+            hide_number=True,
+        )
+        flesh = self.make_region_info(
+            [(x, y) for y in range(5, 21) for x in range(11, 23)],
+            (255, 48, 48),
+        )
+
+        merged, merged_count, forced_count, remaining = merge_tiny_regions_into_neighbors(
+            region_infos=[seed, flesh],
+            min_region_area=120,
+            tiny_area_threshold=100,
+            tiny_side_threshold=12,
+            tiny_merge_min_area=50,
+            tiny_merge_min_side=12,
+            attach_distance=0,
+            color_threshold=10,
+            tiny_merge_policy="relaxed",
+        )
+
+        self.assertEqual(1, merged_count)
+        self.assertEqual(1, forced_count)
+        self.assertEqual(1, len(merged))
 
     def _tiny_merge_across_gap(self, gap_px, attach_distance):
         """Vùng 1 pixel tại (5,5) và một vùng khác cách đúng gap_px pixel mực về bên phải."""
@@ -618,7 +721,12 @@ class GenerateLevelCliTest(unittest.TestCase):
             config = json.loads((output_dir / "config.json").read_text())
 
             self.assertEqual(config["schema_version"], 2)
+            self.assertEqual(config["assets"]["source_line"], "debug_source_line.png")
+            self.assertEqual(config["assets"]["segmentation_line"], "line.png")
+            self.assertEqual(config["assets"]["display_line"], "display_line.png")
+            self.assertEqual(config["assets"]["legacy_line_render"], "line_render.png")
             self.assertEqual(config["assets"]["line"], "line.png")
+            self.assertEqual(config["assets"]["line_render"], "line_render.png")
             self.assertEqual(config["assets"]["mask"], "mask.png")
             self.assertEqual(config["assets"]["preview"], "preview_colored.png")
             self.assertEqual(config["assets"]["detail"], "detail.png")
@@ -629,7 +737,13 @@ class GenerateLevelCliTest(unittest.TestCase):
             first_region = config["regions"][0]
             self.assertIn("id", first_region)
             self.assertIn("quality", first_region)
+            self.assertIn("label_visible", first_region["quality"])
             self.assertIn("touchable", first_region["quality"])
+            self.assertEqual(
+                not first_region["hide_number"],
+                first_region["quality"]["label_visible"],
+            )
+            self.assertTrue(first_region["quality"]["touchable"])
 
             self.assertTrue((output_dir / "mask.png").exists())
             self.assertTrue((output_dir / "line.png").exists())
@@ -638,6 +752,7 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertTrue((output_dir / "debug_regions.png").exists())
             self.assertTrue((output_dir / "debug_report.json").exists())
             self.assertTrue((output_dir / "debug_source_line.png").exists())
+            self.assertTrue((output_dir / "display_line.png").exists())
 
             report = json.loads((output_dir / "debug_report.json").read_text())
             self.assertEqual(report["schema_version"], 1)
@@ -647,11 +762,51 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertIn("fail_reasons", report)
             self.assertIn("metrics", report)
             self.assertTrue(report["generation_params"]["has_detail"])
+            self.assertEqual(
+                "safe_source_fallback",
+                report["generation_params"]["display_line_mode"],
+            )
+            self.assertEqual(
+                "selected_preprocessing_candidate",
+                report["generation_params"]["segmentation_line_mode"],
+            )
+            self.assertFalse(report["generation_params"]["display_line_uses_segmentation_score"])
+            self.assertIn("recovered_ink_pixel_pct", report["generation_params"])
+            self.assertIn("ink_recovery_overreach", report["generation_params"])
+            self.assertIn("segmentation_line_report", report["generation_params"])
+            self.assertEqual(
+                "selected_preprocessing_candidate",
+                report["generation_params"]["segmentation_line_report"]["mode"],
+            )
+            self.assertIn(
+                "selected_profile",
+                report["generation_params"]["segmentation_line_report"],
+            )
+            self.assertIn("display_line_report", report["generation_params"])
+            self.assertFalse(
+                report["generation_params"]["display_line_report"]["uses_segmentation_score"]
+            )
+            self.assertIn(
+                "ink_recovery_overreach",
+                report["generation_params"]["display_line_report"],
+            )
+            self.assertEqual(
+                "source_similarity_guard",
+                report["generation_params"]["display_line_report"]["mode"],
+            )
+            self.assertIn("selected", report["generation_params"]["display_line_report"])
             self.assertNotIn("candidate_top", config["generation_params"]["selected_preprocessing"])
             self.assertNotIn("candidate_playable_score", config["generation_params"]["selected_preprocessing"])
             self.assertNotIn("candidate_top", config["generation"]["selected_preprocessing"])
             self.assertIn("candidate_top", report["generation_params"]["selected_preprocessing"])
             self.assertEqual("reference_lerp_rgba", report["generation_params"]["detail_mode"])
+            self.assertEqual(
+                "selected_preprocessing_candidate",
+                config["generation_params"]["segmentation_line_report"]["mode"],
+            )
+            self.assertFalse(
+                config["generation_params"]["display_line_report"]["uses_segmentation_score"]
+            )
             self.assertEqual(
                 "shared_boundary_adjacency",
                 config["generation_params"]["small_region_merge_mode"],
@@ -976,7 +1131,7 @@ class GenerateLevelCliTest(unittest.TestCase):
 
         reasons = evaluate_quality_gate(visually_good_but_unplayable)
 
-        self.assertIn("hidden_label_pct=81.0>80", reasons)
+        self.assertIn("actionable_hidden_label_pct=81.0>80", reasons)
         self.assertIn("tiny_region_pct_lt_100=46.0>45", reasons)
 
     def test_evaluate_quality_gate_allows_documented_playability_exception(self):
@@ -1032,6 +1187,30 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(1, stale_remaining)
         self.assertEqual(1, absorbed_count)
         self.assertEqual(0, final_remaining)
+
+    def test_isolated_high_contrast_readable_region_is_not_absorbed_by_proximity(self):
+        seed = self.make_region_info(
+            [(x, y) for y in range(5, 11) for x in range(5, 11)],
+            (35, 5, 25),
+            hide_number=False,
+        )
+        seed["protect_from_merge"] = True
+        seed["label_anchor"]["radius"] = 3.0
+        flesh = self.make_region_info(
+            [(x, y) for y in range(20, 26) for x in range(20, 26)],
+            (255, 48, 48),
+        )
+        flesh["label_anchor"]["radius"] = 3.0
+
+        absorbed_infos, absorbed_count = absorb_isolated_unreadable_regions_by_proximity(
+            [seed, flesh],
+            unreadable_radius_px=1.5,
+            color_threshold=10,
+        )
+
+        self.assertEqual(0, absorbed_count)
+        self.assertEqual(2, len(absorbed_infos))
+        self.assertTrue(any(info["target_color"] == (35, 5, 25) for info in absorbed_infos))
 
     def test_label_hidden_gate_reports_default_zoom_hidden_regions_without_merging(self):
         visible_neighbor = self.make_region_info(
@@ -1273,27 +1452,28 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(5.0, anchor["y"])
         self.assertEqual(0.0, anchor["radius"])
 
-    def test_display_line_changes_nothing_except_recovered_ink(self):
-        """BẤT BIẾN CHỐNG REGRESSION — đọc kỹ trước khi sửa build_display_line_image.
-
-        Ảnh hiển thị phải bằng ĐÚNG ảnh nét gốc ở mọi pixel, TRỪ các pixel thuộc mặt nạ
-        ink-recovery. Bản trước vi phạm điều này: nó lấy max(ảnh gốc, binary), mà binary là
-        bản đồ phân vùng sinh bằng ngưỡng độ sáng, nên mọi nét sáng hơn ngưỡng bị đẩy lên
-        trắng tinh — đo trên Animal/01 là 48.4% pixel nét bị xoá, nét đứt thành nét gạch.
-        """
+    def test_display_line_ignores_recovery_mask_and_keeps_source_line(self):
+        """User-facing line must stay equal to the original source line."""
         source = Image.new("L", (5, 1))
         source.putdata([10, 95, 150, 200, 243])
-        # Chỉ pixel thứ 2 (index 1) là mảng mực đặc được khôi phục.
         recovered = Image.new("L", (5, 1))
         recovered.putdata([0, 255, 0, 0, 0])
 
         display = build_display_line_image(source, recovered)
         values = [pixel[0] for pixel in display.convert("RGB").getdata()]
 
-        self.assertEqual(255, values[1], "pixel ink-recovery phải được làm trắng")
-        # Mọi pixel còn lại giữ NGUYÊN sắc độ gốc — kể cả nét nhạt (150, 200) vốn bị bản
-        # trước xoá trắng, và nền giấy 243 vốn bị ép lên 255.
-        self.assertEqual([10, 150, 200, 243], [values[0], values[2], values[3], values[4]])
+        self.assertEqual(list(source.getdata()), values)
+
+    def test_source_stroke_wall_keeps_gray_antialias_from_becoming_fill(self):
+        source = Image.new("L", (5, 1))
+        source.putdata([20, 95, 150, 190, 255])
+        # Low-threshold candidate would treat 95/150/190/255 as fillable paper.
+        binary = Image.new("L", (5, 1))
+        binary.putdata([0, 255, 255, 255, 255])
+
+        guarded = preserve_source_strokes_as_walls(binary, source, stroke_threshold=180)
+
+        self.assertEqual([0, 0, 0, 255, 255], list(guarded.getdata()))
 
     def test_display_line_without_recovery_is_exactly_the_source(self):
         # Ảnh không có mảng mực đặc nào để khôi phục thì ảnh hiển thị phải trùng khít ảnh nét
@@ -1303,6 +1483,71 @@ class GenerateLevelCliTest(unittest.TestCase):
 
         display = build_display_line_image(source, None)
 
+        self.assertEqual(
+            list(source.getdata()),
+            [pixel[0] for pixel in display.convert("RGB").getdata()],
+        )
+
+    def test_safe_display_line_falls_back_when_recovery_overreaches(self):
+        source = Image.new("L", (10, 1))
+        source.putdata([0, 20, 40, 60, 80, 100, 120, 140, 160, 180])
+        candidate = Image.new("L", (10, 1), 255)
+
+        display, report = build_safe_display_line_image(
+            source,
+            candidate,
+            changed_pct_threshold=10.0,
+            mae_threshold=12.0,
+        )
+
+        self.assertTrue(report["fallback_to_source"])
+        self.assertEqual("source_line", report["selected"])
+        self.assertTrue(report["ink_recovery_overreach"])
+        self.assertEqual(
+            list(source.getdata()),
+            [pixel[0] for pixel in display.convert("RGB").getdata()],
+        )
+
+    def test_safe_display_line_keeps_small_recovery_change(self):
+        source = Image.new("L", (10, 1))
+        source.putdata([0, 20, 40, 60, 80, 100, 120, 140, 160, 180])
+        candidate = source.copy()
+        candidate.putpixel((1, 0), 255)
+
+        display, report = build_safe_display_line_image(
+            source,
+            candidate,
+            changed_pct_threshold=20.0,
+            mae_threshold=30.0,
+        )
+
+        self.assertFalse(report["fallback_to_source"])
+        self.assertEqual("recovered_ink_candidate", report["selected"])
+        self.assertFalse(report["ink_recovery_overreach"])
+        self.assertEqual(
+            list(candidate.getdata()),
+            [pixel[0] for pixel in display.convert("RGB").getdata()],
+        )
+
+    def test_safe_display_line_falls_back_when_thin_strokes_are_erased(self):
+        source = Image.new("L", (100, 100), 255)
+        draw = ImageDraw.Draw(source)
+        draw.line((10, 50, 89, 50), fill=30, width=1)
+        candidate = source.copy()
+        for x in range(10, 26):
+            candidate.putpixel((x, 50), 255)
+
+        display, report = build_safe_display_line_image(
+            source,
+            candidate,
+            changed_pct_threshold=10.0,
+            mae_threshold=12.0,
+        )
+
+        self.assertTrue(report["fallback_to_source"])
+        self.assertTrue(report["stroke_guard_failed"])
+        self.assertGreater(report["stroke_lightened_pct"], 10.0)
+        self.assertEqual("stroke_guard_failed", report["reason"])
         self.assertEqual(
             list(source.getdata()),
             [pixel[0] for pixel in display.convert("RGB").getdata()],
@@ -1725,10 +1970,10 @@ class InkFillRecoveryTest(unittest.TestCase):
         self.assertGreater(before, 0, "mảng mực có màu thật phải bị tính là màu đang mất")
         self.assertLess(after, before)
 
-    def test_candidate_selection_prefers_less_lost_color_when_gameplay_ties(self):
+    def test_candidate_selection_does_not_prefer_low_lost_color_over_line_safety_tiebreakers(self):
         candidates = [
             {
-                "profile": "nuot-mat-mang-mau",
+                "profile": "higher-region-count",
                 "playable_score": 80,
                 "quality_score": 90,
                 "lost_color_pct": 9.5,
@@ -1736,16 +1981,16 @@ class InkFillRecoveryTest(unittest.TestCase):
                 "total_regions": 300,
             },
             {
-                "profile": "giu-duoc-mau",
+                "profile": "lower-lost-color",
                 "playable_score": 80,
                 "quality_score": 90,
                 "lost_color_pct": 1.2,
                 "largest_region_pct": 35.0,
-                "total_regions": 300,
+                "total_regions": 200,
             },
         ]
 
-        self.assertEqual("giu-duoc-mau", select_preprocessing_candidate(candidates)["profile"])
+        self.assertEqual("higher-region-count", select_preprocessing_candidate(candidates)["profile"])
 
     def test_gameplay_score_still_outranks_color_fidelity(self):
         # Ràng buộc chống vùng khổng lồ phải thắng — màu chỉ là tiêu chí phá hoà.
@@ -1788,8 +2033,8 @@ class InkFillRecoveryTest(unittest.TestCase):
 
             self.assertIn("trùng khớp", str(context.exception))
 
-    def test_missing_lost_color_pct_does_not_penalize_candidate(self):
-        # Không có ảnh tham chiếu -> không đo được màu -> không thưởng/phạt ai.
+    def test_missing_lost_color_pct_does_not_change_candidate_selection(self):
+        # lost_color_pct không còn được dùng để chọn preprocessing candidate.
         candidates = [
             {"profile": "a", "playable_score": 80, "quality_score": 90, "total_regions": 100},
             {"profile": "b", "playable_score": 80, "quality_score": 90, "total_regions": 200},

@@ -74,7 +74,7 @@ class LevelAdapter(
         } else {
             // Chưa tô gì cả, ưu tiên line gốc để thumbnail sắc nét hơn.
             val levelPath = "${level.category}/${level.id}"
-            val configuredLine = level.assets?.debugSourceLine ?: level.assets?.line
+            val configuredLine = level.assets?.sourceLine ?: level.assets?.debugSourceLine ?: level.assets?.line
             val path = if (!configuredLine.isNullOrBlank()) {
                 "file:///android_asset/$levelPath/$configuredLine"
             } else {

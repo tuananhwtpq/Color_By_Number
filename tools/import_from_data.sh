@@ -42,13 +42,19 @@ if [[ $# -lt 2 ]]; then
   echo "python3 tools/export_asset_review_report.py app/src/main/assets --data-root Data --output outputs/color_by_number_asset_review/color_by_number_designer_review.csv"
   # run data preview csv
   echo "python3 tools/export_asset_review_report.py --per-category"
+  # audit line degradation CSV: so line gốc trong Data với source/display/segmentation line trong assets
+  # để tìm level bị mờ nét hiển thị hoặc xử lý line quá tay làm ảnh hưởng mask.
+  echo "python3 tools/audit_line_degradation.py app/src/main/assets --data-root Data --output outputs/line_degradation_audit.csv"
+  # audit line degradation HTML: sinh trang xem trực quan Data line, source line, display line,
+  # segmentation line, debug_regions và preview cạnh nhau cho từng level.
+  echo "python3 tools/audit_line_degradation.py app/src/main/assets --data-root Data --output outputs/line_degradation_audit.csv --html-output outputs/line_degradation_audit.html"
   # export runtime package cho backend import
   echo "python3 tools/export_backend_content.py app/src/main/assets --output-dir outputs/backend_content --zip"
   exit 1
 
 fi
 
-if [[ "$1" == "from-existing" ]]; thenx
+if [[ "$1" == "from-existing" ]]; then
   if [[ $# -lt 3 ]]; then
     echo "Cách dùng:"
     echo "  bash tools/import_from_data.sh from-existing <SourceCategory/ArtworkFolder> <TargetCategory> [Display Name] [generator options...]"

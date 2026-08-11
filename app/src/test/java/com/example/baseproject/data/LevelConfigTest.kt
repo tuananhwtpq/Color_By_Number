@@ -19,11 +19,16 @@ class LevelConfigTest {
               "category": "Test",
               "width": 16,
               "height": 16,
-              "assets": {
-                "line": "line.png",
-                "mask": "mask.png",
-                "preview": "preview_colored.png",
-                "debug_source_line": "debug_source_line.png"
+	              "assets": {
+	                "source_line": "debug_source_line.png",
+	                "segmentation_line": "line.png",
+	                "display_line": "display_line.png",
+	                "legacy_line_render": "line_render.png",
+	                "line": "line.png",
+	                "line_render": "line_render.png",
+	                "mask": "mask.png",
+	                "preview": "preview_colored.png",
+	                "debug_source_line": "debug_source_line.png"
               },
               "palette": [
                 {
@@ -52,6 +57,8 @@ class LevelConfigTest {
                   "hide_number": false,
                   "quality": {
                     "is_tiny": false,
+                    "label_visible": true,
+                    "protected_detail": false,
                     "touchable": true
                   }
                 },
@@ -67,6 +74,8 @@ class LevelConfigTest {
                   "hide_number": false,
                   "quality": {
                     "is_tiny": false,
+                    "label_visible": true,
+                    "protected_detail": false,
                     "touchable": true
                   }
                 }
@@ -83,9 +92,14 @@ class LevelConfigTest {
 
         val config = gson.fromJson(json, LevelConfig::class.java)
 
-        assertEquals(2, config.schemaVersion)
-        assertEquals("line.png", config.assets?.line)
-        assertEquals("debug_source_line.png", config.assets?.debugSourceLine)
+	        assertEquals(2, config.schemaVersion)
+	        assertEquals("debug_source_line.png", config.assets?.sourceLine)
+	        assertEquals("line.png", config.assets?.segmentationLine)
+	        assertEquals("display_line.png", config.assets?.displayLine)
+	        assertEquals("line_render.png", config.assets?.legacyLineRender)
+	        assertEquals("line.png", config.assets?.line)
+	        assertEquals("line_render.png", config.assets?.lineRender)
+	        assertEquals("debug_source_line.png", config.assets?.debugSourceLine)
         assertEquals(2, config.stats?.totalRegions)
 
         val regionPalette = config.toRegionPaletteItems()
@@ -93,6 +107,9 @@ class LevelConfigTest {
         assertEquals("#000001", regionPalette[0].maskColorHex)
         assertEquals("#ff0000", regionPalette[0].targetColorHex)
         assertEquals(1, regionPalette[0].number)
+        assertEquals(true, config.regions?.first()?.quality?.labelVisible)
+        assertEquals(false, config.regions?.first()?.quality?.protectedDetail)
+        assertEquals(true, config.regions?.first()?.quality?.touchable)
     }
 
     @Test

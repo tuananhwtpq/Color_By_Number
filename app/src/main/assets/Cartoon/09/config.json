@@ -6,6 +6,10 @@
   "width": 1024,
   "height": 1024,
   "assets": {
+    "source_line": "debug_source_line.png",
+    "segmentation_line": "line.png",
+    "display_line": "display_line.png",
+    "legacy_line_render": "line_render.png",
     "line_render": "line_render.png",
     "line": "line.png",
     "mask": "mask.png",
@@ -19,663 +23,726 @@
   "palette": [
     {
       "number": 1,
-      "target_color": "#6250aa",
+      "target_color": "#2c4e85",
       "region_count": 2,
-      "total_area": 2005
+      "total_area": 414
     },
     {
       "number": 2,
-      "target_color": "#f2495d",
+      "target_color": "#4c5b63",
       "region_count": 1,
-      "total_area": 2869
+      "total_area": 244
     },
     {
       "number": 3,
-      "target_color": "#d86879",
-      "region_count": 1,
-      "total_area": 228
+      "target_color": "#6250aa",
+      "region_count": 2,
+      "total_area": 1830
     },
     {
       "number": 4,
-      "target_color": "#ed6279",
-      "region_count": 2,
-      "total_area": 6169
+      "target_color": "#f2495d",
+      "region_count": 1,
+      "total_area": 2775
     },
     {
       "number": 5,
-      "target_color": "#049fe4",
-      "region_count": 4,
-      "total_area": 189363
+      "target_color": "#d66879",
+      "region_count": 1,
+      "total_area": 260
     },
     {
       "number": 6,
-      "target_color": "#1ea6e5",
-      "region_count": 4,
-      "total_area": 11979
+      "target_color": "#ed6279",
+      "region_count": 2,
+      "total_area": 6026
     },
     {
       "number": 7,
-      "target_color": "#33a5e4",
-      "region_count": 1,
-      "total_area": 10344
+      "target_color": "#049fe5",
+      "region_count": 3,
+      "total_area": 131142
     },
     {
       "number": 8,
-      "target_color": "#34ace4",
-      "region_count": 1,
-      "total_area": 4689
+      "target_color": "#1aa5e2",
+      "region_count": 5,
+      "total_area": 97996
     },
     {
       "number": 9,
-      "target_color": "#fd79a1",
-      "region_count": 20,
-      "total_area": 325186
+      "target_color": "#33a6e4",
+      "region_count": 1,
+      "total_area": 10168
     },
     {
       "number": 10,
-      "target_color": "#ea7fa4",
+      "target_color": "#34ace4",
       "region_count": 1,
-      "total_area": 298
+      "total_area": 4626
     },
     {
       "number": 11,
-      "target_color": "#4eb4e4",
-      "region_count": 3,
-      "total_area": 76710
+      "target_color": "#fd79a1",
+      "region_count": 18,
+      "total_area": 322432
     },
     {
       "number": 12,
-      "target_color": "#4cb8d8",
+      "target_color": "#ea7fa4",
       "region_count": 1,
-      "total_area": 29766
+      "total_area": 246
     },
     {
       "number": 13,
-      "target_color": "#fc8e81",
-      "region_count": 9,
-      "total_area": 11636
+      "target_color": "#4fb4e4",
+      "region_count": 3,
+      "total_area": 75901
     },
     {
       "number": 14,
-      "target_color": "#5eb9e5",
-      "region_count": 1,
-      "total_area": 15974
+      "target_color": "#fc8e81",
+      "region_count": 9,
+      "total_area": 11183
     },
     {
       "number": 15,
-      "target_color": "#f892b5",
+      "target_color": "#5eb9e5",
       "region_count": 1,
-      "total_area": 381
+      "total_area": 16471
     },
     {
       "number": 16,
-      "target_color": "#77c2e3",
+      "target_color": "#f992b5",
       "region_count": 2,
-      "total_area": 8890
+      "total_area": 790
     },
     {
       "number": 17,
-      "target_color": "#f6c250",
-      "region_count": 2,
-      "total_area": 2379
+      "target_color": "#77c2e3",
+      "region_count": 1,
+      "total_area": 8288
     },
     {
       "number": 18,
-      "target_color": "#fdc249",
-      "region_count": 6,
-      "total_area": 16572
+      "target_color": "#83c1db",
+      "region_count": 1,
+      "total_area": 207
     },
     {
       "number": 19,
-      "target_color": "#e5bdc3",
-      "region_count": 2,
-      "total_area": 42424
+      "target_color": "#95c8dd",
+      "region_count": 1,
+      "total_area": 199
     },
     {
       "number": 20,
-      "target_color": "#fcd4cd",
-      "region_count": 5,
-      "total_area": 29551
+      "target_color": "#f6c250",
+      "region_count": 2,
+      "total_area": 1590
     },
     {
       "number": 21,
-      "target_color": "#f2d9d0",
-      "region_count": 1,
-      "total_area": 237
+      "target_color": "#fdc249",
+      "region_count": 6,
+      "total_area": 16076
     },
     {
       "number": 22,
-      "target_color": "#f5f6f7",
-      "region_count": 1,
-      "total_area": 502
+      "target_color": "#e5bdc3",
+      "region_count": 2,
+      "total_area": 42159
     },
     {
       "number": 23,
-      "target_color": "#f2fdfe",
-      "region_count": 2,
-      "total_area": 711
+      "target_color": "#fcd4cd",
+      "region_count": 6,
+      "total_area": 28602
     },
     {
       "number": 24,
+      "target_color": "#f3d9d1",
+      "region_count": 1,
+      "total_area": 203
+    },
+    {
+      "number": 25,
+      "target_color": "#f6f8f9",
+      "region_count": 1,
+      "total_area": 435
+    },
+    {
+      "number": 26,
+      "target_color": "#f4fcfc",
+      "region_count": 4,
+      "total_area": 1388
+    },
+    {
+      "number": 27,
       "target_color": "#ffffff",
-      "region_count": 30,
-      "total_area": 134449
+      "region_count": 34,
+      "total_area": 130053
     }
   ],
   "region_palette": [
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#000001",
       "target_color": "#fd79a1"
     },
     {
-      "number": 24,
+      "number": 27,
       "mask_color": "#000002",
       "target_color": "#ffffff"
     },
     {
-      "number": 13,
+      "number": 14,
       "mask_color": "#000003",
       "target_color": "#fc8e81"
     },
     {
-      "number": 13,
+      "number": 14,
       "mask_color": "#000004",
       "target_color": "#fc8e81"
     },
     {
-      "number": 18,
+      "number": 21,
       "mask_color": "#000005",
       "target_color": "#fdc249"
     },
     {
-      "number": 24,
+      "number": 27,
       "mask_color": "#000006",
       "target_color": "#ffffff"
     },
     {
-      "number": 11,
+      "number": 13,
       "mask_color": "#000007",
-      "target_color": "#4eb4e4"
+      "target_color": "#4fb4e4"
     },
     {
-      "number": 8,
+      "number": 10,
       "mask_color": "#000008",
       "target_color": "#34ace4"
     },
     {
-      "number": 24,
+      "number": 27,
       "mask_color": "#000009",
       "target_color": "#ffffff"
     },
     {
-      "number": 24,
+      "number": 27,
       "mask_color": "#00000a",
       "target_color": "#ffffff"
     },
     {
-      "number": 24,
+      "number": 27,
       "mask_color": "#00000b",
       "target_color": "#ffffff"
     },
     {
-      "number": 24,
+      "number": 27,
       "mask_color": "#00000c",
       "target_color": "#ffffff"
     },
     {
-      "number": 24,
+      "number": 27,
       "mask_color": "#00000d",
       "target_color": "#ffffff"
     },
     {
-      "number": 13,
+      "number": 27,
       "mask_color": "#00000e",
-      "target_color": "#fc8e81"
-    },
-    {
-      "number": 5,
-      "mask_color": "#00000f",
-      "target_color": "#049fe4"
-    },
-    {
-      "number": 13,
-      "mask_color": "#000010",
-      "target_color": "#fc8e81"
-    },
-    {
-      "number": 20,
-      "mask_color": "#000011",
-      "target_color": "#fcd4cd"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000012",
       "target_color": "#ffffff"
-    },
-    {
-      "number": 5,
-      "mask_color": "#000013",
-      "target_color": "#049fe4"
-    },
-    {
-      "number": 22,
-      "mask_color": "#000014",
-      "target_color": "#f5f6f7"
     },
     {
       "number": 14,
-      "mask_color": "#000015",
-      "target_color": "#5eb9e5"
+      "mask_color": "#00000f",
+      "target_color": "#fc8e81"
     },
     {
-      "number": 24,
-      "mask_color": "#000016",
+      "number": 7,
+      "mask_color": "#000010",
+      "target_color": "#049fe5"
+    },
+    {
+      "number": 14,
+      "mask_color": "#000011",
+      "target_color": "#fc8e81"
+    },
+    {
+      "number": 23,
+      "mask_color": "#000012",
+      "target_color": "#fcd4cd"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000013",
       "target_color": "#ffffff"
     },
     {
-      "number": 9,
+      "number": 8,
+      "mask_color": "#000014",
+      "target_color": "#1aa5e2"
+    },
+    {
+      "number": 25,
+      "mask_color": "#000015",
+      "target_color": "#f6f8f9"
+    },
+    {
+      "number": 15,
+      "mask_color": "#000016",
+      "target_color": "#5eb9e5"
+    },
+    {
+      "number": 27,
       "mask_color": "#000017",
-      "target_color": "#fd79a1"
+      "target_color": "#ffffff"
     },
     {
-      "number": 9,
+      "number": 1,
       "mask_color": "#000018",
-      "target_color": "#fd79a1"
+      "target_color": "#2c4e85"
     },
     {
-      "number": 9,
+      "number": 1,
       "mask_color": "#000019",
-      "target_color": "#fd79a1"
+      "target_color": "#2c4e85"
     },
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#00001a",
       "target_color": "#fd79a1"
     },
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#00001b",
       "target_color": "#fd79a1"
     },
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#00001c",
       "target_color": "#fd79a1"
     },
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#00001d",
       "target_color": "#fd79a1"
     },
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#00001e",
       "target_color": "#fd79a1"
     },
     {
-      "number": 9,
+      "number": 11,
       "mask_color": "#00001f",
       "target_color": "#fd79a1"
     },
     {
-      "number": 17,
+      "number": 11,
       "mask_color": "#000020",
-      "target_color": "#f6c250"
+      "target_color": "#fd79a1"
     },
     {
-      "number": 21,
+      "number": 26,
       "mask_color": "#000021",
-      "target_color": "#f2d9d0"
+      "target_color": "#f4fcfc"
     },
     {
-      "number": 9,
+      "number": 16,
       "mask_color": "#000022",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 9,
-      "mask_color": "#000023",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 1,
-      "mask_color": "#000024",
-      "target_color": "#6250aa"
-    },
-    {
-      "number": 10,
-      "mask_color": "#000025",
-      "target_color": "#ea7fa4"
+      "target_color": "#f992b5"
     },
     {
       "number": 20,
-      "mask_color": "#000026",
-      "target_color": "#fcd4cd"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000027",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 1,
-      "mask_color": "#000028",
-      "target_color": "#6250aa"
-    },
-    {
-      "number": 13,
-      "mask_color": "#000029",
-      "target_color": "#fc8e81"
-    },
-    {
-      "number": 9,
-      "mask_color": "#00002a",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 15,
-      "mask_color": "#00002b",
-      "target_color": "#f892b5"
-    },
-    {
-      "number": 4,
-      "mask_color": "#00002c",
-      "target_color": "#ed6279"
-    },
-    {
-      "number": 9,
-      "mask_color": "#00002d",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 13,
-      "mask_color": "#00002e",
-      "target_color": "#fc8e81"
-    },
-    {
-      "number": 12,
-      "mask_color": "#00002f",
-      "target_color": "#4cb8d8"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000030",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 18,
-      "mask_color": "#000031",
-      "target_color": "#fdc249"
-    },
-    {
-      "number": 18,
-      "mask_color": "#000032",
-      "target_color": "#fdc249"
-    },
-    {
-      "number": 9,
-      "mask_color": "#000033",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 7,
-      "mask_color": "#000034",
-      "target_color": "#33a5e4"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000035",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 23,
-      "mask_color": "#000036",
-      "target_color": "#f2fdfe"
-    },
-    {
-      "number": 17,
-      "mask_color": "#000037",
+      "mask_color": "#000023",
       "target_color": "#f6c250"
     },
     {
       "number": 11,
-      "mask_color": "#000038",
-      "target_color": "#4eb4e4"
+      "mask_color": "#000024",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 24,
+      "mask_color": "#000025",
+      "target_color": "#f3d9d1"
+    },
+    {
+      "number": 11,
+      "mask_color": "#000026",
+      "target_color": "#fd79a1"
     },
     {
       "number": 23,
-      "mask_color": "#000039",
-      "target_color": "#f2fdfe"
+      "mask_color": "#000027",
+      "target_color": "#fcd4cd"
     },
     {
-      "number": 24,
-      "mask_color": "#00003a",
+      "number": 27,
+      "mask_color": "#000028",
       "target_color": "#ffffff"
     },
     {
-      "number": 2,
-      "mask_color": "#00003b",
-      "target_color": "#f2495d"
+      "number": 11,
+      "mask_color": "#000029",
+      "target_color": "#fd79a1"
     },
     {
-      "number": 18,
-      "mask_color": "#00003c",
-      "target_color": "#fdc249"
+      "number": 3,
+      "mask_color": "#00002a",
+      "target_color": "#6250aa"
     },
     {
-      "number": 24,
-      "mask_color": "#00003d",
-      "target_color": "#ffffff"
+      "number": 12,
+      "mask_color": "#00002b",
+      "target_color": "#ea7fa4"
     },
     {
-      "number": 24,
-      "mask_color": "#00003e",
+      "number": 23,
+      "mask_color": "#00002c",
+      "target_color": "#fcd4cd"
+    },
+    {
+      "number": 27,
+      "mask_color": "#00002d",
       "target_color": "#ffffff"
     },
     {
       "number": 3,
-      "mask_color": "#00003f",
-      "target_color": "#d86879"
+      "mask_color": "#00002e",
+      "target_color": "#6250aa"
     },
     {
-      "number": 24,
-      "mask_color": "#000040",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000041",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 18,
-      "mask_color": "#000042",
-      "target_color": "#fdc249"
-    },
-    {
-      "number": 13,
-      "mask_color": "#000043",
-      "target_color": "#fc8e81"
-    },
-    {
-      "number": 20,
-      "mask_color": "#000044",
-      "target_color": "#fcd4cd"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000045",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 18,
-      "mask_color": "#000046",
-      "target_color": "#fdc249"
-    },
-    {
-      "number": 9,
-      "mask_color": "#000047",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 6,
-      "mask_color": "#000048",
-      "target_color": "#1ea6e5"
-    },
-    {
-      "number": 20,
-      "mask_color": "#000049",
-      "target_color": "#fcd4cd"
-    },
-    {
-      "number": 24,
-      "mask_color": "#00004a",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 16,
-      "mask_color": "#00004b",
-      "target_color": "#77c2e3"
-    },
-    {
-      "number": 24,
-      "mask_color": "#00004c",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 9,
-      "mask_color": "#00004d",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 24,
-      "mask_color": "#00004e",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 16,
-      "mask_color": "#00004f",
-      "target_color": "#77c2e3"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000050",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 4,
-      "mask_color": "#000051",
-      "target_color": "#ed6279"
-    },
-    {
-      "number": 9,
-      "mask_color": "#000052",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000053",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 9,
-      "mask_color": "#000054",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 6,
-      "mask_color": "#000055",
-      "target_color": "#1ea6e5"
-    },
-    {
-      "number": 19,
-      "mask_color": "#000056",
-      "target_color": "#e5bdc3"
-    },
-    {
-      "number": 19,
-      "mask_color": "#000057",
-      "target_color": "#e5bdc3"
-    },
-    {
-      "number": 24,
-      "mask_color": "#000058",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 9,
-      "mask_color": "#000059",
-      "target_color": "#fd79a1"
-    },
-    {
-      "number": 20,
-      "mask_color": "#00005a",
-      "target_color": "#fcd4cd"
-    },
-    {
-      "number": 24,
-      "mask_color": "#00005b",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 24,
-      "mask_color": "#00005c",
-      "target_color": "#ffffff"
-    },
-    {
-      "number": 13,
-      "mask_color": "#00005d",
-      "target_color": "#fc8e81"
-    },
-    {
-      "number": 13,
-      "mask_color": "#00005e",
+      "number": 14,
+      "mask_color": "#00002f",
       "target_color": "#fc8e81"
     },
     {
       "number": 11,
-      "mask_color": "#00005f",
-      "target_color": "#4eb4e4"
+      "mask_color": "#000030",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 16,
+      "mask_color": "#000031",
+      "target_color": "#f992b5"
     },
     {
       "number": 6,
-      "mask_color": "#000060",
-      "target_color": "#1ea6e5"
+      "mask_color": "#000032",
+      "target_color": "#ed6279"
     },
     {
-      "number": 24,
+      "number": 14,
+      "mask_color": "#000033",
+      "target_color": "#fc8e81"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000034",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 21,
+      "mask_color": "#000035",
+      "target_color": "#fdc249"
+    },
+    {
+      "number": 21,
+      "mask_color": "#000036",
+      "target_color": "#fdc249"
+    },
+    {
+      "number": 11,
+      "mask_color": "#000037",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 9,
+      "mask_color": "#000038",
+      "target_color": "#33a6e4"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000039",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 26,
+      "mask_color": "#00003a",
+      "target_color": "#f4fcfc"
+    },
+    {
+      "number": 20,
+      "mask_color": "#00003b",
+      "target_color": "#f6c250"
+    },
+    {
+      "number": 13,
+      "mask_color": "#00003c",
+      "target_color": "#4fb4e4"
+    },
+    {
+      "number": 26,
+      "mask_color": "#00003d",
+      "target_color": "#f4fcfc"
+    },
+    {
+      "number": 27,
+      "mask_color": "#00003e",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 4,
+      "mask_color": "#00003f",
+      "target_color": "#f2495d"
+    },
+    {
+      "number": 21,
+      "mask_color": "#000040",
+      "target_color": "#fdc249"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000041",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000042",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 5,
+      "mask_color": "#000043",
+      "target_color": "#d66879"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000044",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000045",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 21,
+      "mask_color": "#000046",
+      "target_color": "#fdc249"
+    },
+    {
+      "number": 14,
+      "mask_color": "#000047",
+      "target_color": "#fc8e81"
+    },
+    {
+      "number": 23,
+      "mask_color": "#000048",
+      "target_color": "#fcd4cd"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000049",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 21,
+      "mask_color": "#00004a",
+      "target_color": "#fdc249"
+    },
+    {
+      "number": 11,
+      "mask_color": "#00004b",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 8,
+      "mask_color": "#00004c",
+      "target_color": "#1aa5e2"
+    },
+    {
+      "number": 23,
+      "mask_color": "#00004d",
+      "target_color": "#fcd4cd"
+    },
+    {
+      "number": 27,
+      "mask_color": "#00004e",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 17,
+      "mask_color": "#00004f",
+      "target_color": "#77c2e3"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000050",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 11,
+      "mask_color": "#000051",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000052",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 18,
+      "mask_color": "#000053",
+      "target_color": "#83c1db"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000054",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000055",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 6,
+      "mask_color": "#000056",
+      "target_color": "#ed6279"
+    },
+    {
+      "number": 11,
+      "mask_color": "#000057",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000058",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 11,
+      "mask_color": "#000059",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 8,
+      "mask_color": "#00005a",
+      "target_color": "#1aa5e2"
+    },
+    {
+      "number": 22,
+      "mask_color": "#00005b",
+      "target_color": "#e5bdc3"
+    },
+    {
+      "number": 22,
+      "mask_color": "#00005c",
+      "target_color": "#e5bdc3"
+    },
+    {
+      "number": 27,
+      "mask_color": "#00005d",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 11,
+      "mask_color": "#00005e",
+      "target_color": "#fd79a1"
+    },
+    {
+      "number": 23,
+      "mask_color": "#00005f",
+      "target_color": "#fcd4cd"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000060",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 27,
       "mask_color": "#000061",
       "target_color": "#ffffff"
     },
     {
-      "number": 5,
+      "number": 27,
       "mask_color": "#000062",
-      "target_color": "#049fe4"
+      "target_color": "#ffffff"
     },
     {
-      "number": 5,
+      "number": 14,
       "mask_color": "#000063",
-      "target_color": "#049fe4"
+      "target_color": "#fc8e81"
     },
     {
-      "number": 24,
+      "number": 14,
       "mask_color": "#000064",
-      "target_color": "#ffffff"
+      "target_color": "#fc8e81"
     },
     {
-      "number": 6,
+      "number": 13,
       "mask_color": "#000065",
-      "target_color": "#1ea6e5"
+      "target_color": "#4fb4e4"
     },
     {
-      "number": 24,
+      "number": 8,
       "mask_color": "#000066",
+      "target_color": "#1aa5e2"
+    },
+    {
+      "number": 19,
+      "mask_color": "#000067",
+      "target_color": "#95c8dd"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000068",
       "target_color": "#ffffff"
     },
     {
-      "number": 24,
-      "mask_color": "#000067",
+      "number": 27,
+      "mask_color": "#000069",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 2,
+      "mask_color": "#00006a",
+      "target_color": "#4c5b63"
+    },
+    {
+      "number": 7,
+      "mask_color": "#00006b",
+      "target_color": "#049fe5"
+    },
+    {
+      "number": 7,
+      "mask_color": "#00006c",
+      "target_color": "#049fe5"
+    },
+    {
+      "number": 26,
+      "mask_color": "#00006d",
+      "target_color": "#f4fcfc"
+    },
+    {
+      "number": 8,
+      "mask_color": "#00006e",
+      "target_color": "#1aa5e2"
+    },
+    {
+      "number": 27,
+      "mask_color": "#00006f",
+      "target_color": "#ffffff"
+    },
+    {
+      "number": 27,
+      "mask_color": "#000070",
       "target_color": "#ffffff"
     }
   ],
@@ -683,11 +750,11 @@
     {
       "id": 1,
       "mask_color": "#000001",
-      "number": 9,
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 232231,
+      "area": 231897,
       "bbox": {
         "left": 0,
         "top": 0,
@@ -695,8 +762,8 @@
         "bottom": 454
       },
       "centroid": {
-        "x": 502.9614737050609,
-        "y": 151.83334696918155
+        "x": 502.9856962358288,
+        "y": 151.69348891964967
       },
       "label_anchor": {
         "x": 754.0,
@@ -707,18 +774,22 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 13
+        "merged_region_count": 3,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 2,
       "mask_color": "#000002",
-      "number": 24,
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#ffffff",
-      "area": 28536,
+      "area": 28277,
       "bbox": {
         "left": 208,
         "top": 14,
@@ -726,39 +797,43 @@
         "bottom": 236
       },
       "centroid": {
-        "x": 336.70342724978974,
-        "y": 122.55386178861788
+        "x": 336.4335679173887,
+        "y": 122.54461222902005
       },
       "label_anchor": {
-        "x": 293.0,
+        "x": 294.0,
         "y": 175.0,
-        "radius": 48.0
+        "radius": 47.666666666666664
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 11
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 3,
       "mask_color": "#000003",
-      "number": 13,
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fc8e81",
-      "area": 1686,
+      "area": 1657,
       "bbox": {
-        "left": 382,
-        "top": 60,
-        "right": 428,
+        "left": 383,
+        "top": 61,
+        "right": 427,
         "bottom": 107
       },
       "centroid": {
-        "x": 405.46204033214707,
-        "y": 83.69691577698696
+        "x": 405.4321062160531,
+        "y": 83.78998189499094
       },
       "label_anchor": {
         "x": 408.0,
@@ -769,18 +844,22 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 2
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 4,
       "mask_color": "#000004",
-      "number": 13,
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fc8e81",
-      "area": 1591,
+      "area": 1575,
       "bbox": {
         "left": 314,
         "top": 91,
@@ -788,8 +867,8 @@
         "bottom": 137
       },
       "centroid": {
-        "x": 335.9421747328724,
-        "y": 115.7950974230044
+        "x": 335.87301587301585,
+        "y": 115.77142857142857
       },
       "label_anchor": {
         "x": 334.0,
@@ -800,18 +879,22 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 1
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 5,
       "mask_color": "#000005",
-      "number": 18,
+      "number": 21,
       "target_color": "#fdc249",
       "fill_color": "#fdc249",
       "representative_color": "#fec147",
-      "area": 1907,
+      "area": 1888,
       "bbox": {
         "left": 489,
         "top": 94,
@@ -819,8 +902,8 @@
         "bottom": 142
       },
       "centroid": {
-        "x": 512.7603565810173,
-        "y": 118.25799685369691
+        "x": 512.7256355932203,
+        "y": 118.28177966101696
       },
       "label_anchor": {
         "x": 513.0,
@@ -831,89 +914,101 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 1
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 6,
       "mask_color": "#000006",
-      "number": 24,
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fbfdfd",
-      "area": 1117,
+      "area": 1096,
       "bbox": {
-        "left": 466,
+        "left": 467,
         "top": 116,
         "right": 513,
-        "bottom": 169
+        "bottom": 168
       },
       "centroid": {
-        "x": 487.88719785138767,
-        "y": 149.93733213965982
+        "x": 487.98631386861314,
+        "y": 149.99543795620437
       },
       "label_anchor": {
-        "x": 488.0,
-        "y": 153.0,
-        "radius": 10.0
+        "x": 489.0,
+        "y": 152.0,
+        "radius": 9.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 1
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 7,
       "mask_color": "#000007",
-      "number": 11,
-      "target_color": "#4eb4e4",
-      "fill_color": "#4eb4e4",
-      "representative_color": "#50b4e4",
-      "area": 48763,
+      "number": 13,
+      "target_color": "#4fb4e4",
+      "fill_color": "#4fb4e4",
+      "representative_color": "#51b4e4",
+      "area": 48227,
       "bbox": {
         "left": 305,
-        "top": 144,
+        "top": 139,
         "right": 631,
         "bottom": 423
       },
       "centroid": {
-        "x": 443.32912249041283,
-        "y": 287.01605725652644
+        "x": 443.04456010118815,
+        "y": 287.0180189520393
       },
       "label_anchor": {
         "x": 365.0,
-        "y": 327.0,
+        "y": 328.0,
         "radius": 38.333333333333336
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 21
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 8,
       "mask_color": "#000008",
-      "number": 8,
+      "number": 10,
       "target_color": "#34ace4",
       "fill_color": "#34ace4",
       "representative_color": "#34ace4",
-      "area": 4689,
+      "area": 4626,
       "bbox": {
-        "left": 560,
-        "top": 193,
+        "left": 561,
+        "top": 195,
         "right": 651,
-        "bottom": 274
+        "bottom": 273
       },
       "centroid": {
-        "x": 610.0914907229686,
-        "y": 231.0505438259757
+        "x": 610.1431041936878,
+        "y": 231.12624297449202
       },
       "label_anchor": {
         "x": 611.0,
@@ -924,18 +1019,22 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 9,
       "mask_color": "#000009",
-      "number": 24,
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#ffffff",
-      "area": 25035,
+      "area": 24825,
       "bbox": {
         "left": 769,
         "top": 212,
@@ -943,8 +1042,8 @@
         "bottom": 417
       },
       "centroid": {
-        "x": 920.7689235070901,
-        "y": 313.5012981825444
+        "x": 921.0555488418933,
+        "y": 313.47339375629406
       },
       "label_anchor": {
         "x": 980.0,
@@ -955,58 +1054,66 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 10,
       "mask_color": "#00000a",
-      "number": 24,
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fbfffe",
-      "area": 778,
+      "area": 745,
       "bbox": {
-        "left": 465,
-        "top": 210,
-        "right": 514,
-        "bottom": 243
+        "left": 477,
+        "top": 213,
+        "right": 507,
+        "bottom": 242
       },
       "centroid": {
-        "x": 492.133676092545,
-        "y": 227.3727506426735
+        "x": 491.73959731543624,
+        "y": 227.5261744966443
       },
       "label_anchor": {
         "x": 492.0,
-        "y": 227.0,
+        "y": 228.0,
         "radius": 13.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 6
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 11,
       "mask_color": "#00000b",
-      "number": 24,
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#f5fbfd",
-      "area": 243,
+      "representative_color": "#f7fbfd",
+      "area": 196,
       "bbox": {
-        "left": 523,
-        "top": 245,
-        "right": 570,
-        "bottom": 326
+        "left": 534,
+        "top": 246,
+        "right": 556,
+        "bottom": 259
       },
       "centroid": {
-        "x": 543.843621399177,
-        "y": 257.1028806584362
+        "x": 543.6581632653061,
+        "y": 253.53061224489795
       },
       "label_anchor": {
         "x": 542.0,
@@ -1017,30 +1124,69 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 7
+        "merged_region_count": 1,
+        "protected_detail": true,
+        "protected_detail_reason": "small_high_contrast_island",
+        "protected_detail_color_distance": 277.76
       }
     },
     {
       "id": 12,
       "mask_color": "#00000c",
-      "number": 24,
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#f7fcfc",
-      "area": 284,
+      "representative_color": "#f8fefe",
+      "area": 175,
+      "bbox": {
+        "left": 508,
+        "top": 248,
+        "right": 530,
+        "bottom": 260
+      },
+      "centroid": {
+        "x": 517.5428571428571,
+        "y": 254.42857142857142
+      },
+      "label_anchor": {
+        "x": 517.0,
+        "y": 253.0,
+        "radius": 4.333333333333333
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 13,
+      "mask_color": "#00000d",
+      "number": 27,
+      "target_color": "#ffffff",
+      "fill_color": "#ffffff",
+      "representative_color": "#f8fcfc",
+      "area": 271,
       "bbox": {
         "left": 475,
         "top": 250,
-        "right": 506,
+        "right": 502,
         "bottom": 266
       },
       "centroid": {
-        "x": 486.67605633802816,
-        "y": 258.07394366197184
+        "x": 486.23985239852396,
+        "y": 257.9483394833948
       },
       "label_anchor": {
-        "x": 485.0,
+        "x": 484.0,
         "y": 257.0,
         "radius": 6.333333333333333
       },
@@ -1048,27 +1194,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 3
+        "merged_region_count": 1,
+        "protected_detail": true,
+        "protected_detail_reason": "small_high_contrast_island",
+        "protected_detail_color_distance": 279.72
       }
     },
     {
-      "id": 13,
-      "mask_color": "#00000d",
-      "number": 24,
+      "id": 14,
+      "mask_color": "#00000e",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fafffd",
-      "area": 457,
+      "area": 424,
       "bbox": {
-        "left": 366,
-        "top": 236,
-        "right": 473,
-        "bottom": 289
+        "left": 440,
+        "top": 256,
+        "right": 471,
+        "bottom": 280
       },
       "centroid": {
-        "x": 450.363238512035,
-        "y": 266.6345733041575
+        "x": 452.1957547169811,
+        "y": 266.70990566037733
       },
       "label_anchor": {
         "x": 451.0,
@@ -1079,27 +1229,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 5
+        "merged_region_count": 1,
+        "protected_detail": true,
+        "protected_detail_reason": "small_high_contrast_island",
+        "protected_detail_color_distance": 285.48
       }
     },
     {
-      "id": 14,
-      "mask_color": "#00000e",
-      "number": 13,
+      "id": 15,
+      "mask_color": "#00000f",
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fc8e81",
-      "area": 1624,
+      "area": 1607,
       "bbox": {
-        "left": 825,
+        "left": 826,
         "top": 263,
-        "right": 872,
+        "right": 871,
         "bottom": 309
       },
       "centroid": {
-        "x": 847.2081280788177,
-        "y": 286.3386699507389
+        "x": 847.1748599875544,
+        "y": 286.31176104542624
       },
       "label_anchor": {
         "x": 845.0,
@@ -1110,18 +1264,22 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 2
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 15,
-      "mask_color": "#00000f",
-      "number": 5,
-      "target_color": "#049fe4",
-      "fill_color": "#049fe4",
+      "id": 16,
+      "mask_color": "#000010",
+      "number": 7,
+      "target_color": "#049fe5",
+      "fill_color": "#049fe5",
       "representative_color": "#059fe4",
-      "area": 93865,
+      "area": 93562,
       "bbox": {
         "left": 0,
         "top": 278,
@@ -1129,70 +1287,78 @@
         "bottom": 806
       },
       "centroid": {
-        "x": 126.63975922867948,
-        "y": 534.9595802482288
+        "x": 126.47187960924308,
+        "y": 535.0892135696116
       },
       "label_anchor": {
         "x": 82.0,
         "y": 666.0,
-        "radius": 82.0
+        "radius": 81.66666666666667
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 16,
-      "mask_color": "#000010",
-      "number": 13,
+      "id": 17,
+      "mask_color": "#000011",
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fc8e81",
-      "area": 1573,
+      "area": 1534,
       "bbox": {
-        "left": 884,
+        "left": 896,
         "top": 283,
-        "right": 1023,
-        "bottom": 946
+        "right": 942,
+        "bottom": 329
       },
       "centroid": {
-        "x": 920.6878575969486,
-        "y": 310.38143674507313
+        "x": 920.6864406779661,
+        "y": 307.85853976531945
       },
       "label_anchor": {
-        "x": 921.0,
-        "y": 310.0,
+        "x": 922.0,
+        "y": 309.0,
         "radius": 17.666666666666668
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 7
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 17,
-      "mask_color": "#000011",
-      "number": 20,
+      "id": 18,
+      "mask_color": "#000012",
+      "number": 23,
       "target_color": "#fcd4cd",
       "fill_color": "#fcd4cd",
       "representative_color": "#fbd4cd",
-      "area": 2513,
+      "area": 2453,
       "bbox": {
         "left": 756,
         "top": 309,
-        "right": 988,
-        "bottom": 939
+        "right": 828,
+        "bottom": 399
       },
       "centroid": {
-        "x": 794.2116991643454,
-        "y": 354.28611221647435
+        "x": 793.3970648185895,
+        "y": 352.46392172849573
       },
       "label_anchor": {
         "x": 793.0,
@@ -1203,27 +1369,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 18,
-      "mask_color": "#000012",
-      "number": 24,
+      "id": 19,
+      "mask_color": "#000013",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#feffff",
-      "area": 9918,
+      "area": 9793,
       "bbox": {
-        "left": 134,
-        "top": 344,
+        "left": 323,
+        "top": 345,
         "right": 644,
-        "bottom": 1019
+        "bottom": 461
       },
       "centroid": {
-        "x": 494.6634402097197,
-        "y": 391.9942528735632
+        "x": 494.90278770550395,
+        "y": 391.77228632696824
       },
       "label_anchor": {
         "x": 520.0,
@@ -1234,89 +1404,101 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 7
-      }
-    },
-    {
-      "id": 19,
-      "mask_color": "#000013",
-      "number": 5,
-      "target_color": "#049fe4",
-      "fill_color": "#049fe4",
-      "representative_color": "#049fe5",
-      "area": 56867,
-      "bbox": {
-        "left": 648,
-        "top": 345,
-        "right": 1023,
-        "bottom": 708
-      },
-      "centroid": {
-        "x": 837.0518754286318,
-        "y": 542.578630840382
-      },
-      "label_anchor": {
-        "x": 809.0,
-        "y": 548.0,
-        "radius": 54.666666666666664
-      },
-      "hide_number": false,
-      "quality": {
-        "is_tiny": false,
-        "is_small": false,
-        "touchable": true,
-        "merged_region_count": 12
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 20,
       "mask_color": "#000014",
-      "number": 22,
-      "target_color": "#f5f6f7",
-      "fill_color": "#f5f6f7",
-      "representative_color": "#f5f6f7",
-      "area": 502,
+      "number": 8,
+      "target_color": "#1aa5e2",
+      "fill_color": "#1aa5e2",
+      "representative_color": "#1aa5e2",
+      "area": 86198,
+      "bbox": {
+        "left": 649,
+        "top": 346,
+        "right": 1023,
+        "bottom": 842
+      },
+      "centroid": {
+        "x": 875.044536996218,
+        "y": 577.2420125756978
+      },
+      "label_anchor": {
+        "x": 964.0,
+        "y": 607.0,
+        "radius": 56.333333333333336
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 21,
+      "mask_color": "#000015",
+      "number": 25,
+      "target_color": "#f6f8f9",
+      "fill_color": "#f6f8f9",
+      "representative_color": "#f6f8f9",
+      "area": 435,
       "bbox": {
         "left": 749,
         "top": 352,
-        "right": 1018,
-        "bottom": 824
+        "right": 808,
+        "bottom": 422
       },
       "centroid": {
-        "x": 794.292828685259,
-        "y": 403.62549800796813
+        "x": 783.4666666666667,
+        "y": 383.43908045977014
       },
       "label_anchor": {
-        "x": 794.0,
-        "y": 396.0,
+        "x": 785.0,
+        "y": 382.0,
         "radius": 2.6666666666666665
       },
       "hide_number": false,
       "quality": {
         "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 21,
-      "mask_color": "#000015",
-      "number": 14,
+      "id": 22,
+      "mask_color": "#000016",
+      "number": 15,
       "target_color": "#5eb9e5",
       "fill_color": "#5eb9e5",
       "representative_color": "#5eb9e5",
-      "area": 15974,
+      "area": 16471,
       "bbox": {
-        "left": 614,
+        "left": 615,
         "top": 355,
-        "right": 810,
+        "right": 806,
         "bottom": 544
       },
       "centroid": {
-        "x": 719.777012645549,
-        "y": 465.09765869538
+        "x": 719.6048205937709,
+        "y": 462.9984821808026
       },
       "label_anchor": {
         "x": 708.0,
@@ -1327,27 +1509,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 11
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 22,
-      "mask_color": "#000016",
-      "number": 24,
+      "id": 23,
+      "mask_color": "#000017",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#fafdfd",
-      "area": 3014,
+      "representative_color": "#fbfdfd",
+      "area": 1816,
       "bbox": {
-        "left": 653,
-        "top": 361,
-        "right": 761,
-        "bottom": 512
+        "left": 666,
+        "top": 369,
+        "right": 739,
+        "bottom": 428
       },
       "centroid": {
-        "x": 708.657597876576,
-        "y": 402.33045786330456
+        "x": 706.3761013215859,
+        "y": 400.14867841409693
       },
       "label_anchor": {
         "x": 679.0,
@@ -1358,89 +1544,101 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 14
-      }
-    },
-    {
-      "id": 23,
-      "mask_color": "#000017",
-      "number": 9,
-      "target_color": "#fd79a1",
-      "fill_color": "#fd79a1",
-      "representative_color": "#fd7ba1",
-      "area": 391,
-      "bbox": {
-        "left": 547,
-        "top": 394,
-        "right": 576,
-        "bottom": 422
-      },
-      "centroid": {
-        "x": 563.306905370844,
-        "y": 404.6470588235294
-      },
-      "label_anchor": {
-        "x": 563.0,
-        "y": 403.0,
-        "radius": 7.0
-      },
-      "hide_number": false,
-      "quality": {
-        "is_tiny": false,
-        "is_small": false,
-        "touchable": true,
-        "merged_region_count": 3
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 24,
       "mask_color": "#000018",
-      "number": 9,
-      "target_color": "#fd79a1",
-      "fill_color": "#fd79a1",
-      "representative_color": "#fc7ca2",
-      "area": 467,
+      "number": 1,
+      "target_color": "#2c4e85",
+      "fill_color": "#2c4e85",
+      "representative_color": "#2b4e83",
+      "area": 161,
       "bbox": {
-        "left": 587,
-        "top": 325,
-        "right": 858,
-        "bottom": 1018
+        "left": 688,
+        "top": 379,
+        "right": 709,
+        "bottom": 400
       },
       "centroid": {
-        "x": 622.0599571734475,
-        "y": 445.6381156316917
+        "x": 696.5776397515529,
+        "y": 390.9378881987578
       },
       "label_anchor": {
-        "x": 612.0,
-        "y": 409.0,
-        "radius": 5.666666666666667
+        "x": 692.0,
+        "y": 397.0,
+        "radius": 1.6666666666666665
       },
       "hide_number": false,
       "quality": {
-        "is_tiny": false,
+        "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
       "id": 25,
       "mask_color": "#000019",
-      "number": 9,
+      "number": 1,
+      "target_color": "#2c4e85",
+      "fill_color": "#2c4e85",
+      "representative_color": "#2d4e86",
+      "area": 253,
+      "bbox": {
+        "left": 703,
+        "top": 394,
+        "right": 725,
+        "bottom": 418
+      },
+      "centroid": {
+        "x": 713.3833992094861,
+        "y": 405.72727272727275
+      },
+      "label_anchor": {
+        "x": 716.0,
+        "y": 409.0,
+        "radius": 2.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 3,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 26,
+      "mask_color": "#00001a",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fc7aa1",
-      "area": 1681,
+      "area": 1623,
       "bbox": {
-        "left": 910,
-        "top": 393,
+        "left": 979,
+        "top": 395,
         "right": 1023,
-        "bottom": 505
+        "bottom": 470
       },
       "centroid": {
-        "x": 1007.103509815586,
-        "y": 432.1225461035098
+        "x": 1008.7350585335798,
+        "y": 430.9291435613062
       },
       "label_anchor": {
         "x": 1007.0,
@@ -1451,61 +1649,139 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 26,
-      "mask_color": "#00001a",
-      "number": 9,
+      "id": 27,
+      "mask_color": "#00001b",
+      "number": 11,
+      "target_color": "#fd79a1",
+      "fill_color": "#fd79a1",
+      "representative_color": "#fd7ba1",
+      "area": 364,
+      "bbox": {
+        "left": 554,
+        "top": 395,
+        "right": 576,
+        "bottom": 423
+      },
+      "centroid": {
+        "x": 563.6565934065934,
+        "y": 405.36538461538464
+      },
+      "label_anchor": {
+        "x": 564.0,
+        "y": 403.0,
+        "radius": 7.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 28,
+      "mask_color": "#00001c",
+      "number": 11,
+      "target_color": "#fd79a1",
+      "fill_color": "#fd79a1",
+      "representative_color": "#fc7ca2",
+      "area": 489,
+      "bbox": {
+        "left": 584,
+        "top": 396,
+        "right": 620,
+        "bottom": 426
+      },
+      "centroid": {
+        "x": 604.4969325153374,
+        "y": 407.58895705521473
+      },
+      "label_anchor": {
+        "x": 606.0,
+        "y": 405.0,
+        "radius": 5.666666666666667
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 5,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 29,
+      "mask_color": "#00001d",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 959,
+      "area": 2326,
       "bbox": {
-        "left": 164,
+        "left": 437,
         "top": 397,
-        "right": 540,
-        "bottom": 1002
+        "right": 577,
+        "bottom": 452
       },
       "centroid": {
-        "x": 510.13138686131384,
-        "y": 421.50052137643377
+        "x": 515.7037833190026,
+        "y": 423.256233877902
       },
       "label_anchor": {
-        "x": 520.0,
-        "y": 415.0,
+        "x": 521.0,
+        "y": 414.0,
         "radius": 8.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 7,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 27,
-      "mask_color": "#00001b",
-      "number": 9,
+      "id": 30,
+      "mask_color": "#00001e",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 2107,
+      "area": 782,
       "bbox": {
-        "left": 498,
-        "top": 394,
-        "right": 618,
-        "bottom": 447
+        "left": 556,
+        "top": 399,
+        "right": 615,
+        "bottom": 443
       },
       "centroid": {
-        "x": 564.4356905552919,
-        "y": 420.89700996677743
+        "x": 588.0166240409208,
+        "y": 422.5805626598465
       },
       "label_anchor": {
-        "x": 582.0,
+        "x": 583.0,
         "y": 422.0,
         "radius": 8.333333333333334
       },
@@ -1513,58 +1789,66 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 18
+        "merged_region_count": 3,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 28,
-      "mask_color": "#00001c",
-      "number": 9,
+      "id": 31,
+      "mask_color": "#00001f",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 887,
+      "area": 818,
       "bbox": {
-        "left": 9,
-        "top": 402,
-        "right": 503,
-        "bottom": 998
+        "left": 448,
+        "top": 405,
+        "right": 500,
+        "bottom": 444
       },
       "centroid": {
-        "x": 465.85569334836526,
-        "y": 437.2412626832018
+        "x": 473.11002444987776,
+        "y": 423.3545232273839
       },
       "label_anchor": {
-        "x": 472.0,
-        "y": 422.0,
+        "x": 473.0,
+        "y": 421.0,
         "radius": 9.333333333333334
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 29,
-      "mask_color": "#00001d",
-      "number": 9,
+      "id": 32,
+      "mask_color": "#000020",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fc7aa2",
-      "area": 639,
+      "area": 562,
       "bbox": {
-        "left": 205,
-        "top": 276,
-        "right": 330,
-        "bottom": 451
+        "left": 281,
+        "top": 410,
+        "right": 327,
+        "bottom": 449
       },
       "centroid": {
-        "x": 302.5054773082942,
-        "y": 421.32550860719874
+        "x": 306.55871886120997,
+        "y": 429.2313167259787
       },
       "label_anchor": {
         "x": 307.0,
@@ -1575,89 +1859,101 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 30,
-      "mask_color": "#00001e",
-      "number": 9,
-      "target_color": "#fd79a1",
-      "fill_color": "#fd79a1",
-      "representative_color": "#fd7aa1",
-      "area": 1271,
+      "id": 33,
+      "mask_color": "#000021",
+      "number": 26,
+      "target_color": "#f4fcfc",
+      "fill_color": "#f4fcfc",
+      "representative_color": "#f3fbfb",
+      "area": 586,
       "bbox": {
-        "left": 26,
-        "top": 354,
-        "right": 464,
-        "bottom": 898
+        "left": 620,
+        "top": 416,
+        "right": 676,
+        "bottom": 483
       },
       "centroid": {
-        "x": 413.726986624705,
-        "y": 444.5688434303698
+        "x": 656.2918088737201,
+        "y": 454.26962457337885
       },
       "label_anchor": {
-        "x": 435.0,
-        "y": 433.0,
-        "radius": 5.666666666666667
+        "x": 673.0,
+        "y": 451.0,
+        "radius": 2.0
       },
       "hide_number": false,
       "quality": {
-        "is_tiny": false,
+        "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 12
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 31,
-      "mask_color": "#00001f",
-      "number": 9,
-      "target_color": "#fd79a1",
-      "fill_color": "#fd79a1",
-      "representative_color": "#fd7aa1",
-      "area": 1667,
+      "id": 34,
+      "mask_color": "#000022",
+      "number": 16,
+      "target_color": "#f992b5",
+      "fill_color": "#f992b5",
+      "representative_color": "#f992b5",
+      "area": 445,
       "bbox": {
-        "left": 23,
-        "top": 412,
-        "right": 510,
-        "bottom": 920
+        "left": 373,
+        "top": 423,
+        "right": 434,
+        "bottom": 454
       },
       "centroid": {
-        "x": 436.124175164967,
-        "y": 465.2861427714457
+        "x": 401.4696629213483,
+        "y": 441.0629213483146
       },
       "label_anchor": {
-        "x": 411.0,
-        "y": 463.0,
-        "radius": 8.0
+        "x": 401.0,
+        "y": 442.0,
+        "radius": 4.0
       },
       "hide_number": false,
       "quality": {
-        "is_tiny": false,
+        "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 11
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 32,
-      "mask_color": "#000020",
-      "number": 17,
+      "id": 35,
+      "mask_color": "#000023",
+      "number": 20,
       "target_color": "#f6c250",
       "fill_color": "#f6c250",
       "representative_color": "#f7c250",
-      "area": 2000,
+      "area": 1287,
       "bbox": {
-        "left": 617,
-        "top": 416,
-        "right": 743,
-        "bottom": 521
+        "left": 619,
+        "top": 424,
+        "right": 666,
+        "bottom": 474
       },
       "centroid": {
-        "x": 649.5255,
-        "y": 452.1775
+        "x": 644.7451437451438,
+        "y": 450.1841491841492
       },
       "label_anchor": {
         "x": 650.0,
@@ -1668,58 +1964,101 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 13
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 33,
-      "mask_color": "#000021",
-      "number": 21,
-      "target_color": "#f2d9d0",
-      "fill_color": "#f2d9d0",
-      "representative_color": "#f2d9d0",
-      "area": 237,
+      "id": 36,
+      "mask_color": "#000024",
+      "number": 11,
+      "target_color": "#fd79a1",
+      "fill_color": "#fd79a1",
+      "representative_color": "#fd7aa1",
+      "area": 1619,
       "bbox": {
-        "left": 615,
-        "top": 431,
-        "right": 799,
-        "bottom": 894
+        "left": 391,
+        "top": 414,
+        "right": 462,
+        "bottom": 487
       },
       "centroid": {
-        "x": 638.3206751054852,
-        "y": 492.47257383966246
+        "x": 425.7201976528721,
+        "y": 449.62940086473134
+      },
+      "label_anchor": {
+        "x": 410.0,
+        "y": 462.0,
+        "radius": 8.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 4,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 37,
+      "mask_color": "#000025",
+      "number": 24,
+      "target_color": "#f3d9d1",
+      "fill_color": "#f3d9d1",
+      "representative_color": "#f3d9d1",
+      "area": 203,
+      "bbox": {
+        "left": 615,
+        "top": 432,
+        "right": 626,
+        "bottom": 463
+      },
+      "centroid": {
+        "x": 621.0098522167488,
+        "y": 445.9605911330049
       },
       "label_anchor": {
         "x": 622.0,
         "y": 444.0,
-        "radius": 3.666666666666667
+        "radius": 3.333333333333333
       },
       "hide_number": false,
       "quality": {
         "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 34,
-      "mask_color": "#000022",
-      "number": 9,
+      "id": 38,
+      "mask_color": "#000026",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 1062,
+      "area": 965,
       "bbox": {
-        "left": 121,
-        "top": 400,
-        "right": 347,
-        "bottom": 483
+        "left": 286,
+        "top": 434,
+        "right": 346,
+        "bottom": 482
       },
       "centroid": {
-        "x": 313.90583804143125,
-        "y": 458.7758945386064
+        "x": 323.0880829015544,
+        "y": 460.6487046632124
       },
       "label_anchor": {
         "x": 323.0,
@@ -1730,58 +2069,136 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 35,
-      "mask_color": "#000023",
-      "number": 9,
+      "id": 39,
+      "mask_color": "#000027",
+      "number": 23,
+      "target_color": "#fcd4cd",
+      "fill_color": "#fcd4cd",
+      "representative_color": "#fbd4cc",
+      "area": 206,
+      "bbox": {
+        "left": 594,
+        "top": 435,
+        "right": 606,
+        "bottom": 457
+      },
+      "centroid": {
+        "x": 600.252427184466,
+        "y": 445.6747572815534
+      },
+      "label_anchor": {
+        "x": 600.0,
+        "y": 446.0,
+        "radius": 4.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 40,
+      "mask_color": "#000028",
+      "number": 27,
+      "target_color": "#ffffff",
+      "fill_color": "#ffffff",
+      "representative_color": "#fdfbfb",
+      "area": 411,
+      "bbox": {
+        "left": 556,
+        "top": 437,
+        "right": 593,
+        "bottom": 476
+      },
+      "centroid": {
+        "x": 573.3552311435523,
+        "y": 458.11192214111924
+      },
+      "label_anchor": {
+        "x": 565.0,
+        "y": 459.0,
+        "radius": 4.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 41,
+      "mask_color": "#000029",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 603,
+      "area": 1102,
       "bbox": {
-        "left": 103,
-        "top": 341,
-        "right": 319,
-        "bottom": 477
+        "left": 280,
+        "top": 438,
+        "right": 367,
+        "bottom": 507
       },
       "centroid": {
-        "x": 294.39469320066337,
-        "y": 448.88557213930346
+        "x": 318.54990925589834,
+        "y": 473.1098003629764
       },
       "label_anchor": {
-        "x": 293.0,
-        "y": 449.0,
+        "x": 297.0,
+        "y": 453.0,
         "radius": 8.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 36,
-      "mask_color": "#000024",
-      "number": 1,
+      "id": 42,
+      "mask_color": "#00002a",
+      "number": 3,
       "target_color": "#6250aa",
       "fill_color": "#6250aa",
       "representative_color": "#6150aa",
-      "area": 722,
+      "area": 625,
       "bbox": {
-        "left": 563,
-        "top": 436,
-        "right": 818,
-        "bottom": 972
+        "left": 564,
+        "top": 438,
+        "right": 588,
+        "bottom": 471
       },
       "centroid": {
-        "x": 591.4875346260388,
-        "y": 491.6385041551247
+        "x": 577.6704,
+        "y": 453.0256
       },
       "label_anchor": {
         "x": 578.0,
@@ -1792,58 +2209,66 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 37,
-      "mask_color": "#000025",
-      "number": 10,
+      "id": 43,
+      "mask_color": "#00002b",
+      "number": 12,
       "target_color": "#ea7fa4",
       "fill_color": "#ea7fa4",
       "representative_color": "#ea7fa4",
-      "area": 298,
+      "area": 246,
       "bbox": {
-        "left": 774,
-        "top": 436,
-        "right": 917,
-        "bottom": 500
+        "left": 812,
+        "top": 439,
+        "right": 832,
+        "bottom": 470
       },
       "centroid": {
-        "x": 820.2583892617449,
-        "y": 456.5469798657718
+        "x": 820.0040650406504,
+        "y": 453.5691056910569
       },
       "label_anchor": {
-        "x": 818.0,
-        "y": 452.0,
+        "x": 817.0,
+        "y": 451.0,
         "radius": 5.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 38,
-      "mask_color": "#000026",
-      "number": 20,
+      "id": 44,
+      "mask_color": "#00002c",
+      "number": 23,
       "target_color": "#fcd4cd",
       "fill_color": "#fcd4cd",
       "representative_color": "#fcd4cd",
-      "area": 11919,
+      "area": 11060,
       "bbox": {
         "left": 352,
-        "top": 434,
-        "right": 766,
-        "bottom": 909
+        "top": 442,
+        "right": 613,
+        "bottom": 539
       },
       "centroid": {
-        "x": 496.7633190703918,
-        "y": 498.72044634617
+        "x": 491.5273960216998,
+        "y": 498.6397830018083
       },
       "label_anchor": {
         "x": 547.0,
@@ -1854,27 +2279,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 12
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 39,
-      "mask_color": "#000027",
-      "number": 24,
+      "id": 45,
+      "mask_color": "#00002d",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fdfafc",
-      "area": 1006,
+      "area": 757,
       "bbox": {
-        "left": 142,
+        "left": 473,
         "top": 445,
-        "right": 791,
-        "bottom": 960
+        "right": 533,
+        "bottom": 491
       },
       "centroid": {
-        "x": 497.35884691848906,
-        "y": 574.0775347912524
+        "x": 500.57199471598415,
+        "y": 471.80713342140024
       },
       "label_anchor": {
         "x": 487.0,
@@ -1885,337 +2314,311 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 40,
-      "mask_color": "#000028",
-      "number": 1,
+      "id": 46,
+      "mask_color": "#00002e",
+      "number": 3,
       "target_color": "#6250aa",
       "fill_color": "#6250aa",
       "representative_color": "#6250aa",
-      "area": 1283,
+      "area": 1205,
       "bbox": {
-        "left": 71,
-        "top": 444,
-        "right": 822,
-        "bottom": 976
+        "left": 482,
+        "top": 446,
+        "right": 526,
+        "bottom": 486
       },
       "centroid": {
-        "x": 502.62509742790337,
-        "y": 476.8082618862042
+        "x": 508.9195020746888,
+        "y": 464.2240663900415
       },
       "label_anchor": {
         "x": 512.0,
-        "y": 463.0,
+        "y": 462.0,
         "radius": 14.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 41,
-      "mask_color": "#000029",
-      "number": 13,
+      "id": 47,
+      "mask_color": "#00002f",
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fc8e82",
-      "area": 635,
+      "area": 581,
       "bbox": {
         "left": 580,
         "top": 459,
-        "right": 962,
-        "bottom": 878
+        "right": 612,
+        "bottom": 489
       },
       "centroid": {
-        "x": 606.3464566929134,
-        "y": 491.244094488189
+        "x": 598.0740103270224,
+        "y": 475.6471600688468
       },
       "label_anchor": {
         "x": 602.0,
         "y": 474.0,
-        "radius": 9.0
+        "radius": 8.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": true,
+        "protected_detail_reason": "small_high_contrast_island",
+        "protected_detail_color_distance": 190.98
       }
     },
     {
-      "id": 42,
-      "mask_color": "#00002a",
-      "number": 9,
+      "id": 48,
+      "mask_color": "#000030",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 1241,
+      "area": 1177,
       "bbox": {
         "left": 287,
         "top": 463,
         "right": 379,
-        "bottom": 519
+        "bottom": 516
       },
       "centroid": {
-        "x": 324.29814665592266,
-        "y": 494.7252215954875
+        "x": 323.5420560747664,
+        "y": 494.08241291418864
       },
       "label_anchor": {
-        "x": 316.0,
-        "y": 494.0,
+        "x": 313.0,
+        "y": 490.0,
         "radius": 7.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 43,
-      "mask_color": "#00002b",
-      "number": 15,
-      "target_color": "#f892b5",
-      "fill_color": "#f892b5",
+      "id": 49,
+      "mask_color": "#000031",
+      "number": 16,
+      "target_color": "#f992b5",
+      "fill_color": "#f992b5",
       "representative_color": "#f892b5",
-      "area": 381,
+      "area": 345,
       "bbox": {
-        "left": 40,
-        "top": 411,
-        "right": 315,
-        "bottom": 511
+        "left": 284,
+        "top": 469,
+        "right": 314,
+        "bottom": 506
       },
       "centroid": {
-        "x": 291.2020997375328,
-        "y": 484.87926509186354
+        "x": 294.49855072463765,
+        "y": 487.0985507246377
       },
       "label_anchor": {
-        "x": 292.0,
-        "y": 485.0,
+        "x": 291.0,
+        "y": 483.0,
         "radius": 5.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 44,
-      "mask_color": "#00002c",
-      "number": 4,
+      "id": 50,
+      "mask_color": "#000032",
+      "number": 6,
       "target_color": "#ed6279",
       "fill_color": "#ed6279",
       "representative_color": "#ec6279",
-      "area": 3499,
+      "area": 3413,
       "bbox": {
-        "left": 222,
-        "top": 469,
-        "right": 362,
+        "left": 223,
+        "top": 470,
+        "right": 361,
         "bottom": 598
       },
       "centroid": {
-        "x": 264.3938268076593,
-        "y": 518.0945984567019
+        "x": 264.1280398476414,
+        "y": 518.0413126281863
       },
       "label_anchor": {
         "x": 243.0,
-        "y": 513.0,
+        "y": 512.0,
         "radius": 13.333333333333334
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 11
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 45,
-      "mask_color": "#00002d",
-      "number": 9,
-      "target_color": "#fd79a1",
-      "fill_color": "#fd79a1",
-      "representative_color": "#fd79a1",
-      "area": 609,
-      "bbox": {
-        "left": 166,
-        "top": 445,
-        "right": 374,
-        "bottom": 507
-      },
-      "centroid": {
-        "x": 336.23152709359607,
-        "y": 492.69786535303774
-      },
-      "label_anchor": {
-        "x": 341.0,
-        "y": 493.0,
-        "radius": 8.0
-      },
-      "hide_number": false,
-      "quality": {
-        "is_tiny": false,
-        "is_small": false,
-        "touchable": true,
-        "merged_region_count": 9
-      }
-    },
-    {
-      "id": 46,
-      "mask_color": "#00002e",
-      "number": 13,
+      "id": 51,
+      "mask_color": "#000033",
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fd8e81",
-      "area": 1504,
+      "area": 1373,
       "bbox": {
-        "left": 89,
-        "top": 474,
-        "right": 770,
-        "bottom": 895
+        "left": 461,
+        "top": 477,
+        "right": 520,
+        "bottom": 514
       },
       "centroid": {
-        "x": 475.5558510638298,
-        "y": 522.3417553191489
+        "x": 486.89730517115805,
+        "y": 498.16168973051714
       },
       "label_anchor": {
-        "x": 476.0,
-        "y": 495.0,
+        "x": 481.0,
+        "y": 499.0,
         "radius": 12.333333333333334
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 47,
-      "mask_color": "#00002f",
-      "number": 12,
-      "target_color": "#4cb8d8",
-      "fill_color": "#4cb8d8",
-      "representative_color": "#4cb8d8",
-      "area": 29766,
-      "bbox": {
-        "left": 859,
-        "top": 501,
-        "right": 1023,
-        "bottom": 842
-      },
-      "centroid": {
-        "x": 947.5589934824968,
-        "y": 643.2173956863536
-      },
-      "label_anchor": {
-        "x": 966.0,
-        "y": 610.0,
-        "radius": 56.333333333333336
-      },
-      "hide_number": false,
-      "quality": {
-        "is_tiny": false,
-        "is_small": false,
-        "touchable": true,
-        "merged_region_count": 9
-      }
-    },
-    {
-      "id": 48,
-      "mask_color": "#000030",
-      "number": 24,
+      "id": 52,
+      "mask_color": "#000034",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#feffff",
-      "area": 6222,
+      "area": 6062,
       "bbox": {
-        "left": 107,
+        "left": 368,
         "top": 516,
         "right": 598,
-        "bottom": 783
+        "bottom": 566
       },
       "centroid": {
-        "x": 469.9786242365799,
-        "y": 548.2907425265188
+        "x": 470.06878917848894,
+        "y": 547.4927416694161
       },
       "label_anchor": {
-        "x": 392.0,
-        "y": 539.0,
-        "radius": 21.333333333333332
+        "x": 395.0,
+        "y": 540.0,
+        "radius": 21.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 49,
-      "mask_color": "#000031",
-      "number": 18,
+      "id": 53,
+      "mask_color": "#000035",
+      "number": 21,
       "target_color": "#fdc249",
       "fill_color": "#fdc249",
-      "representative_color": "#fbc24b",
-      "area": 1757,
+      "representative_color": "#fbc34b",
+      "area": 1667,
       "bbox": {
         "left": 604,
-        "top": 517,
-        "right": 717,
+        "top": 519,
+        "right": 650,
         "bottom": 603
       },
       "centroid": {
-        "x": 629.0500853727946,
-        "y": 561.870233352305
+        "x": 627.7270545890822,
+        "y": 562.2711457708458
       },
       "label_anchor": {
-        "x": 628.0,
-        "y": 561.0,
+        "x": 623.0,
+        "y": 552.0,
         "radius": 10.333333333333334
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 50,
-      "mask_color": "#000032",
-      "number": 18,
+      "id": 54,
+      "mask_color": "#000036",
+      "number": 21,
       "target_color": "#fdc249",
       "fill_color": "#fdc249",
       "representative_color": "#fcc24a",
-      "area": 3544,
+      "area": 3404,
       "bbox": {
-        "left": 19,
-        "top": 434,
+        "left": 241,
+        "top": 531,
         "right": 364,
         "bottom": 604
       },
       "centroid": {
-        "x": 294.58944695259595,
-        "y": 548.0242663656885
+        "x": 295.22708578143363,
+        "y": 548.8960047003525
       },
       "label_anchor": {
         "x": 260.0,
@@ -2226,27 +2629,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 51,
-      "mask_color": "#000033",
-      "number": 9,
+      "id": 55,
+      "mask_color": "#000037",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fc7ca3",
-      "area": 1544,
+      "area": 1503,
       "bbox": {
-        "left": 653,
-        "top": 529,
+        "left": 652,
+        "top": 530,
         "right": 744,
-        "bottom": 578
+        "bottom": 577
       },
       "centroid": {
-        "x": 697.4753886010362,
-        "y": 551.5848445595855
+        "x": 697.3666001330672,
+        "y": 551.6566866267465
       },
       "label_anchor": {
         "x": 697.0,
@@ -2257,58 +2664,66 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 52,
-      "mask_color": "#000034",
-      "number": 7,
-      "target_color": "#33a5e4",
-      "fill_color": "#33a5e4",
-      "representative_color": "#33a5e4",
-      "area": 10344,
+      "id": 56,
+      "mask_color": "#000038",
+      "number": 9,
+      "target_color": "#33a6e4",
+      "fill_color": "#33a6e4",
+      "representative_color": "#33a6e4",
+      "area": 10168,
       "bbox": {
         "left": 421,
-        "top": 551,
-        "right": 627,
+        "top": 552,
+        "right": 628,
         "bottom": 818
       },
       "centroid": {
-        "x": 508.82472931167825,
-        "y": 672.090777262181
+        "x": 508.713512981904,
+        "y": 672.5684500393392
       },
       "label_anchor": {
         "x": 445.0,
         "y": 783.0,
-        "radius": 21.333333333333332
+        "radius": 21.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 13
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 53,
-      "mask_color": "#000035",
-      "number": 24,
+      "id": 57,
+      "mask_color": "#000039",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#ffffff",
-      "area": 1922,
+      "area": 1879,
       "bbox": {
-        "left": 86,
-        "top": 444,
+        "left": 274,
+        "top": 557,
         "right": 347,
         "bottom": 597
       },
       "centroid": {
-        "x": 302.12018730489075,
-        "y": 570.1711758584808
+        "x": 304.63544438531136,
+        "y": 571.616285258116
       },
       "label_anchor": {
         "x": 293.0,
@@ -2319,58 +2734,66 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 54,
-      "mask_color": "#000036",
-      "number": 23,
-      "target_color": "#f2fdfe",
-      "fill_color": "#f2fdfe",
-      "representative_color": "#f2fdfe",
-      "area": 428,
+      "id": 58,
+      "mask_color": "#00003a",
+      "number": 26,
+      "target_color": "#f4fcfc",
+      "fill_color": "#f4fcfc",
+      "representative_color": "#f3fdfe",
+      "area": 129,
       "bbox": {
-        "left": 598,
+        "left": 599,
         "top": 565,
-        "right": 1006,
-        "bottom": 780
+        "right": 607,
+        "bottom": 593
       },
       "centroid": {
-        "x": 671.8831775700935,
-        "y": 626.9883177570093
+        "x": 603.8759689922481,
+        "y": 579.3565891472869
       },
       "label_anchor": {
         "x": 605.0,
-        "y": 587.0,
+        "y": 586.0,
         "radius": 2.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 55,
-      "mask_color": "#000037",
-      "number": 17,
+      "id": 59,
+      "mask_color": "#00003b",
+      "number": 20,
       "target_color": "#f6c250",
       "fill_color": "#f6c250",
-      "representative_color": "#f0c152",
-      "area": 379,
+      "representative_color": "#f1c152",
+      "area": 303,
       "bbox": {
-        "left": 405,
-        "top": 565,
-        "right": 469,
-        "bottom": 585
+        "left": 423,
+        "top": 567,
+        "right": 468,
+        "bottom": 581
       },
       "centroid": {
-        "x": 441.00791556728234,
-        "y": 571.6860158311346
+        "x": 441.14521452145215,
+        "y": 572.1782178217821
       },
       "label_anchor": {
         "x": 437.0,
@@ -2381,244 +2804,276 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 56,
-      "mask_color": "#000038",
-      "number": 11,
-      "target_color": "#4eb4e4",
-      "fill_color": "#4eb4e4",
-      "representative_color": "#48b3e5",
-      "area": 18224,
+      "id": 60,
+      "mask_color": "#00003c",
+      "number": 13,
+      "target_color": "#4fb4e4",
+      "fill_color": "#4fb4e4",
+      "representative_color": "#49b3e5",
+      "area": 18070,
       "bbox": {
         "left": 205,
-        "top": 568,
+        "top": 569,
         "right": 438,
-        "bottom": 775
+        "bottom": 774
       },
       "centroid": {
-        "x": 333.55942712906057,
-        "y": 675.7525790166814
+        "x": 333.6967349197565,
+        "y": 675.7238516878805
       },
       "label_anchor": {
-        "x": 351.0,
-        "y": 688.0,
+        "x": 350.0,
+        "y": 689.0,
         "radius": 32.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 57,
-      "mask_color": "#000039",
-      "number": 23,
-      "target_color": "#f2fdfe",
-      "fill_color": "#f2fdfe",
+      "id": 61,
+      "mask_color": "#00003d",
+      "number": 26,
+      "target_color": "#f4fcfc",
+      "fill_color": "#f4fcfc",
       "representative_color": "#f3fefe",
-      "area": 283,
+      "area": 222,
       "bbox": {
-        "left": 387,
-        "top": 569,
+        "left": 518,
+        "top": 575,
         "right": 534,
-        "bottom": 818
+        "bottom": 618
       },
       "centroid": {
-        "x": 514.1590106007067,
-        "y": 623.3886925795053
+        "x": 528.5990990990991,
+        "y": 598.918918918919
       },
       "label_anchor": {
-        "x": 527.0,
-        "y": 609.0,
+        "x": 526.0,
+        "y": 607.0,
         "radius": 2.6666666666666665
       },
       "hide_number": false,
       "quality": {
         "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 58,
-      "mask_color": "#00003a",
-      "number": 24,
+      "id": 62,
+      "mask_color": "#00003e",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fdfdfa",
-      "area": 1196,
+      "area": 1086,
       "bbox": {
-        "left": 194,
-        "top": 507,
-        "right": 401,
-        "bottom": 615
+        "left": 323,
+        "top": 573,
+        "right": 394,
+        "bottom": 612
       },
       "centroid": {
-        "x": 361.3754180602007,
-        "y": 588.7408026755853
+        "x": 362.69244935543276,
+        "y": 590.6206261510129
       },
       "label_anchor": {
-        "x": 360.0,
-        "y": 589.0,
+        "x": 363.0,
+        "y": 590.0,
         "radius": 7.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 11
+        "merged_region_count": 3,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 59,
-      "mask_color": "#00003b",
-      "number": 2,
+      "id": 63,
+      "mask_color": "#00003f",
+      "number": 4,
       "target_color": "#f2495d",
       "fill_color": "#f2495d",
       "representative_color": "#f2495d",
-      "area": 2869,
+      "area": 2775,
       "bbox": {
-        "left": 177,
-        "top": 577,
+        "left": 422,
+        "top": 579,
         "right": 501,
-        "bottom": 781
+        "bottom": 659
       },
       "centroid": {
-        "x": 460.7699546880446,
-        "y": 618.7302195887069
+        "x": 461.41261261261263,
+        "y": 618.8771171171171
       },
       "label_anchor": {
-        "x": 436.0,
-        "y": 640.0,
+        "x": 486.0,
+        "y": 597.0,
         "radius": 6.333333333333333
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 60,
-      "mask_color": "#00003c",
-      "number": 18,
+      "id": 64,
+      "mask_color": "#000040",
+      "number": 21,
       "target_color": "#fdc249",
       "fill_color": "#fdc249",
       "representative_color": "#fbc24b",
-      "area": 1159,
+      "area": 1072,
       "bbox": {
-        "left": 142,
-        "top": 583,
+        "left": 305,
+        "top": 588,
         "right": 387,
         "bottom": 624
       },
       "centroid": {
-        "x": 343.3157894736842,
-        "y": 604.1044003451251
+        "x": 349.71921641791045,
+        "y": 604.4281716417911
       },
       "label_anchor": {
-        "x": 368.0,
-        "y": 612.0,
+        "x": 370.0,
+        "y": 613.0,
         "radius": 7.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 61,
-      "mask_color": "#00003d",
-      "number": 24,
+      "id": 65,
+      "mask_color": "#000041",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#fcfdfc",
-      "area": 754,
+      "representative_color": "#fcfcfb",
+      "area": 668,
       "bbox": {
-        "left": 206,
-        "top": 570,
-        "right": 477,
-        "bottom": 641
+        "left": 433,
+        "top": 590,
+        "right": 476,
+        "bottom": 630
       },
       "centroid": {
-        "x": 444.44827586206895,
-        "y": 604.7281167108754
+        "x": 452.8562874251497,
+        "y": 602.8832335329341
       },
       "label_anchor": {
-        "x": 456.0,
+        "x": 455.0,
         "y": 600.0,
-        "radius": 9.0
+        "radius": 8.333333333333334
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 17
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 62,
-      "mask_color": "#00003e",
-      "number": 24,
+      "id": 66,
+      "mask_color": "#000042",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fefefa",
-      "area": 1505,
+      "area": 1421,
       "bbox": {
-        "left": 174,
-        "top": 503,
-        "right": 371,
-        "bottom": 642
+        "left": 279,
+        "top": 597,
+        "right": 370,
+        "bottom": 636
       },
       "centroid": {
-        "x": 324.8730897009967,
-        "y": 612.4445182724253
+        "x": 327.2962702322308,
+        "y": 614.8951442646024
       },
       "label_anchor": {
-        "x": 325.0,
-        "y": 613.0,
+        "x": 328.0,
+        "y": 614.0,
         "radius": 8.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 63,
-      "mask_color": "#00003f",
-      "number": 3,
-      "target_color": "#d86879",
-      "fill_color": "#d86879",
-      "representative_color": "#d86879",
-      "area": 228,
+      "id": 67,
+      "mask_color": "#000043",
+      "number": 5,
+      "target_color": "#d66879",
+      "fill_color": "#d66879",
+      "representative_color": "#d66879",
+      "area": 260,
       "bbox": {
-        "left": 656,
-        "top": 563,
-        "right": 726,
-        "bottom": 627
+        "left": 633,
+        "top": 596,
+        "right": 671,
+        "bottom": 644
       },
       "centroid": {
-        "x": 672.0219298245614,
-        "y": 601.4078947368421
+        "x": 660.1538461538462,
+        "y": 618.6807692307692
       },
       "label_anchor": {
         "x": 661.0,
@@ -2629,27 +3084,66 @@
       "quality": {
         "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 11
+        "merged_region_count": 10,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 64,
-      "mask_color": "#000040",
-      "number": 24,
+      "id": 68,
+      "mask_color": "#000044",
+      "number": 27,
+      "target_color": "#ffffff",
+      "fill_color": "#ffffff",
+      "representative_color": "#fcfdfc",
+      "area": 774,
+      "bbox": {
+        "left": 446,
+        "top": 606,
+        "right": 490,
+        "bottom": 647
+      },
+      "centroid": {
+        "x": 470.4870801033592,
+        "y": 633.422480620155
+      },
+      "label_anchor": {
+        "x": 470.0,
+        "y": 635.0,
+        "radius": 9.333333333333334
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 69,
+      "mask_color": "#000045",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fdfefe",
-      "area": 5900,
+      "area": 5778,
       "bbox": {
         "left": 506,
         "top": 606,
         "right": 660,
-        "bottom": 813
+        "bottom": 704
       },
       "centroid": {
-        "x": 570.1289830508474,
-        "y": 648.2213559322034
+        "x": 569.7317410868812,
+        "y": 648.0420560747664
       },
       "label_anchor": {
         "x": 543.0,
@@ -2660,58 +3154,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 4,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 65,
-      "mask_color": "#000041",
-      "number": 24,
-      "target_color": "#ffffff",
-      "fill_color": "#ffffff",
-      "representative_color": "#fcfdfb",
-      "area": 822,
-      "bbox": {
-        "left": 110,
-        "top": 606,
-        "right": 490,
-        "bottom": 781
-      },
-      "centroid": {
-        "x": 467.45985401459853,
-        "y": 635.448905109489
-      },
-      "label_anchor": {
-        "x": 467.0,
-        "y": 637.0,
-        "radius": 9.666666666666666
-      },
-      "hide_number": false,
-      "quality": {
-        "is_tiny": false,
-        "is_small": false,
-        "touchable": true,
-        "merged_region_count": 10
-      }
-    },
-    {
-      "id": 66,
-      "mask_color": "#000042",
-      "number": 18,
+      "id": 70,
+      "mask_color": "#000046",
+      "number": 21,
       "target_color": "#fdc249",
       "fill_color": "#fdc249",
       "representative_color": "#fcc249",
-      "area": 1795,
+      "area": 1738,
       "bbox": {
-        "left": 168,
-        "top": 571,
-        "right": 354,
-        "bottom": 664
+        "left": 274,
+        "top": 610,
+        "right": 353,
+        "bottom": 660
       },
       "centroid": {
-        "x": 312.6233983286908,
-        "y": 633.808913649025
+        "x": 313.512082853855,
+        "y": 634.0350978135788
       },
       "label_anchor": {
         "x": 322.0,
@@ -2722,30 +3189,34 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 67,
-      "mask_color": "#000043",
-      "number": 13,
+      "id": 71,
+      "mask_color": "#000047",
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fb9084",
-      "area": 1142,
+      "area": 1075,
       "bbox": {
-        "left": 633,
-        "top": 576,
-        "right": 759,
+        "left": 637,
+        "top": 653,
+        "right": 707,
         "bottom": 674
       },
       "centroid": {
-        "x": 673.9369527145359,
-        "y": 660.9553415061296
+        "x": 672.4827906976744,
+        "y": 663.3404651162791
       },
       "label_anchor": {
-        "x": 674.0,
+        "x": 672.0,
         "y": 663.0,
         "radius": 10.0
       },
@@ -2753,27 +3224,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 68,
-      "mask_color": "#000044",
-      "number": 20,
+      "id": 72,
+      "mask_color": "#000048",
+      "number": 23,
       "target_color": "#fcd4cd",
       "fill_color": "#fcd4cd",
       "representative_color": "#fcd4cd",
-      "area": 7216,
+      "area": 7115,
       "bbox": {
         "left": 603,
         "top": 660,
-        "right": 995,
+        "right": 727,
         "bottom": 751
       },
       "centroid": {
-        "x": 657.5022172949002,
-        "y": 702.3586474501109
+        "x": 656.0271257905832,
+        "y": 702.2541110330288
       },
       "label_anchor": {
         "x": 631.0,
@@ -2784,27 +3259,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 69,
-      "mask_color": "#000045",
-      "number": 24,
+      "id": 73,
+      "mask_color": "#000049",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fafcfc",
-      "area": 1581,
+      "area": 1518,
       "bbox": {
-        "left": 32,
-        "top": 515,
+        "left": 199,
+        "top": 664,
         "right": 280,
-        "bottom": 773
+        "bottom": 769
       },
       "centroid": {
-        "x": 247.06261859582543,
-        "y": 705.5970904490829
+        "x": 249.11660079051384,
+        "y": 707.0131752305665
       },
       "label_anchor": {
         "x": 233.0,
@@ -2815,58 +3294,66 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 70,
-      "mask_color": "#000046",
-      "number": 18,
+      "id": 74,
+      "mask_color": "#00004a",
+      "number": 21,
       "target_color": "#fdc249",
       "fill_color": "#fdc249",
       "representative_color": "#fdc249",
-      "area": 6410,
+      "area": 6307,
       "bbox": {
         "left": 369,
-        "top": 661,
-        "right": 487,
+        "top": 664,
+        "right": 486,
         "bottom": 814
       },
       "centroid": {
-        "x": 426.4322932917317,
-        "y": 730.4463338533542
+        "x": 426.46931980339303,
+        "y": 730.519422863485
       },
       "label_anchor": {
-        "x": 456.0,
-        "y": 693.0,
+        "x": 457.0,
+        "y": 691.0,
         "radius": 20.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 12
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 71,
-      "mask_color": "#000047",
-      "number": 9,
+      "id": 75,
+      "mask_color": "#00004b",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#f87ca4",
-      "area": 650,
+      "area": 585,
       "bbox": {
-        "left": 537,
-        "top": 669,
-        "right": 781,
-        "bottom": 803
+        "left": 538,
+        "top": 671,
+        "right": 599,
+        "bottom": 706
       },
       "centroid": {
-        "x": 580.2169230769231,
-        "y": 689.7369230769231
+        "x": 575.2324786324787,
+        "y": 686.3982905982906
       },
       "label_anchor": {
         "x": 588.0,
@@ -2877,27 +3364,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 72,
-      "mask_color": "#000048",
-      "number": 6,
-      "target_color": "#1ea6e5",
-      "fill_color": "#1ea6e5",
+      "id": 76,
+      "mask_color": "#00004c",
+      "number": 8,
+      "target_color": "#1aa5e2",
+      "fill_color": "#1aa5e2",
       "representative_color": "#1fa6e5",
-      "area": 3075,
+      "area": 3027,
       "bbox": {
-        "left": 952,
-        "top": 679,
-        "right": 1014,
-        "bottom": 742
+        "left": 953,
+        "top": 680,
+        "right": 1013,
+        "bottom": 741
       },
       "centroid": {
-        "x": 982.9544715447155,
-        "y": 710.5008130081301
+        "x": 983.025768087215,
+        "y": 710.5500495540139
       },
       "label_anchor": {
         "x": 983.0,
@@ -2908,18 +3399,22 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 73,
-      "mask_color": "#000049",
-      "number": 20,
+      "id": 77,
+      "mask_color": "#00004d",
+      "number": 23,
       "target_color": "#fcd4cd",
       "fill_color": "#fcd4cd",
       "representative_color": "#fcd4cd",
-      "area": 6872,
+      "area": 6792,
       "bbox": {
         "left": 153,
         "top": 685,
@@ -2927,8 +3422,8 @@
         "bottom": 788
       },
       "centroid": {
-        "x": 210.3520081490105,
-        "y": 734.5151338766007
+        "x": 210.49573027090696,
+        "y": 734.5150176678445
       },
       "label_anchor": {
         "x": 222.0,
@@ -2939,58 +3434,66 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 74,
-      "mask_color": "#00004a",
-      "number": 24,
+      "id": 78,
+      "mask_color": "#00004e",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fdfdfd",
-      "area": 1391,
+      "area": 1325,
       "bbox": {
-        "left": 94,
+        "left": 504,
         "top": 689,
         "right": 595,
-        "bottom": 793
+        "bottom": 743
       },
       "centroid": {
-        "x": 551.6736161035226,
-        "y": 712.2774982027319
+        "x": 555.188679245283,
+        "y": 711.1207547169811
       },
       "label_anchor": {
-        "x": 562.0,
-        "y": 707.0,
+        "x": 568.0,
+        "y": 705.0,
         "radius": 7.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 75,
-      "mask_color": "#00004b",
-      "number": 16,
+      "id": 79,
+      "mask_color": "#00004f",
+      "number": 17,
       "target_color": "#77c2e3",
       "fill_color": "#77c2e3",
       "representative_color": "#77c2e3",
-      "area": 8372,
+      "area": 8288,
       "bbox": {
-        "left": 684,
-        "top": 696,
+        "left": 685,
+        "top": 697,
         "right": 856,
         "bottom": 856
       },
       "centroid": {
-        "x": 756.5029861442905,
-        "y": 764.6715241280459
+        "x": 756.3042953667954,
+        "y": 764.8857384169884
       },
       "label_anchor": {
         "x": 723.0,
@@ -3001,80 +3504,92 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 76,
-      "mask_color": "#00004c",
-      "number": 24,
+      "id": 80,
+      "mask_color": "#000050",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fbfdfd",
-      "area": 466,
+      "area": 433,
       "bbox": {
         "left": 714,
-        "top": 591,
-        "right": 790,
+        "top": 703,
+        "right": 746,
         "bottom": 738
       },
       "centroid": {
-        "x": 731.3197424892704,
-        "y": 714.6416309012875
+        "x": 729.8799076212471,
+        "y": 718.473441108545
       },
       "label_anchor": {
-        "x": 730.0,
-        "y": 717.0,
+        "x": 729.0,
+        "y": 718.0,
         "radius": 6.666666666666667
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 4,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 77,
-      "mask_color": "#00004d",
-      "number": 9,
+      "id": 81,
+      "mask_color": "#000051",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 10744,
+      "area": 10641,
       "bbox": {
         "left": 482,
         "top": 709,
-        "right": 651,
-        "bottom": 818
+        "right": 650,
+        "bottom": 814
       },
       "centroid": {
-        "x": 557.039277736411,
-        "y": 770.9961839166047
+        "x": 556.8189079973687,
+        "y": 770.9958650502772
       },
       "label_anchor": {
-        "x": 558.0,
+        "x": 557.0,
         "y": 768.0,
-        "radius": 44.333333333333336
+        "radius": 44.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 78,
-      "mask_color": "#00004e",
-      "number": 24,
+      "id": 82,
+      "mask_color": "#000052",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#ffffff",
-      "area": 15249,
+      "area": 15079,
       "bbox": {
         "left": 728,
         "top": 714,
@@ -3082,11 +3597,11 @@
         "bottom": 896
       },
       "centroid": {
-        "x": 820.0832185717096,
-        "y": 803.857236540101
+        "x": 820.207440811725,
+        "y": 803.8935605809404
       },
       "label_anchor": {
-        "x": 838.0,
+        "x": 839.0,
         "y": 804.0,
         "radius": 28.0
       },
@@ -3094,89 +3609,136 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 9,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 79,
-      "mask_color": "#00004f",
-      "number": 16,
-      "target_color": "#77c2e3",
-      "fill_color": "#77c2e3",
-      "representative_color": "#82c0da",
-      "area": 518,
+      "id": 83,
+      "mask_color": "#000053",
+      "number": 18,
+      "target_color": "#83c1db",
+      "fill_color": "#83c1db",
+      "representative_color": "#83c1db",
+      "area": 207,
       "bbox": {
         "left": 737,
-        "top": 616,
-        "right": 883,
-        "bottom": 745
+        "top": 715,
+        "right": 768,
+        "bottom": 742
       },
       "centroid": {
-        "x": 754.6274131274131,
-        "y": 722.5173745173745
+        "x": 746.1932367149758,
+        "y": 728.4927536231884
       },
       "label_anchor": {
-        "x": 756.0,
-        "y": 726.0,
+        "x": 741.0,
+        "y": 736.0,
+        "radius": 3.666666666666667
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 3,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 84,
+      "mask_color": "#000054",
+      "number": 27,
+      "target_color": "#ffffff",
+      "fill_color": "#ffffff",
+      "representative_color": "#f9fcfb",
+      "area": 226,
+      "bbox": {
+        "left": 747,
+        "top": 712,
+        "right": 775,
+        "bottom": 740
+      },
+      "centroid": {
+        "x": 755.4070796460177,
+        "y": 727.5486725663717
+      },
+      "label_anchor": {
+        "x": 755.0,
+        "y": 727.0,
         "radius": 4.333333333333333
       },
       "hide_number": false,
       "quality": {
         "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 80,
-      "mask_color": "#000050",
-      "number": 24,
+      "id": 85,
+      "mask_color": "#000055",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fdfdfd",
-      "area": 476,
+      "area": 399,
       "bbox": {
-        "left": 699,
-        "top": 677,
-        "right": 989,
+        "left": 700,
+        "top": 722,
+        "right": 727,
         "bottom": 748
       },
       "centroid": {
-        "x": 732.0042016806723,
-        "y": 730.9957983193277
+        "x": 712.0827067669173,
+        "y": 735.2756892230576
       },
       "label_anchor": {
-        "x": 711.0,
-        "y": 735.0,
+        "x": 712.0,
+        "y": 736.0,
         "radius": 8.333333333333334
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 81,
-      "mask_color": "#000051",
-      "number": 4,
+      "id": 86,
+      "mask_color": "#000056",
+      "number": 6,
       "target_color": "#ed6279",
       "fill_color": "#ed6279",
-      "representative_color": "#ee6379",
-      "area": 2670,
+      "representative_color": "#ef6379",
+      "area": 2613,
       "bbox": {
         "left": 328,
-        "top": 722,
+        "top": 724,
         "right": 394,
-        "bottom": 794
+        "bottom": 791
       },
       "centroid": {
-        "x": 363.012734082397,
-        "y": 765.3318352059925
+        "x": 362.98966704936856,
+        "y": 765.5591274397244
       },
       "label_anchor": {
         "x": 349.0,
@@ -3187,61 +3749,69 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 82,
-      "mask_color": "#000052",
-      "number": 9,
+      "id": 87,
+      "mask_color": "#000057",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 37985,
+      "area": 37803,
       "bbox": {
         "left": 581,
-        "top": 730,
+        "top": 732,
         "right": 964,
         "bottom": 1009
       },
       "centroid": {
-        "x": 785.4974858496776,
-        "y": 885.4124259576148
+        "x": 785.4935322593445,
+        "y": 885.5139803719281
       },
       "label_anchor": {
         "x": 862.0,
-        "y": 917.0,
-        "radius": 61.666666666666664
+        "y": 916.0,
+        "radius": 61.333333333333336
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 10
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 83,
-      "mask_color": "#000053",
-      "number": 24,
+      "id": 88,
+      "mask_color": "#000058",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#fbfdfb",
-      "area": 440,
+      "representative_color": "#fbfdfc",
+      "area": 391,
       "bbox": {
         "left": 674,
-        "top": 696,
-        "right": 951,
+        "top": 735,
+        "right": 707,
         "bottom": 765
       },
       "centroid": {
-        "x": 698.2636363636364,
-        "y": 747.8477272727273
+        "x": 690.6189258312021,
+        "y": 750.2046035805627
       },
       "label_anchor": {
-        "x": 693.0,
+        "x": 692.0,
         "y": 749.0,
         "radius": 6.666666666666667
       },
@@ -3249,89 +3819,101 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 4,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 84,
-      "mask_color": "#000054",
-      "number": 9,
+      "id": 89,
+      "mask_color": "#000059",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fd79a1",
-      "area": 25117,
+      "area": 24940,
       "bbox": {
         "left": 83,
-        "top": 741,
-        "right": 324,
+        "top": 742,
+        "right": 323,
         "bottom": 1022
       },
       "centroid": {
-        "x": 187.74427678464784,
-        "y": 847.414898276068
+        "x": 187.65128307939054,
+        "y": 847.3231756214916
       },
       "label_anchor": {
         "x": 177.0,
-        "y": 841.0,
+        "y": 840.0,
         "radius": 57.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 85,
-      "mask_color": "#000055",
-      "number": 6,
-      "target_color": "#1ea6e5",
-      "fill_color": "#1ea6e5",
-      "representative_color": "#1fa5e4",
-      "area": 1912,
+      "id": 90,
+      "mask_color": "#00005a",
+      "number": 8,
+      "target_color": "#1aa5e2",
+      "fill_color": "#1aa5e2",
+      "representative_color": "#1fa6e4",
+      "area": 1868,
       "bbox": {
-        "left": 938,
+        "left": 939,
         "top": 771,
         "right": 987,
-        "bottom": 823
+        "bottom": 819
       },
       "centroid": {
-        "x": 962.8566945606694,
-        "y": 795.489539748954
+        "x": 962.9320128479658,
+        "y": 795.4710920770877
       },
       "label_anchor": {
         "x": 963.0,
         "y": 796.0,
-        "radius": 22.666666666666668
+        "radius": 22.333333333333332
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 86,
-      "mask_color": "#000056",
-      "number": 19,
+      "id": 91,
+      "mask_color": "#00005b",
+      "number": 22,
       "target_color": "#e5bdc3",
       "fill_color": "#e5bdc3",
       "representative_color": "#e5bdc3",
-      "area": 24128,
+      "area": 23986,
       "bbox": {
         "left": 0,
-        "top": 776,
+        "top": 778,
         "right": 205,
         "bottom": 1023
       },
       "centroid": {
-        "x": 59.01960377984085,
-        "y": 923.8602868037135
+        "x": 58.86767280913866,
+        "y": 923.7784124072375
       },
       "label_anchor": {
         "x": 41.0,
@@ -3342,18 +3924,22 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 87,
-      "mask_color": "#000057",
-      "number": 19,
+      "id": 92,
+      "mask_color": "#00005c",
+      "number": 22,
       "target_color": "#e5bdc3",
       "fill_color": "#e5bdc3",
       "representative_color": "#e5bdc3",
-      "area": 18296,
+      "area": 18173,
       "bbox": {
         "left": 868,
         "top": 778,
@@ -3361,39 +3947,43 @@
         "bottom": 1023
       },
       "centroid": {
-        "x": 974.7662330564058,
-        "y": 932.3980651508526
+        "x": 974.8337093490343,
+        "y": 932.2980245419028
       },
       "label_anchor": {
-        "x": 989.0,
+        "x": 988.0,
         "y": 975.0,
-        "radius": 33.666666666666664
+        "radius": 33.333333333333336
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 88,
-      "mask_color": "#000058",
-      "number": 24,
+      "id": 93,
+      "mask_color": "#00005d",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#ffffff",
-      "area": 16880,
+      "area": 16645,
       "bbox": {
         "left": 239,
         "top": 788,
         "right": 477,
-        "bottom": 963
+        "bottom": 962
       },
       "centroid": {
-        "x": 336.98607819905214,
-        "y": 876.6847156398104
+        "x": 336.8070892159808,
+        "y": 876.5115650345449
       },
       "label_anchor": {
         "x": 404.0,
@@ -3404,213 +3994,276 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 89,
-      "mask_color": "#000059",
-      "number": 9,
+      "id": 94,
+      "mask_color": "#00005e",
+      "number": 11,
       "target_color": "#fd79a1",
       "fill_color": "#fd79a1",
       "representative_color": "#fc7ba2",
-      "area": 3331,
+      "area": 3236,
       "bbox": {
         "left": 356,
-        "top": 795,
+        "top": 798,
         "right": 517,
         "bottom": 875
       },
       "centroid": {
-        "x": 462.6853797658361,
-        "y": 835.2818973281297
+        "x": 463.75463535228675,
+        "y": 835.7351668726823
       },
       "label_anchor": {
         "x": 486.0,
         "y": 843.0,
-        "radius": 19.666666666666668
+        "radius": 19.333333333333332
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 12
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 90,
-      "mask_color": "#00005a",
-      "number": 20,
+      "id": 95,
+      "mask_color": "#00005f",
+      "number": 23,
       "target_color": "#fcd4cd",
       "fill_color": "#fcd4cd",
       "representative_color": "#fbd5d0",
-      "area": 1031,
+      "area": 976,
       "bbox": {
-        "left": 97,
-        "top": 788,
+        "left": 522,
+        "top": 815,
         "right": 585,
         "bottom": 835
       },
       "centroid": {
-        "x": 550.5722599418041,
-        "y": 825.9709020368574
+        "x": 554.2858606557377,
+        "y": 826.561475409836
       },
       "label_anchor": {
-        "x": 566.0,
-        "y": 826.0,
+        "x": 574.0,
+        "y": 825.0,
         "radius": 8.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 91,
-      "mask_color": "#00005b",
-      "number": 24,
+      "id": 96,
+      "mask_color": "#000060",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#fcfbfc",
-      "area": 1451,
+      "representative_color": "#fdfefd",
+      "area": 836,
       "bbox": {
         "left": 507,
         "top": 842,
-        "right": 559,
-        "bottom": 894
+        "right": 539,
+        "bottom": 888
       },
       "centroid": {
-        "x": 530.8980013783597,
-        "y": 860.7401791867677
+        "x": 521.5119617224881,
+        "y": 861.6674641148326
       },
       "label_anchor": {
-        "x": 543.0,
+        "x": 524.0,
         "y": 862.0,
-        "radius": 6.333333333333333
+        "radius": 4.333333333333333
       },
       "hide_number": false,
       "quality": {
-        "is_tiny": false,
+        "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 4,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 92,
-      "mask_color": "#00005c",
-      "number": 24,
+      "id": 97,
+      "mask_color": "#000061",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#fcfdfd",
-      "area": 1453,
+      "representative_color": "#fcfcfc",
+      "area": 547,
       "bbox": {
-        "left": 525,
-        "top": 845,
-        "right": 580,
-        "bottom": 918
+        "left": 533,
+        "top": 843,
+        "right": 559,
+        "bottom": 875
       },
       "centroid": {
-        "x": 554.180316586373,
-        "y": 881.7894012388163
+        "x": 545.6965265082267,
+        "y": 858.8372943327239
       },
       "label_anchor": {
-        "x": 562.0,
-        "y": 867.0,
+        "x": 544.0,
+        "y": 859.0,
         "radius": 6.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 15
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 93,
-      "mask_color": "#00005d",
-      "number": 13,
+      "id": 98,
+      "mask_color": "#000062",
+      "number": 27,
+      "target_color": "#ffffff",
+      "fill_color": "#ffffff",
+      "representative_color": "#fcfdfd",
+      "area": 581,
+      "bbox": {
+        "left": 554,
+        "top": 845,
+        "right": 580,
+        "bottom": 882
+      },
+      "centroid": {
+        "x": 566.500860585198,
+        "y": 862.8967297762479
+      },
+      "label_anchor": {
+        "x": 564.0,
+        "y": 860.0,
+        "radius": 6.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": false,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 4,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 99,
+      "mask_color": "#000063",
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fc8f81",
-      "area": 940,
+      "area": 883,
       "bbox": {
-        "left": 128,
-        "top": 719,
-        "right": 434,
+        "left": 341,
+        "top": 846,
+        "right": 373,
         "bottom": 881
       },
       "centroid": {
-        "x": 357.0872340425532,
-        "y": 858.954255319149
+        "x": 357.7010192525481,
+        "y": 863.3533408833522
       },
       "label_anchor": {
         "x": 359.0,
-        "y": 862.0,
+        "y": 863.0,
         "radius": 13.0
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 94,
-      "mask_color": "#00005e",
-      "number": 13,
+      "id": 100,
+      "mask_color": "#000064",
+      "number": 14,
       "target_color": "#fc8e81",
       "fill_color": "#fc8e81",
       "representative_color": "#fb8e81",
-      "area": 941,
+      "area": 898,
       "bbox": {
-        "left": 163,
-        "top": 687,
-        "right": 328,
+        "left": 292,
+        "top": 865,
+        "right": 327,
         "bottom": 901
       },
       "centroid": {
-        "x": 305.1307120085016,
-        "y": 880.0956429330499
+        "x": 308.57683741648106,
+        "y": 884.4899777282851
       },
       "label_anchor": {
-        "x": 306.0,
-        "y": 884.0,
+        "x": 309.0,
+        "y": 886.0,
         "radius": 13.333333333333334
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 95,
-      "mask_color": "#00005f",
-      "number": 11,
-      "target_color": "#4eb4e4",
-      "fill_color": "#4eb4e4",
+      "id": 101,
+      "mask_color": "#000065",
+      "number": 13,
+      "target_color": "#4fb4e4",
+      "fill_color": "#4fb4e4",
       "representative_color": "#4fb5e5",
-      "area": 9723,
+      "area": 9604,
       "bbox": {
-        "left": 240,
-        "top": 792,
+        "left": 461,
+        "top": 874,
         "right": 621,
         "bottom": 984
       },
       "centroid": {
-        "x": 534.1494394734135,
-        "y": 943.4890465905585
+        "x": 534.5543523531861,
+        "y": 943.8900458142441
       },
       "label_anchor": {
         "x": 571.0,
@@ -3621,27 +4274,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 12
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 96,
-      "mask_color": "#000060",
-      "number": 6,
-      "target_color": "#1ea6e5",
-      "fill_color": "#1ea6e5",
+      "id": 102,
+      "mask_color": "#000066",
+      "number": 8,
+      "target_color": "#1aa5e2",
+      "fill_color": "#1aa5e2",
       "representative_color": "#1da5e5",
-      "area": 1913,
+      "area": 1873,
       "bbox": {
-        "left": 83,
+        "left": 84,
         "top": 876,
         "right": 132,
-        "bottom": 929
+        "bottom": 924
       },
       "centroid": {
-        "x": 108.03815995818087,
-        "y": 899.8274960794563
+        "x": 108.01868659903897,
+        "y": 899.9103043246129
       },
       "label_anchor": {
         "x": 108.0,
@@ -3652,58 +4309,171 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 97,
-      "mask_color": "#000061",
-      "number": 24,
+      "id": 103,
+      "mask_color": "#000067",
+      "number": 19,
+      "target_color": "#95c8dd",
+      "fill_color": "#95c8dd",
+      "representative_color": "#95c8dd",
+      "area": 199,
+      "bbox": {
+        "left": 525,
+        "top": 881,
+        "right": 567,
+        "bottom": 899
+      },
+      "centroid": {
+        "x": 538.2010050251256,
+        "y": 887.1356783919598
+      },
+      "label_anchor": {
+        "x": 530.0,
+        "y": 887.0,
+        "radius": 2.6666666666666665
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 6,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 104,
+      "mask_color": "#000068",
+      "number": 27,
+      "target_color": "#ffffff",
+      "fill_color": "#ffffff",
+      "representative_color": "#fafcfb",
+      "area": 250,
+      "bbox": {
+        "left": 533,
+        "top": 886,
+        "right": 564,
+        "bottom": 897
+      },
+      "centroid": {
+        "x": 547.248,
+        "y": 891.072
+      },
+      "label_anchor": {
+        "x": 547.0,
+        "y": 890.0,
+        "radius": 4.0
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 105,
+      "mask_color": "#000069",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fcfefe",
-      "area": 702,
+      "area": 632,
       "bbox": {
-        "left": 278,
-        "top": 770,
+        "left": 438,
+        "top": 888,
         "right": 474,
-        "bottom": 916
+        "bottom": 915
       },
       "centroid": {
-        "x": 445.1267806267806,
-        "y": 891.7307692307693
+        "x": 455.98259493670884,
+        "y": 901.3275316455696
       },
       "label_anchor": {
         "x": 456.0,
-        "y": 901.0,
+        "y": 902.0,
         "radius": 9.666666666666666
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 98,
-      "mask_color": "#000062",
-      "number": 5,
-      "target_color": "#049fe4",
-      "fill_color": "#049fe4",
-      "representative_color": "#009ee6",
-      "area": 18494,
+      "id": 106,
+      "mask_color": "#00006a",
+      "number": 2,
+      "target_color": "#4c5b63",
+      "fill_color": "#4c5b63",
+      "representative_color": "#4c5b63",
+      "area": 244,
       "bbox": {
-        "left": 221,
+        "left": 528,
+        "top": 900,
+        "right": 573,
+        "bottom": 918
+      },
+      "centroid": {
+        "x": 548.2254098360655,
+        "y": 907.905737704918
+      },
+      "label_anchor": {
+        "x": 532.0,
+        "y": 915.0,
+        "radius": 1.6666666666666665
+      },
+      "hide_number": false,
+      "quality": {
+        "is_tiny": true,
+        "is_small": false,
+        "label_visible": true,
+        "touchable": true,
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
+      }
+    },
+    {
+      "id": 107,
+      "mask_color": "#00006b",
+      "number": 7,
+      "target_color": "#049fe5",
+      "fill_color": "#049fe5",
+      "representative_color": "#009ee6",
+      "area": 18218,
+      "bbox": {
+        "left": 225,
         "top": 909,
-        "right": 526,
+        "right": 522,
         "bottom": 1023
       },
       "centroid": {
-        "x": 368.8170758083703,
-        "y": 979.0435276305828
+        "x": 369.2394884180481,
+        "y": 979.1302009002086
       },
       "label_anchor": {
         "x": 355.0,
@@ -3714,27 +4484,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 14
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 99,
-      "mask_color": "#000063",
-      "number": 5,
-      "target_color": "#049fe4",
-      "fill_color": "#049fe4",
+      "id": 108,
+      "mask_color": "#00006c",
+      "number": 7,
+      "target_color": "#049fe5",
+      "fill_color": "#049fe5",
       "representative_color": "#009ee6",
-      "area": 20137,
+      "area": 19362,
       "bbox": {
-        "left": 533,
-        "top": 912,
-        "right": 863,
+        "left": 538,
+        "top": 915,
+        "right": 859,
         "bottom": 1023
       },
       "centroid": {
-        "x": 712.1289169191041,
-        "y": 977.9979142871331
+        "x": 714.0289226319595,
+        "y": 978.5186447681025
       },
       "label_anchor": {
         "x": 765.0,
@@ -3745,49 +4519,57 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 11
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 100,
-      "mask_color": "#000064",
-      "number": 24,
-      "target_color": "#ffffff",
-      "fill_color": "#ffffff",
+      "id": 109,
+      "mask_color": "#00006d",
+      "number": 26,
+      "target_color": "#f4fcfc",
+      "fill_color": "#f4fcfc",
       "representative_color": "#f5fdfd",
-      "area": 597,
+      "area": 451,
       "bbox": {
-        "left": 368,
-        "top": 795,
-        "right": 643,
+        "left": 526,
+        "top": 917,
+        "right": 598,
         "bottom": 932
       },
       "centroid": {
-        "x": 557.9396984924623,
-        "y": 905.1239530988274
+        "x": 554.4412416851442,
+        "y": 923.3569844789357
       },
       "label_anchor": {
-        "x": 542.0,
-        "y": 926.0,
+        "x": 539.0,
+        "y": 927.0,
         "radius": 4.333333333333333
       },
       "hide_number": false,
       "quality": {
         "is_tiny": true,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 9
+        "merged_region_count": 2,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 101,
-      "mask_color": "#000065",
-      "number": 6,
-      "target_color": "#1ea6e5",
-      "fill_color": "#1ea6e5",
+      "id": 110,
+      "mask_color": "#00006e",
+      "number": 8,
+      "target_color": "#1aa5e2",
+      "fill_color": "#1aa5e2",
       "representative_color": "#1da6e5",
-      "area": 5079,
+      "area": 5030,
       "bbox": {
         "left": 134,
         "top": 918,
@@ -3795,42 +4577,46 @@
         "bottom": 997
       },
       "centroid": {
-        "x": 173.43295924394565,
-        "y": 957.4203583382556
+        "x": 173.44055666003976,
+        "y": 957.5320079522863
       },
       "label_anchor": {
         "x": 173.0,
-        "y": 957.0,
+        "y": 958.0,
         "radius": 36.333333333333336
       },
       "hide_number": false,
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 102,
-      "mask_color": "#000066",
-      "number": 24,
+      "id": 111,
+      "mask_color": "#00006f",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
       "representative_color": "#fdfefe",
-      "area": 3954,
+      "area": 3712,
       "bbox": {
-        "left": 86,
-        "top": 793,
+        "left": 441,
+        "top": 926,
         "right": 630,
-        "bottom": 1020
+        "bottom": 1012
       },
       "centroid": {
-        "x": 524.9916540212444,
-        "y": 986.9491654021244
+        "x": 528.7297952586207,
+        "y": 987.2559267241379
       },
       "label_anchor": {
-        "x": 525.0,
+        "x": 529.0,
         "y": 1001.0,
         "radius": 11.0
       },
@@ -3838,27 +4624,31 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     },
     {
-      "id": 103,
-      "mask_color": "#000067",
-      "number": 24,
+      "id": 112,
+      "mask_color": "#000070",
+      "number": 27,
       "target_color": "#ffffff",
       "fill_color": "#ffffff",
-      "representative_color": "#fdfeff",
-      "area": 1100,
+      "representative_color": "#fdffff",
+      "area": 1025,
       "bbox": {
-        "left": 35,
-        "top": 775,
-        "right": 285,
+        "left": 233,
+        "top": 967,
+        "right": 275,
         "bottom": 1007
       },
       "centroid": {
-        "x": 250.54909090909092,
-        "y": 978.9145454545454
+        "x": 251.36975609756098,
+        "y": 983.550243902439
       },
       "label_anchor": {
         "x": 249.0,
@@ -3869,30 +4659,35 @@
       "quality": {
         "is_tiny": false,
         "is_small": false,
+        "label_visible": true,
         "touchable": true,
-        "merged_region_count": 8
+        "merged_region_count": 1,
+        "protected_detail": false,
+        "protected_detail_reason": null,
+        "protected_detail_color_distance": null
       }
     }
   ],
   "stats": {
-    "total_regions": 103,
-    "raw_region_count": 2398,
-    "final_region_count": 103,
-    "region_count_drop_pct": 95.7,
-    "unique_numbers": 24,
+    "total_regions": 112,
+    "raw_region_count": 191,
+    "final_region_count": 112,
+    "region_count_drop_pct": 41.36,
+    "unique_numbers": 27,
     "estimated_difficulty": 9,
     "small_regions_count": 0,
+    "protected_detail_region_count": 4,
     "giant_regions_count": 0
   },
   "estimated_difficulty": 9,
-  "total_regions": 103,
-  "unique_numbers": 24,
+  "total_regions": 112,
+  "unique_numbers": 27,
   "small_regions_count": 0,
-  "skipped_noise_regions": 1467,
-  "merged_small_regions_count": 5,
-  "merged_tiny_regions_count": 539,
-  "forced_tiny_region_merges_count": 510,
-  "remaining_tiny_regions_count": 1,
+  "skipped_noise_regions": 5,
+  "merged_small_regions_count": 3,
+  "merged_tiny_regions_count": 58,
+  "forced_tiny_region_merges_count": 42,
+  "remaining_tiny_regions_count": 5,
   "generation": {
     "source_mode": "line_plus_reference",
     "brightness_threshold": 120,
@@ -3906,15 +4701,15 @@
     "small_region_merge_mode": "shared_boundary_adjacency",
     "small_color_absorb_mode": "shared_boundary_adjacency",
     "tiny_region_merge_mode": "shared_boundary_adjacency",
-    "raw_region_count": 2398,
-    "final_region_count": 103,
-    "region_count_drop_pct": 95.7,
+    "raw_region_count": 191,
+    "final_region_count": 112,
+    "region_count_drop_pct": 41.36,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
-    "tiny_merge_rejected_non_adjacent": 19,
-    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_non_adjacent": 41,
+    "tiny_merge_rejected_color_distance": 87,
     "tiny_merge_rejected_giant_target": 0,
-    "tiny_merge_rejected_fragment_cap": 4667,
+    "tiny_merge_rejected_fragment_cap": 0,
     "tiny_merge_profile": "medium",
     "adaptive_palette": true,
     "quantize_method": "mediancut",
@@ -3926,22 +4721,68 @@
     "assumed_zoom": 6.0,
     "min_touch_bbox_side": 12,
     "untouchable_merge_color_threshold": 45.0,
-    "merged_untouchable_region_count": 11,
-    "merged_unreadable_region_count": 0,
-    "forced_unreadable_region_merges_count": 0,
-    "absorbed_isolated_unreadable_region_count": 273,
+    "merged_untouchable_region_count": 6,
+    "merged_unreadable_region_count": 6,
+    "forced_unreadable_region_merges_count": 5,
+    "absorbed_isolated_unreadable_region_count": 7,
     "label_gate_canvas_radius_px": 23.704,
     "merged_hidden_label_region_count": 0,
-    "remaining_hidden_label_region_count": 77,
+    "remaining_hidden_label_region_count": 87,
+    "protected_detail_candidate_count": 4,
+    "protected_detail_region_count": 4,
+    "protected_detail_merge_policy": "skip_all_region_merge_passes",
+    "ink_recovery_enabled": false,
     "ink_core_radius": 1,
     "ink_min_chroma_value": 60,
     "ink_min_chroma_spread": 18,
-    "recovered_ink_pixel_count": 7670,
-    "lost_color_pct": 2.42,
+    "recovered_ink_pixel_count": 0,
+    "recovered_ink_pixel_pct": 0.0,
+    "ink_recovery_overreach": false,
+    "segmentation_line_mode": "selected_preprocessing_candidate",
+    "segmentation_line_report": {
+      "mode": "selected_preprocessing_candidate",
+      "selected_profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0,
+      "evaluation_mode": "pre_generation_proxy_post_merge",
+      "quality_score": 67,
+      "playable_score": 100,
+      "raw_total_regions": 157,
+      "estimated_final_regions": 134,
+      "largest_region_pct": 22.06,
+      "candidate_count": 17,
+      "candidate_rescored_count": 6,
+      "lost_color_pct": 4.09,
+      "recovered_ink_pixel_count": 0
+    },
+    "display_line_mode": "safe_source_fallback",
+    "display_line_uses_segmentation_score": false,
+    "display_line_report": {
+      "candidate_mae": 0.0,
+      "candidate_changed_pct": 0.0,
+      "changed_pct_threshold": 10.0,
+      "mae_threshold": 12.0,
+      "stroke_lightened_pct_threshold": 10.0,
+      "stroke_pixel_count": 169732,
+      "stroke_lightened_count": 0,
+      "stroke_lightened_pct": 0.0,
+      "stroke_lightened_mae": 0.0,
+      "stroke_guard_failed": false,
+      "fallback_to_source": false,
+      "selected": "source_line",
+      "reason": "ink_recovery_disabled",
+      "ink_recovery_overreach": false,
+      "mode": "source_similarity_guard",
+      "candidate_source": "source_line_no_ink_recovery",
+      "uses_segmentation_score": false,
+      "recovered_ink_pixel_pct": 0.0,
+      "recovered_ink_overreach_threshold_pct": 12.0
+    },
+    "lost_color_pct": 4.09,
     "selected_preprocessing": {
-      "profile": "poster",
-      "brightness_threshold": 90,
-      "line_close_radius": 1
+      "profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0
     },
     "has_detail": true,
     "detail_mode": "reference_lerp_rgba",
@@ -3959,15 +4800,15 @@
     "small_region_merge_mode": "shared_boundary_adjacency",
     "small_color_absorb_mode": "shared_boundary_adjacency",
     "tiny_region_merge_mode": "shared_boundary_adjacency",
-    "raw_region_count": 2398,
-    "final_region_count": 103,
-    "region_count_drop_pct": 95.7,
+    "raw_region_count": 191,
+    "final_region_count": 112,
+    "region_count_drop_pct": 41.36,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
-    "tiny_merge_rejected_non_adjacent": 19,
-    "tiny_merge_rejected_color_distance": 0,
+    "tiny_merge_rejected_non_adjacent": 41,
+    "tiny_merge_rejected_color_distance": 87,
     "tiny_merge_rejected_giant_target": 0,
-    "tiny_merge_rejected_fragment_cap": 4667,
+    "tiny_merge_rejected_fragment_cap": 0,
     "tiny_merge_profile": "medium",
     "adaptive_palette": true,
     "quantize_method": "mediancut",
@@ -3979,22 +4820,68 @@
     "assumed_zoom": 6.0,
     "min_touch_bbox_side": 12,
     "untouchable_merge_color_threshold": 45.0,
-    "merged_untouchable_region_count": 11,
-    "merged_unreadable_region_count": 0,
-    "forced_unreadable_region_merges_count": 0,
-    "absorbed_isolated_unreadable_region_count": 273,
+    "merged_untouchable_region_count": 6,
+    "merged_unreadable_region_count": 6,
+    "forced_unreadable_region_merges_count": 5,
+    "absorbed_isolated_unreadable_region_count": 7,
     "label_gate_canvas_radius_px": 23.704,
     "merged_hidden_label_region_count": 0,
-    "remaining_hidden_label_region_count": 77,
+    "remaining_hidden_label_region_count": 87,
+    "protected_detail_candidate_count": 4,
+    "protected_detail_region_count": 4,
+    "protected_detail_merge_policy": "skip_all_region_merge_passes",
+    "ink_recovery_enabled": false,
     "ink_core_radius": 1,
     "ink_min_chroma_value": 60,
     "ink_min_chroma_spread": 18,
-    "recovered_ink_pixel_count": 7670,
-    "lost_color_pct": 2.42,
+    "recovered_ink_pixel_count": 0,
+    "recovered_ink_pixel_pct": 0.0,
+    "ink_recovery_overreach": false,
+    "segmentation_line_mode": "selected_preprocessing_candidate",
+    "segmentation_line_report": {
+      "mode": "selected_preprocessing_candidate",
+      "selected_profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0,
+      "evaluation_mode": "pre_generation_proxy_post_merge",
+      "quality_score": 67,
+      "playable_score": 100,
+      "raw_total_regions": 157,
+      "estimated_final_regions": 134,
+      "largest_region_pct": 22.06,
+      "candidate_count": 17,
+      "candidate_rescored_count": 6,
+      "lost_color_pct": 4.09,
+      "recovered_ink_pixel_count": 0
+    },
+    "display_line_mode": "safe_source_fallback",
+    "display_line_uses_segmentation_score": false,
+    "display_line_report": {
+      "candidate_mae": 0.0,
+      "candidate_changed_pct": 0.0,
+      "changed_pct_threshold": 10.0,
+      "mae_threshold": 12.0,
+      "stroke_lightened_pct_threshold": 10.0,
+      "stroke_pixel_count": 169732,
+      "stroke_lightened_count": 0,
+      "stroke_lightened_pct": 0.0,
+      "stroke_lightened_mae": 0.0,
+      "stroke_guard_failed": false,
+      "fallback_to_source": false,
+      "selected": "source_line",
+      "reason": "ink_recovery_disabled",
+      "ink_recovery_overreach": false,
+      "mode": "source_similarity_guard",
+      "candidate_source": "source_line_no_ink_recovery",
+      "uses_segmentation_score": false,
+      "recovered_ink_pixel_pct": 0.0,
+      "recovered_ink_overreach_threshold_pct": 12.0
+    },
+    "lost_color_pct": 4.09,
     "selected_preprocessing": {
-      "profile": "poster",
-      "brightness_threshold": 90,
-      "line_close_radius": 1
+      "profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0
     },
     "has_detail": true,
     "detail_mode": "reference_lerp_rgba",
@@ -4002,14 +4889,14 @@
   },
   "category_profile": "medium",
   "target_unique_colors": 64,
-  "initial_unique_numbers": 75,
-  "final_unique_numbers": 24,
+  "initial_unique_numbers": 87,
+  "final_unique_numbers": 27,
   "quantization_method": "mediancut",
   "quantized_reference_color_count": 160,
   "final_merge_threshold": 15.0,
   "palette_reduction_passes": 1,
   "palette_reduction_reason": "within_limit",
-  "absorbed_small_color_count": 1,
+  "absorbed_small_color_count": 0,
   "compat": {
     "region_palette_entries": true,
     "android_source_of_truth": "regions"

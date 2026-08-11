@@ -98,6 +98,12 @@ data class RegionMetadata(
 }
 
 data class LevelAssets(
+    // Role-based names used by the asset pipeline/reporting. Existing runtime code still
+    // reads the legacy fields below until the display-line behavior is changed explicitly.
+    @SerializedName("source_line") val sourceLine: String? = null,
+    @SerializedName("segmentation_line") val segmentationLine: String? = null,
+    @SerializedName("display_line") val displayLine: String? = null,
+    @SerializedName("legacy_line_render") val legacyLineRender: String? = null,
     @SerializedName("line") val line: String? = null,
     // Ảnh nét dùng để nhân lúc vẽ (xem AssetLevelRepositoryImpl). Khác "line" — cái đó là
     // bản đồ nhị phân dùng cho logic tô/loang màu.
@@ -132,8 +138,12 @@ data class GenerationMetadata(
 data class RegionQuality(
     @SerializedName("is_tiny") val isTiny: Boolean? = null,
     @SerializedName("is_small") val isSmall: Boolean? = null,
+    @SerializedName("label_visible") val labelVisible: Boolean? = null,
     @SerializedName("touchable") val touchable: Boolean? = null,
-    @SerializedName("merged_region_count") val mergedRegionCount: Int? = null
+    @SerializedName("merged_region_count") val mergedRegionCount: Int? = null,
+    @SerializedName("protected_detail") val protectedDetail: Boolean? = null,
+    @SerializedName("protected_detail_reason") val protectedDetailReason: String? = null,
+    @SerializedName("protected_detail_color_distance") val protectedDetailColorDistance: Float? = null
 )
 
 data class BoundingBox(

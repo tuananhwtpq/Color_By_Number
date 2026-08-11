@@ -99,17 +99,19 @@ class AssetLevelRepositoryImpl(
                 ?: error("Failed to decode line bitmap for $category/$levelId")
 
             val levelPath = "$category/$levelId"
-            // Ảnh nét dùng để NHÂN lên khi vẽ. Ưu tiên line_render.png: đó là bản giữ sắc độ
-            // anti-alias ở chỗ vẫn là nét, nhưng KHÔNG làm tối pixel đã được xếp là vùng tô
-            // được. Trước đây chỗ này nạp debug_source_line.png (ảnh nét GỐC), nên mọi mảng
-            // mực đặc đã được khôi phục thành vùng tô được (tóc, áo, mảng tối) vẫn còn tối
-            // trong ảnh gốc và bị nhân vào màu vùng -> bôi đen. Đo trên Art/09: 19.8% pixel
-            // tô được bị bôi tối, lệch trung bình so với preview 15.9; dùng line_render còn
-            // 0.33. Hai nhánh dự phòng phía sau để level chưa sinh lại vẫn chạy như cũ.
+            // Ảnh nét dùng để NHÂN lên khi vẽ. Ưu tiên display_line.png mới: generator chỉ
+            // dùng bản recovered-ink nếu nó còn gần line gốc, nếu không sẽ fallback về line
+            // gốc để tránh nét bị mờ/xoá quá tay. Các nhánh line_render/debug_source_line/line
+            // phía sau giữ tương thích với assets cũ chưa sinh lại.
             val displayLineBitmap = decodeOptionalConfiguredBitmap(
                 assetManager = assetManager,
                 levelPath = levelPath,
-                configuredFileName = config.assets?.lineRender,
+                configuredFileName = config.assets?.displayLine,
+                fallbackBasePath = "$levelPath/display_line"
+            ) ?: decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.lineRender ?: config.assets?.legacyLineRender,
                 fallbackBasePath = "$levelPath/line_render"
             ) ?: decodeOptionalConfiguredBitmap(
                 assetManager = assetManager,

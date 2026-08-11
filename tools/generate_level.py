@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from collections import Counter, defaultdict, deque
 
-from PIL import Image, ImageChops, ImageFilter
+from PIL import Image, ImageChops, ImageFilter, ImageStat
 from PIL import ImageDraw
 
 try:
@@ -230,6 +230,16 @@ def close_small_line_gaps(binary_img, close_radius):
 DEFAULT_INK_RECOVERY_RADIUS = 1
 DEFAULT_INK_MIN_CHROMA_VALUE = 60
 DEFAULT_INK_MIN_CHROMA_SPREAD = 18
+SOURCE_STROKE_WALL_THRESHOLD = 180
+
+
+def preserve_source_strokes_as_walls(binary_img, source_gray, stroke_threshold=SOURCE_STROKE_WALL_THRESHOLD):
+    """Force visible source-line strokes to remain segmentation walls."""
+    stroke_wall = source_gray.point(
+        lambda value: 0 if value < stroke_threshold else 255,
+        mode="L",
+    )
+    return ImageChops.darker(binary_img, stroke_wall)
 
 
 def build_chromatic_mask(
@@ -340,6 +350,7 @@ def load_binary_fill_map(line_art_path, brightness_threshold, line_close_radius)
     gray = line_img.convert("L")
     binary = gray.point(lambda value: 255 if value > brightness_threshold else 0, mode="L")
     binary = close_small_line_gaps(binary, line_close_radius)
+    binary = preserve_source_strokes_as_walls(binary, gray)
     return line_img, binary
 
 
@@ -545,17 +556,13 @@ def score_preprocessing_candidate(
 def preprocessing_candidate_sort_key(item):
     """Thứ tự ưu tiên khi chọn candidate tiền xử lý.
 
-    Gameplay (playable_score, quality_score) vẫn quyết định trước — đây là ràng buộc để
-    không phá lại việc chống vùng khổng lồ. `lost_color_pct` xen vào ngay sau đó: giữa các
-    candidate tương đương về gameplay, chọn cái vứt đi ÍT màu thật của ảnh gốc nhất. Trước
-    đây khâu chấm điểm hoàn toàn mù về màu nên hay chọn bản đồ vùng nuốt mất cả mảng màu.
+    Gameplay (playable_score, quality_score) quyết định trước. Không dùng `lost_color_pct`
+    để phá hoà nữa: tiêu chí đó từng kéo candidate về ngưỡng quá thấp và biến nét xám của
+    ảnh gốc thành vùng tô, gây lỗi tô tràn qua vùng chưa khoanh.
     """
-    lost_color_pct = item.get("lost_color_pct")
     return (
         item.get("playable_score", item.get("candidate_playable_score", 0)),
         item.get("quality_score", item.get("score", 0)),
-        # None nghĩa là không đo được (không có ảnh tham chiếu) -> không thưởng/phạt.
-        -(lost_color_pct if lost_color_pct is not None else 0.0),
         -abs(item.get("largest_region_pct", 0) - 35.0),
         item.get("total_regions", 0),
     )
@@ -595,7 +602,8 @@ def select_binary_fill_map(
             "Kích thước của ảnh nét vẽ và ảnh tham chiếu phải trùng khớp "
             f"(line={line_img.size}, reference={ref_img.size})."
         )
-    # Tính một lần rồi dùng lại cho mọi candidate; ảnh gốc không đổi giữa các candidate.
+    # Tính một lần cho audit metadata. Không dùng để khôi phục mực vào segmentation nữa:
+    # ink recovery từng biến nét gốc thành vùng tô và gây tô tràn qua vùng chưa khoanh.
     chromatic_mask = (
         None
         if ref_img is None
@@ -618,22 +626,9 @@ def select_binary_fill_map(
             mode="L",
         )
         binary = close_small_line_gaps(binary, candidate["line_close_radius"])
-        # Khôi phục mảng mực đặc NGAY TỪ vòng chấm điểm rẻ, để mọi candidate được đánh giá
-        # trên đúng bản đồ vùng sẽ dùng thật, và để shortlist không loại nhầm candidate chỉ
-        # vì bản chưa khôi phục của nó trông ít vùng hơn.
+        binary = preserve_source_strokes_as_walls(binary, gray)
         recovered_ink_pixel_count = 0
         recovered_mask = None
-        if chromatic_mask is not None:
-            recovered_mask = build_recovered_ink_mask(
-                binary, chromatic_mask, ink_core_radius
-            )
-            recovered_ink_pixel_count = (
-                count_mask_pixels(recovered_mask) if recovered_mask else 0
-            )
-            if recovered_ink_pixel_count:
-                binary = ImageChops.lighter(binary, recovered_mask)
-            else:
-                recovered_mask = None
         cheap_report = score_preprocessing_candidate(binary, playability_profile=playability_profile)
         cheap_candidates.append({
             **candidate,
@@ -698,6 +693,27 @@ def make_runtime_preprocessing_report(selected_preprocessing):
         key: selected_preprocessing[key]
         for key in ["profile", "brightness_threshold", "line_close_radius"]
         if key in selected_preprocessing
+    }
+
+
+def make_segmentation_line_report(selected_preprocessing):
+    return {
+        "mode": "selected_preprocessing_candidate",
+        "selected_profile": selected_preprocessing.get("profile"),
+        "brightness_threshold": selected_preprocessing.get("brightness_threshold"),
+        "line_close_radius": selected_preprocessing.get("line_close_radius"),
+        "evaluation_mode": selected_preprocessing.get("evaluation_mode"),
+        "quality_score": selected_preprocessing.get("quality_score")
+        or selected_preprocessing.get("score"),
+        "playable_score": selected_preprocessing.get("playable_score")
+        or selected_preprocessing.get("candidate_playable_score"),
+        "raw_total_regions": selected_preprocessing.get("raw_total_regions"),
+        "estimated_final_regions": selected_preprocessing.get("total_regions"),
+        "largest_region_pct": selected_preprocessing.get("largest_region_pct"),
+        "candidate_count": selected_preprocessing.get("candidate_count"),
+        "candidate_rescored_count": selected_preprocessing.get("candidate_rescored_count"),
+        "lost_color_pct": selected_preprocessing.get("lost_color_pct"),
+        "recovered_ink_pixel_count": selected_preprocessing.get("recovered_ink_pixel_count"),
     }
 
 
@@ -1137,6 +1153,12 @@ def choose_palette_color(target_color, palette_colors):
 # không biết là màu/số gì.
 LABEL_UNREADABLE_RADIUS_PX = 1.5
 DEFAULT_LABEL_GATE_MAX_HIDDEN_PCT = 80.0
+PROTECTED_DETAIL_MIN_AREA = 20
+PROTECTED_DETAIL_MAX_AREA = 600
+PROTECTED_DETAIL_MAX_AREA_PCT = 1.0
+PROTECTED_DETAIL_MAX_SIDE = 40
+PROTECTED_DETAIL_COLOR_DISTANCE = 45.0
+NON_MEANINGFUL_MERGE_MAX_THICKNESS = 2.5
 
 
 # Chi phí bước đi của chamfer distance transform, xấp xỉ khoảng cách Euclid bằng số
@@ -1260,23 +1282,125 @@ def find_label_anchor(region, bbox, centroid):
 def build_display_line_image(source_line_img, recovered_ink_mask):
     """Ảnh nét mà APP nhân lên khi chơi.
 
-    Bắt đầu từ ĐÚNG ảnh nét gốc, chỉ làm trắng các pixel thuộc mặt nạ ink-recovery. Nói cách
-    khác: giống hệt debug_source_line.png ở mọi pixel, TRỪ các mảng mực đặc đã được khôi
-    phục thành vùng tô được. Nhờ vậy nét vẽ giữ nguyên độ sắc và anti-alias như bản vốn chạy
-    tốt, mà vẫn hết cảnh tóc/áo bị nhân với giá trị tối rồi bôi đen.
-
-    KHÔNG dùng lại render_line_img (= max(ảnh gốc, binary)) nữa. binary là bản đồ PHÂN VÙNG
-    sinh ra bằng một ngưỡng độ sáng, nên `max` đẩy mọi pixel nét sáng hơn ngưỡng lên trắng
-    tinh: đo trên Animal/01 (ngưỡng 90) thì 48.4% pixel nét nhìn thấy được bị xoá trắng, 82%
-    trong số đó chỉ vì sáng hơn ngưỡng chứ không phải do ink-recovery. Hậu quả là nét đứt
-    thành nét gạch và mất 2/3 anti-alias. Ngưỡng đó được tinh chỉnh cho việc flood-fill, dùng
-    nó để quyết định HIỂN THỊ là sai.
-
+    Bắt đầu và kết thúc bằng ĐÚNG ảnh nét gốc. Ink recovery đã bị tắt khỏi pipeline vì nó
+    từng xoá nét gốc khỏi line hiển thị và biến pixel nét thành vùng tô. Tham số
+    recovered_ink_mask chỉ còn để giữ tương thích với test/call-site cũ.
     """
-    display = source_line_img.convert("L")
-    if recovered_ink_mask is not None:
-        display = ImageChops.lighter(display, recovered_ink_mask)
-    return display.convert("RGB")
+    _ = recovered_ink_mask
+    return source_line_img.convert("RGB")
+
+
+DISPLAY_LINE_CHANGED_PIXEL_THRESHOLD = 10
+DISPLAY_LINE_CHANGED_PCT_FALLBACK_THRESHOLD = 10.0
+DISPLAY_LINE_MAE_FALLBACK_THRESHOLD = 12.0
+DISPLAY_LINE_STROKE_LIGHTENED_PCT_FALLBACK_THRESHOLD = 10.0
+INK_RECOVERY_OVERREACH_RECOVERED_PCT_THRESHOLD = 12.0
+
+
+def measure_line_difference(source_line_img, candidate_line_img, changed_threshold=DISPLAY_LINE_CHANGED_PIXEL_THRESHOLD):
+    source = source_line_img.convert("L")
+    candidate = candidate_line_img.convert("L")
+    if candidate.size != source.size:
+        candidate = candidate.resize(source.size, Image.Resampling.BILINEAR)
+    diff = ImageChops.difference(source, candidate)
+    stat = ImageStat.Stat(diff)
+    changed_count = sum(1 for value in diff.getdata() if value > changed_threshold)
+    total = max(1, diff.width * diff.height)
+    return {
+        "mae": round(stat.mean[0], 2),
+        "changed_pct": round(changed_count * 100.0 / total, 2),
+    }
+
+
+def measure_stroke_preservation(
+    source_line_img,
+    candidate_line_img,
+    stroke_threshold=245,
+    lightened_threshold=DISPLAY_LINE_CHANGED_PIXEL_THRESHOLD,
+):
+    """Measure display-line damage only on pixels that belong to the source strokes."""
+    source = source_line_img.convert("L")
+    candidate = candidate_line_img.convert("L")
+    if candidate.size != source.size:
+        candidate = candidate.resize(source.size, Image.Resampling.BILINEAR)
+
+    source_pixels = source.load()
+    candidate_pixels = candidate.load()
+    stroke_count = 0
+    lightened_count = 0
+    total_lightened = 0
+    for y in range(source.height):
+        for x in range(source.width):
+            source_value = source_pixels[x, y]
+            if source_value >= stroke_threshold:
+                continue
+            stroke_count += 1
+            delta = candidate_pixels[x, y] - source_value
+            if delta > lightened_threshold:
+                lightened_count += 1
+                total_lightened += delta
+
+    if stroke_count == 0:
+        return {
+            "stroke_pixel_count": 0,
+            "stroke_lightened_count": 0,
+            "stroke_lightened_pct": 0.0,
+            "stroke_lightened_mae": 0.0,
+        }
+
+    return {
+        "stroke_pixel_count": stroke_count,
+        "stroke_lightened_count": lightened_count,
+        "stroke_lightened_pct": round(lightened_count * 100.0 / stroke_count, 2),
+        "stroke_lightened_mae": round(total_lightened / stroke_count, 2),
+    }
+
+
+def build_safe_display_line_image(
+    source_line_img,
+    candidate_line_img,
+    changed_pct_threshold=DISPLAY_LINE_CHANGED_PCT_FALLBACK_THRESHOLD,
+    mae_threshold=DISPLAY_LINE_MAE_FALLBACK_THRESHOLD,
+    stroke_lightened_pct_threshold=DISPLAY_LINE_STROKE_LIGHTENED_PCT_FALLBACK_THRESHOLD,
+):
+    """Return the UX-facing display line and a report describing any fallback.
+
+    `candidate_line_img` is the legacy recovered-ink display line. It is useful when it only
+    removes true solid fill ink, but harmful when recovery eats thin strokes/texture. The safe
+    display line keeps the candidate only while it remains close to the source line; otherwise
+    it falls back to the exact source art so user-facing strokes stay crisp.
+    """
+    diff = measure_line_difference(source_line_img, candidate_line_img)
+    stroke_report = measure_stroke_preservation(source_line_img, candidate_line_img)
+    stroke_guard_failed = (
+        stroke_report["stroke_lightened_pct"] > stroke_lightened_pct_threshold
+    )
+    fallback = (
+        diff["changed_pct"] > changed_pct_threshold
+        or diff["mae"] > mae_threshold
+        or stroke_guard_failed
+    )
+    reason = "within_threshold"
+    if diff["changed_pct"] > changed_pct_threshold or diff["mae"] > mae_threshold:
+        reason = "over_threshold"
+    elif stroke_guard_failed:
+        reason = "stroke_guard_failed"
+    report = {
+        "candidate_mae": diff["mae"],
+        "candidate_changed_pct": diff["changed_pct"],
+        "changed_pct_threshold": changed_pct_threshold,
+        "mae_threshold": mae_threshold,
+        "stroke_lightened_pct_threshold": stroke_lightened_pct_threshold,
+        **stroke_report,
+        "stroke_guard_failed": stroke_guard_failed,
+        "fallback_to_source": fallback,
+        "selected": "source_line" if fallback else "recovered_ink_candidate",
+        "reason": reason,
+        "ink_recovery_overreach": fallback,
+    }
+    if fallback:
+        return source_line_img.convert("RGB"), report
+    return candidate_line_img.convert("RGB"), report
 
 
 def estimate_difficulty(total_regions, unique_numbers, small_regions_count):
@@ -1561,6 +1685,109 @@ def classify_region_infos(
     return region_infos
 
 
+def is_protected_detail_region(info):
+    return bool(info and info.get("protect_from_merge"))
+
+
+def is_non_meaningful_merge_noise(info):
+    return (
+        int(info.get("area", 0) or 0) < PROTECTED_DETAIL_MIN_AREA
+        or (
+            bbox_min_side(info["bbox"]) <= NON_MEANINGFUL_MERGE_MAX_THICKNESS
+            and region_thickness_diameter(info) <= NON_MEANINGFUL_MERGE_MAX_THICKNESS
+        )
+    )
+
+
+def can_merge_color_drift_region(info, color_gap, color_threshold):
+    return (
+        color_gap <= color_threshold
+        or info.get("hide_number")
+        or is_non_meaningful_merge_noise(info)
+    )
+
+
+def mark_protected_detail_regions(
+    region_infos,
+    attach_distance,
+    color_distance_threshold=PROTECTED_DETAIL_COLOR_DISTANCE,
+    min_area=PROTECTED_DETAIL_MIN_AREA,
+    max_area=PROTECTED_DETAIL_MAX_AREA,
+    total_pixels=None,
+    max_area_pct=PROTECTED_DETAIL_MAX_AREA_PCT,
+    max_side=PROTECTED_DETAIL_MAX_SIDE,
+):
+    """Protect small high-contrast islands from later merge passes.
+
+    Examples: watermelon seeds, flower dots, tiny eyes. These may be too small to show a
+    permanent label, but if their reference color differs sharply from nearby larger regions
+    they should remain interactive regions instead of being swallowed by a parent color.
+    """
+    if not region_infos:
+        return 0
+
+    point_index = build_region_point_index(region_infos)
+    protected_count = 0
+    for idx, info in enumerate(region_infos):
+        if is_protected_detail_region(info):
+            protected_count += 1
+            continue
+        # A protected detail becomes a standalone paint target. If the target is already too
+        # small to show a number or too narrow to tap reliably, keeping it separate creates the
+        # exact UX failure users see as dozens of tiny highlighted dots. Let merge passes handle
+        # those specks; only protect details that are still playable as independent regions.
+        if (
+            info.get("hide_number")
+            or info.get("is_micro_region")
+            or info.get("is_tiny_display_region")
+        ):
+            continue
+        area = int(info.get("area", 0) or 0)
+        if area < min_area or area > max_area:
+            continue
+        if (
+            total_pixels is not None
+            and area * 100.0 / max(1, total_pixels) > max_area_pct
+        ):
+            continue
+        if bbox_min_side(info["bbox"]) <= 0:
+            continue
+        if max(bbox_width(info["bbox"]), bbox_height(info["bbox"])) > max_side:
+            continue
+
+        adjacent_counts, bridged_ink_gap = find_adjacent_region_indices(
+            idx,
+            region_infos,
+            point_index,
+            ink_gap_px=attach_distance,
+        )
+        candidates = []
+        for candidate_idx, shared_boundary_count in adjacent_counts.items():
+            candidate = region_infos[candidate_idx]
+            if candidate["area"] <= area:
+                continue
+            gap = color_distance(info["target_color"], candidate["target_color"])
+            score = gap - min(shared_boundary_count, 12) * 0.25
+            candidates.append((score, gap, candidate_idx, bridged_ink_gap))
+        if not candidates:
+            continue
+
+        _, best_gap, best_idx, used_ink_gap = max(candidates, key=lambda item: item[1])
+        if best_gap < color_distance_threshold:
+            continue
+
+        neighbor = region_infos[best_idx]
+        info["protect_from_merge"] = True
+        info["protected_detail_reason"] = "small_high_contrast_island"
+        info["protected_detail_color_distance"] = round(best_gap, 2)
+        info["protected_detail_neighbor_area"] = neighbor["area"]
+        info["protected_detail_neighbor_color"] = neighbor["target_color"]
+        info["protected_detail_bridged_ink_gap"] = used_ink_gap
+        protected_count += 1
+
+    return protected_count
+
+
 def count_remaining_micro_regions(
     region_infos,
     min_region_area,
@@ -1788,6 +2015,8 @@ def merge_tiny_regions_into_neighbors(
             if small_idx in tombstoned or small_idx in frozen_targets:
                 continue
             small_info = region_infos[small_idx]
+            if is_protected_detail_region(small_info):
+                continue
             if not small_info.get("is_micro_region"):
                 continue
 
@@ -1808,6 +2037,8 @@ def merge_tiny_regions_into_neighbors(
                     # tại đầu lượt. Để lượt sau xử lý tiếp cho nhất quán.
                     continue
                 candidate_info = region_infos[candidate_idx]
+                if is_protected_detail_region(candidate_info):
+                    continue
                 if candidate_info["area"] <= small_info["area"]:
                     continue
                 merged_pct = (candidate_info["area"] + small_info["area"]) * 100.0 / total_pixels
@@ -1837,8 +2068,21 @@ def merge_tiny_regions_into_neighbors(
                 elif not policy["allow_fallback"]:
                     rejected_color_distance_count += 1
 
-                if policy["allow_fallback"] and (
-                    fallback_candidate_score is None or score < fallback_candidate_score
+                elif policy["allow_fallback"] and not can_merge_color_drift_region(
+                    small_info,
+                    color_gap,
+                    effective_color_threshold,
+                ):
+                    rejected_color_distance_count += 1
+
+                if (
+                    policy["allow_fallback"]
+                    and can_merge_color_drift_region(
+                        small_info,
+                        color_gap,
+                        effective_color_threshold,
+                    )
+                    and (fallback_candidate_score is None or score < fallback_candidate_score)
                 ):
                     fallback_candidate_score = score
                     fallback_candidate_idx = candidate_idx
@@ -1913,6 +2157,8 @@ def absorb_small_region_colors(
     sorted_indices = sorted(range(len(region_infos)), key=lambda idx: region_infos[idx]["area"])
     for small_idx in sorted_indices:
         info = region_infos[small_idx]
+        if is_protected_detail_region(info):
+            continue
         if not is_tiny_display_region(info, tiny_area_threshold, tiny_side_threshold):
             continue
 
@@ -1925,6 +2171,8 @@ def absorb_small_region_colors(
         )
         for large_idx, shared_boundary_count in adjacent_counts.items():
             candidate = region_infos[large_idx]
+            if is_protected_detail_region(candidate):
+                continue
             if candidate["area"] <= info["area"]:
                 continue
 
@@ -1946,7 +2194,11 @@ def absorb_small_region_colors(
     return absorbed_count
 
 
-def absorb_isolated_unreadable_regions_by_proximity(region_infos, unreadable_radius_px):
+def absorb_isolated_unreadable_regions_by_proximity(
+    region_infos,
+    unreadable_radius_px,
+    color_threshold=PROTECTED_DETAIL_COLOR_DISTANCE,
+):
     """Phương án CUỐI CÙNG cho vùng không đọc được số dù zoom tối đa mà bị nét vẽ bao kín
     hoàn toàn (không có láng giềng liền kề nào — ví dụ 1 ô nhỏ trong hoạ tiết mandala, mỗi ô
     có viền riêng). merge_tiny_regions_into_neighbors (shared-boundary adjacency, đúng thiết
@@ -1954,13 +2206,16 @@ def absorb_isolated_unreadable_regions_by_proximity(region_infos, unreadable_rad
     adjacency để dùng.
 
     Gán trực tiếp vào vùng ĐỌC ĐƯỢC gần nhất theo khoảng cách centroid, bỏ qua yêu cầu liền
-    kề VÀ yêu cầu màu khớp — chấp nhận đổi màu hoàn toàn, vì để lại 1 ô user tap được nhưng
-    không bao giờ biết là gì luôn tệ hơn. Chỉ áp dụng cho vùng ĐÃ xác nhận không đọc được số;
-    không đụng tới vùng khác.
+    kề nhưng vẫn giữ guard màu: chỉ nuốt vùng lệch màu nếu nó là noise/anti-alias thật sự.
+    Vùng nhỏ có ý nghĩa màu (ví dụ hạt dưa, chấm hoa, mắt) phải được giữ lại cho dù label
+    thường bị ẩn. Chỉ áp dụng cho vùng ĐÃ xác nhận không đọc được số; không đụng tới vùng khác.
     """
     survivors = []
     isolated = []
     for info in region_infos:
+        if is_protected_detail_region(info):
+            survivors.append(info)
+            continue
         radius = info.get("label_anchor", {}).get("radius")
         if radius is not None and radius < unreadable_radius_px:
             isolated.append(info)
@@ -1985,12 +2240,28 @@ def absorb_isolated_unreadable_regions_by_proximity(region_infos, unreadable_rad
         # Hạn mức ở đây là MỀM: ưu tiên vùng gần nhất còn dưới hạn mức, nhưng nếu không còn
         # vùng nào như vậy thì vẫn gộp vào vùng gần nhất — đây là phương án CUỐI cho vùng
         # không đọc được số và không có láng giềng, để trống nó còn tệ hơn.
-        under_cap = [
+        eligible_survivors = [
             candidate
             for candidate in survivors
+            if (
+                not is_protected_detail_region(candidate)
+                and can_merge_color_drift_region(
+                    small_info,
+                    color_distance(small_info["target_color"], candidate["target_color"]),
+                    color_threshold,
+                )
+            )
+        ]
+        if not eligible_survivors:
+            unresolved.append(small_info)
+            continue
+
+        under_cap = [
+            candidate
+            for candidate in eligible_survivors
             if merged_fragment_count(candidate, small_info, True) <= MAX_REGION_FRAGMENTS
         ]
-        nearest = min(under_cap or survivors, key=distance_to)
+        nearest = min(under_cap or eligible_survivors, key=distance_to)
         merge_region_info_into_parent(nearest, small_info, bridged_ink_gap=True)
         absorbed_count += 1
 
@@ -2031,6 +2302,7 @@ def merge_small_attached_regions(
                 for idx, info in enumerate(region_infos)
                 if info["area"] < min_region_area
                 or is_tiny_display_region(info, tiny_area_threshold, tiny_side_threshold)
+                if not is_protected_detail_region(info)
             ],
             key=lambda idx: region_infos[idx]["area"],
         )
@@ -2045,6 +2317,8 @@ def merge_small_attached_regions(
             if small_idx in tombstoned or small_idx in frozen_targets:
                 continue
             small_info = region_infos[small_idx]
+            if is_protected_detail_region(small_info):
+                continue
             small_or_tiny = (
                 small_info["area"] < min_region_area
                 or is_tiny_display_region(small_info, tiny_area_threshold, tiny_side_threshold)
@@ -2062,6 +2336,8 @@ def merge_small_attached_regions(
                 if large_idx in tombstoned or large_idx in frozen_targets:
                     continue
                 large_info = region_infos[large_idx]
+                if is_protected_detail_region(large_info):
+                    continue
                 if large_info["area"] <= small_info["area"]:
                     continue
                 merged_pct = (large_info["area"] + small_info["area"]) * 100.0 / total_pixels
@@ -2197,7 +2473,11 @@ def merge_untouchable_regions(
             (
                 index
                 for index, info in enumerate(working_infos)
-                if info is not None and is_untouchable(info)
+                if (
+                    info is not None
+                    and is_untouchable(info)
+                    and not is_protected_detail_region(info)
+                )
             ),
             key=lambda index: working_infos[index]["area"],
         )
@@ -2221,6 +2501,8 @@ def merge_untouchable_regions(
                 candidate_info = working_infos[candidate_idx]
                 if candidate_info is None:
                     continue
+                if is_protected_detail_region(candidate_info):
+                    continue
                 merged_pct = (candidate_info["area"] + small_info["area"]) * 100.0 / total_pixels
                 if enforce_largest_target and merged_pct > thresholds["max_largest_region_pct"]:
                     continue
@@ -2241,7 +2523,10 @@ def merge_untouchable_regions(
                 ):
                     best_score = score
                     best_idx = candidate_idx
-                if fallback_score is None or score < fallback_score:
+                if (
+                    can_merge_color_drift_region(small_info, color_gap, color_threshold)
+                    and (fallback_score is None or score < fallback_score)
+                ):
                     fallback_score = score
                     fallback_idx = candidate_idx
 
@@ -2560,13 +2845,17 @@ def evaluate_quality_gate(quality_report):
 
     if not has_documented_playability_exception:
         hidden_label_pct = (
-            metrics.get("estimated_hidden_label_pct")
-            if metrics.get("estimated_hidden_label_pct") is not None
-            else metrics.get("hidden_label_pct")
+            metrics.get("actionable_hidden_label_pct")
+            if metrics.get("actionable_hidden_label_pct") is not None
+            else (
+                metrics.get("estimated_hidden_label_pct")
+                if metrics.get("estimated_hidden_label_pct") is not None
+                else metrics.get("hidden_label_pct")
+            )
         ) or 0
         tiny_region_pct_lt_100 = metrics.get("tiny_region_pct_lt_100") or 0
         if hidden_label_pct > 80:
-            reasons.append(f"hidden_label_pct={hidden_label_pct}>80")
+            reasons.append(f"actionable_hidden_label_pct={hidden_label_pct}>80")
         if tiny_region_pct_lt_100 > 45:
             reasons.append(f"tiny_region_pct_lt_100={tiny_region_pct_lt_100}>45")
         if metrics.get("overmerge_risk") == "high":
@@ -2801,6 +3090,17 @@ def generate_level_assets(
             )
         )
 
+    protected_detail_candidate_count = mark_protected_detail_regions(
+        region_infos=region_infos,
+        attach_distance=ink_gap_attach_px,
+        total_pixels=width * height,
+    )
+    if protected_detail_candidate_count:
+        print(
+            f"Đã bảo vệ {protected_detail_candidate_count} chi tiết nhỏ khác màu "
+            "khỏi các bước gộp vùng."
+        )
+
     (
         region_infos,
         merged_tiny_regions_count,
@@ -2894,6 +3194,15 @@ def generate_level_assets(
         tiny_merge_min_side=tiny_merge_min_side,
     )
     if giant_split_stats["giant_region_split_count"] > 0:
+        protected_after_split_count = mark_protected_detail_regions(
+            region_infos=region_infos,
+            attach_distance=ink_gap_attach_px,
+            total_pixels=width * height,
+        )
+        protected_detail_candidate_count = max(
+            protected_detail_candidate_count,
+            protected_after_split_count,
+        )
         print(
             "Phát hiện vùng khổng lồ còn sót lại sau khi chọn candidate tốt nhất; "
             f"đã sub-segment {giant_split_stats['giant_region_split_count']} vùng thành "
@@ -2990,6 +3299,7 @@ def generate_level_assets(
             region_infos, absorbed_isolated_count = absorb_isolated_unreadable_regions_by_proximity(
                 region_infos=region_infos,
                 unreadable_radius_px=LABEL_UNREADABLE_RADIUS_PX,
+                color_threshold=untouchable_merge_color_threshold,
             )
             classify_region_infos(
                 region_infos=region_infos,
@@ -3006,8 +3316,8 @@ def generate_level_assets(
         if total_absorbed_isolated_count:
             print(
                 f"Đã gán {total_absorbed_isolated_count} vùng bị nét vẽ bao kín hoàn toàn "
-                "(không có láng giềng liền kề) vào vùng gần nhất theo khoảng cách, chấp nhận "
-                "đổi màu hoàn toàn để đảm bảo vùng đó luôn được xác định."
+                "(không có láng giềng liền kề) vào vùng gần nhất theo khoảng cách khi màu "
+                "tương thích hoặc vùng chỉ là noise/anti-alias thật sự."
             )
         still_unreadable = sum(
             1
@@ -3156,14 +3466,23 @@ def generate_level_assets(
                 "quality": {
                     "is_tiny": info["is_tiny_display_region"],
                     "is_small": info["is_small_region"],
-                    "touchable": not info["hide_number"],
+                    "label_visible": not info["hide_number"],
+                    "touchable": True,
                     "merged_region_count": info.get("merged_region_count", 1),
+                    "protected_detail": is_protected_detail_region(info),
+                    "protected_detail_reason": info.get("protected_detail_reason"),
+                    "protected_detail_color_distance": info.get(
+                        "protected_detail_color_distance"
+                    ),
                 },
             }
         )
         region_pixel_sets.append(region)
 
     small_regions_count = sum(1 for info in region_infos if info["is_small_region"])
+    protected_detail_region_count = sum(
+        1 for info in region_infos if is_protected_detail_region(info)
+    )
     unique_numbers = len({item["number"] for item in region_palette_config})
     difficulty = estimate_difficulty(
         total_regions=len(region_configs),
@@ -3188,8 +3507,39 @@ def generate_level_assets(
         "unique_numbers": unique_numbers,
         "estimated_difficulty": difficulty,
         "small_regions_count": small_regions_count,
+        "protected_detail_region_count": protected_detail_region_count,
         "giant_regions_count": giant_regions_count,
     }
+    legacy_display_line_img = build_display_line_image(source_line_img, None)
+    display_line_img, display_line_report = build_safe_display_line_image(
+        source_line_img,
+        legacy_display_line_img,
+    )
+    display_line_report = {
+        **display_line_report,
+        "selected": "source_line",
+        "reason": "ink_recovery_disabled",
+        "fallback_to_source": False,
+        "ink_recovery_overreach": False,
+    }
+    recovered_ink_pixel_pct = round(
+        recovered_ink_pixel_count * 100.0 / max(1, width * height),
+        2,
+    )
+    ink_recovery_overreach = (
+        display_line_report["ink_recovery_overreach"]
+        or recovered_ink_pixel_pct > INK_RECOVERY_OVERREACH_RECOVERED_PCT_THRESHOLD
+    )
+    display_line_report = {
+        **display_line_report,
+        "mode": "source_similarity_guard",
+        "candidate_source": "source_line_no_ink_recovery",
+        "uses_segmentation_score": False,
+        "recovered_ink_pixel_pct": recovered_ink_pixel_pct,
+        "recovered_ink_overreach_threshold_pct": INK_RECOVERY_OVERREACH_RECOVERED_PCT_THRESHOLD,
+        "ink_recovery_overreach": ink_recovery_overreach,
+    }
+    segmentation_line_report = make_segmentation_line_report(selected_preprocessing)
     debug_generation_params = {
         "brightness_threshold": brightness_threshold,
         "merge_threshold": color_merge_threshold,
@@ -3225,10 +3575,21 @@ def generate_level_assets(
         "label_gate_canvas_radius_px": round(label_gate_canvas_radius_px, 3),
         "merged_hidden_label_region_count": merged_hidden_label_region_count,
         "remaining_hidden_label_region_count": remaining_hidden_label_region_count,
+        "protected_detail_candidate_count": protected_detail_candidate_count,
+        "protected_detail_region_count": protected_detail_region_count,
+        "protected_detail_merge_policy": "skip_all_region_merge_passes",
+        "ink_recovery_enabled": False,
         "ink_core_radius": ink_core_radius,
         "ink_min_chroma_value": ink_min_chroma_value,
         "ink_min_chroma_spread": ink_min_chroma_spread,
         "recovered_ink_pixel_count": recovered_ink_pixel_count,
+        "recovered_ink_pixel_pct": recovered_ink_pixel_pct,
+        "ink_recovery_overreach": ink_recovery_overreach,
+        "segmentation_line_mode": "selected_preprocessing_candidate",
+        "segmentation_line_report": segmentation_line_report,
+        "display_line_mode": "safe_source_fallback",
+        "display_line_uses_segmentation_score": False,
+        "display_line_report": display_line_report,
         "lost_color_pct": selected_preprocessing.get("lost_color_pct"),
         "selected_preprocessing": selected_preprocessing,
         "has_detail": True,
@@ -3260,10 +3621,19 @@ def generate_level_assets(
     line_img.save(line_out_path)
     print(f"Đã lưu ảnh Line: {line_out_path}")
 
-    display_line_img = build_display_line_image(source_line_img, recovered_ink_mask)
-    display_line_out_path = os.path.join(output_dir, "line_render.png")
+    legacy_display_line_out_path = os.path.join(output_dir, "line_render.png")
+    legacy_display_line_img.save(legacy_display_line_out_path)
+    print(f"Đã lưu ảnh Line hiển thị legacy cho app: {legacy_display_line_out_path}")
+
+    display_line_out_path = os.path.join(output_dir, "display_line.png")
     display_line_img.save(display_line_out_path)
-    print(f"Đã lưu ảnh Line hiển thị cho app: {display_line_out_path}")
+    print(
+        "Đã lưu ảnh Line hiển thị an toàn: "
+        f"{display_line_out_path} "
+        f"(selected={display_line_report['selected']}, "
+        f"changed={display_line_report['candidate_changed_pct']}%, "
+        f"mae={display_line_report['candidate_mae']})"
+    )
 
     source_line_out_path = os.path.join(output_dir, "debug_source_line.png")
     source_line_img.save(source_line_out_path)
@@ -3328,6 +3698,15 @@ def generate_level_assets(
         "width": width,
         "height": height,
         "assets": {
+            # Role-based names: make the line-art contract explicit.
+            # source_line is the Data line copied for visual/debug comparison.
+            # segmentation_line is the processed binary map used to build regions/mask.
+            # display_line is the line art users see in the app.
+            "source_line": "debug_source_line.png",
+            "segmentation_line": "line.png",
+            "display_line": "display_line.png",
+            "legacy_line_render": "line_render.png",
+            # Legacy names kept for current Android/backend compatibility.
             "line_render": "line_render.png",
             "line": "line.png",
             "mask": "mask.png",
@@ -3567,9 +3946,8 @@ def create_parser():
         type=int,
         default=DEFAULT_INK_RECOVERY_RADIUS,
         help=(
-            "Bán kính co ảnh khi tách mảng mực ĐẶC (tóc, áo tô kín) khỏi nét viền mảnh, để "
-            "khôi phục chúng thành vùng tô được thay vì render ra đen tuyền. Càng lớn càng "
-            "chỉ khôi phục mảng thật dày. Đặt 0 để tắt hẳn ink recovery."
+            "Deprecated/no-op. Ink recovery đã bị tắt vì từng biến nét gốc thành vùng tô và "
+            "gây tô tràn qua vùng chưa khoanh."
         ),
     )
     parser.add_argument(
