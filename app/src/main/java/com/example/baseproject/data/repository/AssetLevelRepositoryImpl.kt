@@ -99,14 +99,23 @@ class AssetLevelRepositoryImpl(
                 ?: error("Failed to decode line bitmap for $category/$levelId")
 
             val levelPath = "$category/$levelId"
-            // Ảnh nét dùng để NHÂN lên khi vẽ. Ưu tiên display_line.png mới: generator chỉ
-            // dùng bản recovered-ink nếu nó còn gần line gốc, nếu không sẽ fallback về line
-            // gốc để tránh nét bị mờ/xoá quá tay. Các nhánh line_render/debug_source_line/line
-            // phía sau giữ tương thích với assets cũ chưa sinh lại.
-            val displayLineBitmap = decodeOptionalConfiguredBitmap(
+            // Ảnh nét dùng để NHÂN lên khi vẽ. Có thể khác resolution với mask: canvas sẽ
+            // fit nó vào toạ độ mask để hỗ trợ display_line_2x/4x khi zoom sâu.
+            val displayLineBitmap = listOfNotNull(
+                config.assets?.displayLine4x,
+                config.assets?.displayLine2x,
+                config.assets?.displayLine,
+            ).firstNotNullOfOrNull { fileName ->
+                decodeOptionalConfiguredBitmap(
+                    assetManager = assetManager,
+                    levelPath = levelPath,
+                    configuredFileName = fileName,
+                    fallbackBasePath = "$levelPath/$fileName"
+                )
+            } ?: decodeOptionalConfiguredBitmap(
                 assetManager = assetManager,
                 levelPath = levelPath,
-                configuredFileName = config.assets?.displayLine,
+                configuredFileName = null,
                 fallbackBasePath = "$levelPath/display_line"
             ) ?: decodeOptionalConfiguredBitmap(
                 assetManager = assetManager,

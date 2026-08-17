@@ -103,6 +103,8 @@ data class LevelAssets(
     @SerializedName("source_line") val sourceLine: String? = null,
     @SerializedName("segmentation_line") val segmentationLine: String? = null,
     @SerializedName("display_line") val displayLine: String? = null,
+    @SerializedName("display_line_2x") val displayLine2x: String? = null,
+    @SerializedName("display_line_4x") val displayLine4x: String? = null,
     @SerializedName("legacy_line_render") val legacyLineRender: String? = null,
     @SerializedName("line") val line: String? = null,
     // Ảnh nét dùng để nhân lúc vẽ (xem AssetLevelRepositoryImpl). Khác "line" — cái đó là

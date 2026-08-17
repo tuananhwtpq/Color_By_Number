@@ -8,6 +8,7 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.view.View
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -34,6 +35,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val GUIDE_STEP_03 = 2
         private const val GUIDE_PALETTE_HORIZONTAL_PADDING_DP = 8f
         private const val GUIDE_PALETTE_VERTICAL_PADDING_DP = 14f
+
+        // Tag debug tạm thời — xoá cùng các Log.d bên dưới sau khi xác định xong nguyên nhân.
+        private const val DBG_TAG = "PBN_DBG_a91f"
     }
 
     private val viewModel: PaintViewModel by viewModels {
@@ -102,6 +106,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.rvPalette.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
+            Log.d(
+                DBG_TAG,
+                "ON_REGION_FILLED_CB mask=$maskInt(${Integer.toHexString(maskInt)}) t=${System.currentTimeMillis()}"
+            )
             viewModel.onRegionFilled(maskInt)
         }
         binding.fullPreviewOverlay.visibility = View.GONE
@@ -157,6 +165,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                 lifecycleScope.launch {
                     ensureFullPreviewBitmap(renderData)
                     binding.paintCanvas.setBitmapsSuspend(
+                        renderData.lineBitmap,
                         renderData.displayLineBitmap,
                         renderData.maskBitmap,
                         renderData.detailBitmap,
@@ -172,6 +181,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     binding.root.post { updateGuideOverlayForCurrentStep() }
                 }
             } else if (!isFillAllPreviewActive) {
+                Log.d(
+                    DBG_TAG,
+                    "VM_STATE completed=${state.completedMaskColors} highlight=${state.highlightMaskColors} " +
+                        "t=${System.currentTimeMillis()}"
+                )
                 // Đang xem bản tô đầy thì bỏ qua: mọi lệnh vẽ ở đây sẽ đè lên lớp preview
                 // (ví dụ chọn màu khác trên palette sẽ bật lại highlight giữa ảnh đã tô).
                 if (lastCompletedMaskColors.isNotEmpty() && state.completedMaskColors.isEmpty()) {
@@ -435,7 +449,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
         val previewBitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             buildFullPreviewBitmap(
-                lineBitmap = renderData.displayLineBitmap,
+                displayLineBitmap = renderData.displayLineBitmap,
                 maskBitmap = renderData.maskBitmap,
                 detailBitmap = renderData.detailBitmap,
                 allMaskColorsToTargetColors = renderData.allMaskColorsToTargetColors
@@ -448,7 +462,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun buildFullPreviewBitmap(
-        lineBitmap: Bitmap,
+        displayLineBitmap: Bitmap,
         maskBitmap: Bitmap,
         detailBitmap: Bitmap?,
         allMaskColorsToTargetColors: Map<Int, Int>
@@ -473,7 +487,12 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         if (detailBitmap != null && detailBitmap.width == width && detailBitmap.height == height) {
             canvas.drawBitmap(detailBitmap, 0f, 0f, null)
         }
-        canvas.drawBitmap(lineBitmap, 0f, 0f, previewMultiplyPaint)
+        canvas.drawBitmap(
+            displayLineBitmap,
+            null,
+            RectF(0f, 0f, width.toFloat(), height.toFloat()),
+            previewMultiplyPaint
+        )
         coloredBitmap.recycle()
         return result
     }

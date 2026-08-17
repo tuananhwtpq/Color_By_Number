@@ -30,11 +30,12 @@ object HighlightThemes {
             id = "checker_default",
             style = HighlightStyle.CHECKER,
             primaryColor = Color.parseColor("#F5F2F8"),
-            secondaryColor = Color.parseColor("#CFC7D8"),
-            cellSizePx = 18,
+            secondaryColor = Color.parseColor("#9A94A3"),
+            cellSizePx = 10,
             baseAlpha = 255,
             fadeInDurationMs = 200L,
-            interpolator = AccelerateInterpolator()
+            interpolator = AccelerateInterpolator(),
+            tinyTargetHaloAlpha = 0
         )
     }
 }

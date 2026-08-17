@@ -13,6 +13,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.util.AttributeSet
+import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -31,6 +32,8 @@ class PaintCanvasView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     companion object {
+        // Tag debug tạm thời — xoá cùng các Log.d/w bên dưới sau khi xác định xong nguyên nhân.
+        private const val DBG_TAG = "PBN_DBG_a91f"
         private const val CANVAS_BACKGROUND_COLOR = 0xFFF3F1F3.toInt()
 
         // Ngưỡng bán kính trên MÀN HÌNH (không phải trên bitmap) để quyết định có hiện số
@@ -49,7 +52,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     }
 
-    private var lineBitmap: Bitmap? = null
+    private var displayLineBitmap: Bitmap? = null
     private var maskWidth: Int = 0
     private var maskHeight: Int = 0
     private var coloredBitmap: Bitmap? = null
@@ -70,6 +73,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     private val drawMatrix = Matrix()
     private val inverseMatrix = Matrix()
+    private val bitmapBounds = RectF()
 
     private val normalPaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val multiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
@@ -124,8 +128,8 @@ class PaintCanvasView @JvmOverloads constructor(
             object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
                     val fitScale = Math.min(
-                        width.toFloat() / (lineBitmap?.width ?: 1),
-                        height.toFloat() / (lineBitmap?.height ?: 1)
+                        width.toFloat() / (maskWidth.takeIf { it > 0 } ?: 1),
+                        height.toFloat() / (maskHeight.takeIf { it > 0 } ?: 1)
                     )
                     val minScale = fitScale * 0.8f
                     val newScale =
@@ -161,14 +165,15 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     suspend fun setBitmapsSuspend(
-        line: Bitmap,
+        logicLine: Bitmap,
+        displayLine: Bitmap,
         mask: Bitmap,
         detail: Bitmap?,
         regionsData: List<RegionData>
     ) =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val w = line.width
-            val h = line.height
+            val w = mask.width
+            val h = mask.height
 
             val coloredBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val highlightBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
@@ -185,14 +190,19 @@ class PaintCanvasView @JvmOverloads constructor(
                 null
             }
 
-            val lp = IntArray(w * h)
-            line.getPixels(lp, 0, w, 0, 0, w, h)
+            val lp = if (logicLine.width == w && logicLine.height == h) {
+                IntArray(w * h).also {
+                    logicLine.getPixels(it, 0, w, 0, 0, w, h)
+                }
+            } else {
+                IntArray(w * h)
+            }
 
             // Giải phóng maskBitmap để tiết kiệm 4.6MB RAM
             mask.recycle()
 
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                lineBitmap = line
+                displayLineBitmap = displayLine
                 maskWidth = w
                 maskHeight = h
                 regions = regionsData
@@ -242,6 +252,11 @@ class PaintCanvasView @JvmOverloads constructor(
 
     suspend fun restoreProgressSuspend(completedMap: Map<Int, Int>) =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            Log.w(
+                DBG_TAG,
+                "RESTORE_PROGRESS_CALLED mapSize=${completedMap.size} t=${System.currentTimeMillis()}",
+                Exception("stack trace")
+            )
             if (completedMap.isEmpty()) return@withContext
 
             val maskPx = maskPixelsArray ?: return@withContext
@@ -344,6 +359,13 @@ class PaintCanvasView @JvmOverloads constructor(
                 }
                 invalidate()
                 // ĐÃ XÓA vòng lặp onRegionFilledListener để tránh gọi 500 lần trên UI thread
+
+                // DEBUG: đọc lại pixel tại tâm mỗi vùng vừa khôi phục, để so sánh trực tiếp với
+                // các dòng PIXEL_WATCH[T*] ghi được lúc tô sống (trước khi back ra vào lại).
+                for (maskColor in completedMap.keys) {
+                    val r = regions.find { it.maskColorInt == maskColor } ?: continue
+                    logPixelWatch("AFTER_RESTORE", r.number, maskColor, r.centerX.toInt(), r.centerY.toInt())
+                }
             }
         }
 
@@ -370,6 +392,12 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     fun resetProgress() {
+        Log.w(
+            DBG_TAG,
+            "RESET_PROGRESS_CALLED completedBefore=$completedMaskColors " +
+                "activeFillersBefore=${activeFillers.map { it.maskColor }} t=${System.currentTimeMillis()}",
+            Exception("stack trace")
+        )
         completedMaskColors = emptySet()
         activeFillers.clear()
         val colArr = coloredPixelsArray ?: return
@@ -410,19 +438,44 @@ class PaintCanvasView @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun revealDetailForMaskColor(maskColor: Int) {
+    private fun completeRegionForMaskColor(maskColor: Int, targetColor: Int) {
         val maskPx = maskPixelsArray ?: return
-        val detailSrcPx = detailSourcePixelsArray ?: return
-        val detailOutPx = revealedDetailPixelsArray ?: return
-        val detailBmp = revealedDetailBitmap ?: return
+        val colArr = coloredPixelsArray ?: return
+        val colBmp = coloredBitmap ?: return
+        val detailSrcPx = detailSourcePixelsArray
+        val detailOutPx = revealedDetailPixelsArray
+        val detailBmp = revealedDetailBitmap
 
-        DetailRevealEngine.revealDetailForMaskColor(
+        DetailRevealEngine.completeRegionForMaskColor(
             maskPixels = maskPx,
+            coloredPixels = colArr,
             detailSourcePixels = detailSrcPx,
             revealedDetailPixels = detailOutPx,
             maskColor = maskColor,
+            targetColor = targetColor,
         )
-        detailBmp.setPixels(detailOutPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+        colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
+        if (detailBmp != null && detailOutPx != null) {
+            detailBmp.setPixels(detailOutPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+        }
+    }
+
+    // DEBUG: đọc lại đúng 1 pixel của vùng vừa tô xong, tại nhiều mốc thời gian sau đó, để
+    // phát hiện xem có gì đó âm thầm ghi đè coloredBitmap/revealedDetailBitmap sau khi tô
+    // xong hay không (nếu colored/detail đổi giá trị giữa các mốc log thì đó chính là thủ phạm).
+    private fun logPixelWatch(label: String, regionNumber: Int?, maskColor: Int, x: Int, y: Int) {
+        val colored = coloredBitmap ?: return
+        val detail = revealedDetailBitmap
+        if (x !in 0 until colored.width || y !in 0 until colored.height) return
+        val coloredPx = colored.getPixel(x, y)
+        val detailPx = detail?.getPixel(x, y) ?: 0
+        val stillCompleted = completedMaskColors.contains(maskColor)
+        Log.d(
+            DBG_TAG,
+            "PIXEL_WATCH[$label] region=$regionNumber mask=$maskColor(${Integer.toHexString(maskColor)}) " +
+                "colored=${Integer.toHexString(coloredPx)} detail=${Integer.toHexString(detailPx)} " +
+                "stillCompleted=$stillCompleted t=${System.currentTimeMillis()}"
+        )
     }
 
     /**
@@ -431,7 +484,7 @@ class PaintCanvasView @JvmOverloads constructor(
      */
     fun generateThumbnail(thumbSize: Int): Bitmap? {
         val colored = coloredBitmap ?: return null
-        val line = lineBitmap ?: return null
+        val line = displayLineBitmap ?: return null
         val w = maskWidth
         val h = maskHeight
         if (w == 0 || h == 0) return null
@@ -442,7 +495,7 @@ class PaintCanvasView @JvmOverloads constructor(
             canvas.drawColor(CANVAS_BACKGROUND_COLOR)
             canvas.drawBitmap(colored, 0f, 0f, null)
             revealedDetailBitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
-            canvas.drawBitmap(line, 0f, 0f, multiplyPaint)
+            drawBitmapInMaskBounds(canvas, line, multiplyPaint)
 
             val scaled = Bitmap.createScaledBitmap(result, thumbSize, thumbSize, true)
             if (scaled != result) {
@@ -467,6 +520,12 @@ class PaintCanvasView @JvmOverloads constructor(
             !completedMaskColors.contains(it) && !animatingColors.contains(it)
         }.toIntArray()
         currentHighlightTargets = activeTargets
+        Log.d(
+            DBG_TAG,
+            "HIGHLIGHT_REQ in=$targetMaskColors completed=$completedMaskColors " +
+                "animating=$animatingColors -> active=${activeTargets.toList()} " +
+                "t=${System.currentTimeMillis()}"
+        )
 
         if (activeTargets.isEmpty()) {
             clearHighlightImmediately()
@@ -506,17 +565,20 @@ class PaintCanvasView @JvmOverloads constructor(
         }
 
         hl.setPixels(hlPixels, 0, width, 0, 0, width, height)
+        Log.d(
+            DBG_TAG,
+            "HIGHLIGHT_RENDER targets=${currentHighlightTargets.toList()} t=${System.currentTimeMillis()}"
+        )
         invalidate()
     }
 
     private fun updateMatrix() {
-        val line = lineBitmap ?: return
         val viewWidth = width.toFloat();
         val viewHeight = height.toFloat()
-        if (viewWidth == 0f || viewHeight == 0f) return
+        if (viewWidth == 0f || viewHeight == 0f || maskWidth == 0 || maskHeight == 0) return
 
-        val scaledWidth = line.width * scaleFactor
-        val scaledHeight = line.height * scaleFactor
+        val scaledWidth = maskWidth * scaleFactor
+        val scaledHeight = maskHeight * scaleFactor
 
         if (scaledWidth < viewWidth) {
             translateX = (viewWidth - scaledWidth) / 2f
@@ -543,14 +605,13 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     fun getDisplayedBitmapRectInView(): RectF? {
-        val line = lineBitmap ?: return null
-        if (width == 0 || height == 0) return null
+        if (width == 0 || height == 0 || maskWidth == 0 || maskHeight == 0) return null
 
         return RectF(
             translateX,
             translateY,
-            translateX + line.width * scaleFactor,
-            translateY + line.height * scaleFactor
+            translateX + maskWidth * scaleFactor,
+            translateY + maskHeight * scaleFactor
         )
     }
 
@@ -558,7 +619,10 @@ class PaintCanvasView @JvmOverloads constructor(
         val viewWidth = width.toFloat()
         val viewHeight = height.toFloat()
         val minScaleForView =
-            Math.min(viewWidth / (lineBitmap?.width ?: 1), viewHeight / (lineBitmap?.height ?: 1))
+            Math.min(
+                viewWidth / (maskWidth.takeIf { it > 0 } ?: 1),
+                viewHeight / (maskHeight.takeIf { it > 0 } ?: 1)
+            )
 
         // Target scale is around 8x the fit scale
         val targetScale = Math.min(20f, Math.max(scaleFactor, minScaleForView * 8f))
@@ -652,6 +716,29 @@ class PaintCanvasView @JvmOverloads constructor(
             },
             detailPixels = detailSourcePixelsArray
         )
+
+        // DEBUG: kiểm tra xem vùng vừa tap có chia sẻ pixel viền (bleed) với filler nào
+        // đang chạy không — nếu có, pixel đó sẽ bị filler xong SAU ghi đè lên (last-write-wins).
+        if (activeFillers.isNotEmpty()) {
+            val newIndicesSet = filler.indices.toHashSet()
+            for (other in activeFillers) {
+                val overlap = other.indices.count { it in newIndicesSet }
+                if (overlap > 0) {
+                    Log.w(
+                        DBG_TAG,
+                        "BLEED_OVERLAP newMask=$clickedColor(${Integer.toHexString(clickedColor)}) " +
+                            "vsActiveMask=${other.maskColor}(${Integer.toHexString(other.maskColor)}) " +
+                            "overlapPixels=$overlap t=${System.currentTimeMillis()}"
+                    )
+                }
+            }
+        }
+        Log.d(
+            DBG_TAG,
+            "TAP_START region=${region?.number} mask=$clickedColor(${Integer.toHexString(clickedColor)}) " +
+                "indices=${filler.indices.size} activeFillersBefore=${activeFillers.map { it.maskColor }} " +
+                "hasDetailData=${detailSourcePixelsArray != null} t=${System.currentTimeMillis()}"
+        )
         activeFillers.add(filler)
 
         // Cập nhật ngay lập tức: Xóa highlight của mảng màu này để animation hiện rõ
@@ -744,13 +831,35 @@ class PaintCanvasView @JvmOverloads constructor(
                 val isRunning = filler.tick(speed)
                 if (!isRunning) {
                     iterator.remove()
-                    // Khi filler kết thúc, cập nhật mảng pixel thực tế lên Bitmap
-                    val colBmp = coloredBitmap
-                    val colArr = coloredPixelsArray
-                    if (colBmp != null && colArr != null) {
-                        colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
-                    }
-                    revealDetailForMaskColor(filler.maskColor)
+                    // Khi filler kết thúc: tick() đã tô màu phẳng cho cụm liên thông cục bộ
+                    // (để có hiệu ứng loang), completeRegionForMaskColor() quét nốt toàn ảnh để
+                    // tô/phủ chi tiết cho MỌI pixel còn lại cùng mã màu — kể cả ở cụm tách rời
+                    // khác — rồi đẩy cả 2 lớp bitmap lên canvas trong 1 lần.
+                    completeRegionForMaskColor(filler.maskColor, filler.targetColor)
+                    completedMaskColors = completedMaskColors + filler.maskColor
+                    val regionNumber = regions.find { it.maskColorInt == filler.maskColor }?.number
+                    Log.d(
+                        DBG_TAG,
+                        "FILL_DONE region=$regionNumber mask=${filler.maskColor}(${Integer.toHexString(filler.maskColor)}) " +
+                            "currentHighlightTargets=${currentHighlightTargets.toList()} " +
+                            "t=${System.currentTimeMillis()}"
+                    )
+                    // Dùng tâm vùng (thay vì điểm chạm tay) để toạ độ trùng khớp với log
+                    // AFTER_RESTORE trong restoreProgressSuspend() — so sánh đúng 1 pixel.
+                    val watchRegion = regions.find { it.maskColorInt == filler.maskColor }
+                    val watchX = watchRegion?.centerX?.toInt() ?: filler.startX
+                    val watchY = watchRegion?.centerY?.toInt() ?: filler.startY
+                    logPixelWatch("T0", regionNumber, filler.maskColor, watchX, watchY)
+                    postDelayed({
+                        logPixelWatch("T300", regionNumber, filler.maskColor, watchX, watchY)
+                    }, 300)
+                    postDelayed({
+                        logPixelWatch("T1000", regionNumber, filler.maskColor, watchX, watchY)
+                    }, 1000)
+                    postDelayed({
+                        logPixelWatch("T3000", regionNumber, filler.maskColor, watchX, watchY)
+                    }, 3000)
+                    filler.dispatchFinished()
                 }
             }
             invalidate()
@@ -766,7 +875,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
         val colored = coloredBitmap ?: return
         val hl = highlightBitmap ?: return
-        val line = lineBitmap ?: return
+        val line = displayLineBitmap ?: return
 
         canvas.drawBitmap(colored, drawMatrix, normalPaint)
 
@@ -839,6 +948,14 @@ class PaintCanvasView @JvmOverloads constructor(
             )
         }
 
-        canvas.drawBitmap(line, drawMatrix, multiplyPaint)
+        canvas.save()
+        canvas.concat(drawMatrix)
+        drawBitmapInMaskBounds(canvas, line, multiplyPaint)
+        canvas.restore()
+    }
+
+    private fun drawBitmapInMaskBounds(canvas: Canvas, bitmap: Bitmap, paint: Paint?) {
+        bitmapBounds.set(0f, 0f, maskWidth.toFloat(), maskHeight.toFloat())
+        canvas.drawBitmap(bitmap, null, bitmapBounds, paint)
     }
 }

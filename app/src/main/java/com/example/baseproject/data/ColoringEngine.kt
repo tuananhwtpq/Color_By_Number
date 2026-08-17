@@ -26,6 +26,136 @@ object MaskRegionHitTester {
     }
 }
 
+internal object FillColorComposer {
+    fun colorWithOptionalDetail(
+        isMaskPixel: Boolean,
+        targetColor: Int,
+        detailColor: Int?
+    ): Int {
+        if (!isMaskPixel || detailColor == null) return targetColor
+
+        val alpha = (detailColor ushr 24) and 0xFF
+        if (alpha == 0) return targetColor
+
+        val inverse = 255 - alpha
+        val r = (((detailColor shr 16) and 0xFF) * alpha + ((targetColor shr 16) and 0xFF) * inverse) / 255
+        val g = (((detailColor shr 8) and 0xFF) * alpha + ((targetColor shr 8) and 0xFF) * inverse) / 255
+        val b = ((detailColor and 0xFF) * alpha + (targetColor and 0xFF) * inverse) / 255
+        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+    }
+}
+
+internal data class FillRegionPixels(
+    val indices: IntArray,
+    val minX: Int,
+    val maxX: Int,
+    val minY: Int,
+    val maxY: Int
+)
+
+internal object FillRegionCollector {
+    fun collect(
+        maskPixels: IntArray,
+        linePixels: IntArray,
+        width: Int,
+        height: Int,
+        maskColor: Int,
+        startX: Int,
+        startY: Int,
+        expectedRegionArea: Int
+    ): FillRegionPixels {
+        val startIdx = startY * width + startX
+        if (startIdx !in maskPixels.indices || maskPixels[startIdx] != maskColor) {
+            return FillRegionPixels(IntArray(0), startX, startX, startY, startY)
+        }
+
+        val initialCapacity = expectedRegionArea
+            .coerceAtLeast(256)
+            .coerceAtMost(maskPixels.size)
+        val indices = GrowingIntArray(initialCapacity)
+        val queue = GrowingIntArray(initialCapacity)
+        val visited = BooleanArray(maskPixels.size)
+
+        var qHead = 0
+        visited[startIdx] = true
+        indices.add(startIdx)
+        queue.add(startIdx)
+
+        var minX = startX
+        var maxX = startX
+        var minY = startY
+        var maxY = startY
+
+        // Nối 8 hướng (kể cả 4 đường chéo): hình dạng mảnh/cong (mắt, chi tiết nhỏ) có thể có
+        // các pixel cùng mã màu chỉ dính nhau qua đường chéo — nối 4 hướng bỏ sót các pixel đó,
+        // khiến vùng bị tô loang không phủ hết dù revealDetailForMaskColor (quét theo mã màu,
+        // không quan tâm hướng nối) vẫn phủ chi tiết lên, gây lệch giữa 2 lớp.
+        val dx = intArrayOf(-1, 1, 0, 0, -1, -1, 1, 1)
+        val dy = intArrayOf(0, 0, -1, 1, -1, 1, -1, 1)
+
+        while (qHead < queue.size) {
+            val idx = queue[qHead++]
+            val x = idx % width
+            val y = idx / width
+
+            if (x < minX) minX = x
+            if (x > maxX) maxX = x
+            if (y < minY) minY = y
+            if (y > maxY) maxY = y
+
+            for (i in dx.indices) {
+                val nx = x + dx[i]
+                val ny = y + dy[i]
+                if (nx !in 0 until width || ny !in 0 until height) continue
+
+                val nIdx = ny * width + nx
+                if (visited[nIdx]) continue
+
+                if (maskPixels[nIdx] == maskColor) {
+                    visited[nIdx] = true
+                    indices.add(nIdx)
+                    queue.add(nIdx)
+                } else if (isBleedPixel(linePixels[nIdx])) {
+                    visited[nIdx] = true
+                    indices.add(nIdx)
+                }
+            }
+        }
+
+        return FillRegionPixels(
+            indices = indices.toIntArray(),
+            minX = minX,
+            maxX = maxX,
+            minY = minY,
+            maxY = maxY
+        )
+    }
+
+    private fun isBleedPixel(linePixel: Int): Boolean {
+        val r = (linePixel shr 16) and 0xFF
+        val g = (linePixel shr 8) and 0xFF
+        val b = linePixel and 0xFF
+        return (r + g + b) / 3 < 240
+    }
+}
+
+private class GrowingIntArray(initialCapacity: Int) {
+    private var values = IntArray(initialCapacity.coerceAtLeast(1))
+    var size = 0
+        private set
+
+    operator fun get(index: Int): Int = values[index]
+
+    fun add(value: Int) {
+        if (size == values.size) {
+            values = values.copyOf(values.size * 2)
+        }
+        values[size++] = value
+    }
+
+    fun toIntArray(): IntArray = values.copyOf(size)
+}
+
 class AnimatedFiller(
     private val maskPixels: IntArray,
     private val linePixels: IntArray,
@@ -48,88 +178,38 @@ class AnimatedFiller(
     val top: Int
     var currentRadius = 0f
     val maxRadius: Float
-    private val indices: IntArray
-    private var count = 0
+    // internal (thay vì private) tạm thời để PaintCanvasView có thể log kiểm tra
+    // chồng lấn pixel viền (bleed) giữa các filler đang chạy song song — phục vụ debug.
+    internal val indices: IntArray
 
     init {
-        val safeSize = Math.max(width * height / 10, maxQueueSize * 5)
-        indices = IntArray(safeSize)
-        val qIdx = IntArray(safeSize)
-        var qHead = 0
-        var qTail = 0
-
-        val startIdx = startY * width + startX
-        if (maskPixels[startIdx] == maskColor) {
-            maskPixels[startIdx] = maskPixels[startIdx].inv()
-        }
-        indices[count++] = startIdx
-        qIdx[qTail++] = startIdx
-
-        val dx = intArrayOf(-1, 1, 0, 0)
-        val dy = intArrayOf(0, 0, -1, 1)
-
-        var minX = startX
-        var maxX = startX
-        var minY = startY
-        var maxY = startY
-
-        // 1. Quét BFS để tìm toàn bộ pixel và Bounding Box
-        while (qHead < qTail) {
-            val idx = qIdx[qHead++]
-            val x = idx % width
-            val y = idx / width
-
-            if (x < minX) minX = x
-            if (x > maxX) maxX = x
-            if (y < minY) minY = y
-            if (y > maxY) maxY = y
-
-            for (i in 0 until 4) {
-                val nx = x + dx[i]
-                val ny = y + dy[i]
-                if (nx in 0 until width && ny in 0 until height) {
-                    val nIdx = ny * width + nx
-                    if (maskPixels[nIdx] == maskColor) {
-                        maskPixels[nIdx] = maskPixels[nIdx].inv()
-                        if (count < safeSize) indices[count++] = nIdx
-                        if (qTail < safeSize) qIdx[qTail++] = nIdx
-                    } else if (maskPixels[nIdx] != maskColor.inv()) {
-                        // Color Bleeding
-                        val linePx = linePixels[nIdx]
-                        val r = (linePx shr 16) and 0xFF
-                        val g = (linePx shr 8) and 0xFF
-                        val b = linePx and 0xFF
-                        if ((r + g + b) / 3 < 240) {
-                            if (count < safeSize) indices[count++] = nIdx
-                        }
-                    }
-                }
-            }
-        }
-
-        // Khôi phục mảng mask
-        for (i in 0 until count) {
-            val idx = indices[i]
-            if (maskPixels[idx] == maskColor.inv()) {
-                maskPixels[idx] = maskColor
-            }
-        }
+        val region = FillRegionCollector.collect(
+            maskPixels = maskPixels,
+            linePixels = linePixels,
+            width = width,
+            height = height,
+            maskColor = maskColor,
+            startX = startX,
+            startY = startY,
+            expectedRegionArea = maxQueueSize
+        )
+        indices = region.indices
 
         // Bounding box cần được mở rộng thêm 1 pixel mỗi chiều
         // để chứa các điểm ảnh viền đen (Color Bleeding) nằm ngoài vùng mask
-        left = Math.max(0, minX - 1)
-        top = Math.max(0, minY - 1)
-        val right = Math.min(width - 1, maxX + 1)
-        val bottom = Math.min(height - 1, maxY + 1)
+        left = Math.max(0, region.minX - 1)
+        top = Math.max(0, region.minY - 1)
+        val right = Math.min(width - 1, region.maxX + 1)
+        val bottom = Math.min(height - 1, region.maxY + 1)
 
         val bw = right - left + 1
         val bh = bottom - top + 1
 
         // Tính toán bán kính tối đa cần để loang hết bounding box
-        val dx1 = (minX - startX).toDouble()
-        val dx2 = (maxX - startX).toDouble()
-        val dy1 = (minY - startY).toDouble()
-        val dy2 = (maxY - startY).toDouble()
+        val dx1 = (region.minX - startX).toDouble()
+        val dx2 = (region.maxX - startX).toDouble()
+        val dy1 = (region.minY - startY).toDouble()
+        val dy2 = (region.maxY - startY).toDouble()
         val d1 = Math.sqrt(dx1 * dx1 + dy1 * dy1)
         val d2 = Math.sqrt(dx2 * dx2 + dy1 * dy1)
         val d3 = Math.sqrt(dx1 * dx1 + dy2 * dy2)
@@ -138,8 +218,7 @@ class AnimatedFiller(
 
         // 2. Tạo một Bitmap thu nhỏ chứa riêng mảng màu này
         val localPx = IntArray(bw * bh)
-        for (i in 0 until count) {
-            val idx = indices[i]
+        for (idx in indices) {
             val x = idx % width
             val y = idx / width
             localPx[(y - top) * bw + (x - left)] = colorWithDetail(idx)
@@ -150,23 +229,17 @@ class AnimatedFiller(
     }
 
     /**
-     * Màu phẳng của bảng màu, đã phủ lớp detail lên trên đúng như lúc tô xong.
+     * Màu hiển thị khi đang loang.
      *
-     * Cùng công thức alpha-over mà PaintCanvasView dùng khi vẽ revealedDetailBitmap, nên
-     * mảng màu lúc đang loang trùng khít với lúc loang xong — không còn cú "nhảy màu".
+     * Pixel thuộc mask thật dùng cùng công thức alpha-over với revealedDetailBitmap. Pixel
+     * bleed ngoài mask giữ màu phẳng, vì đường finish/restore cũng không reveal detail ở đó.
      */
     private fun colorWithDetail(index: Int): Int {
-        val detail = detailPixels ?: return targetColor
-        if (index >= detail.size) return targetColor
-        val packed = detail[index]
-        val alpha = (packed ushr 24) and 0xFF
-        if (alpha == 0) return targetColor
-
-        val inverse = 255 - alpha
-        val r = (((packed shr 16) and 0xFF) * alpha + ((targetColor shr 16) and 0xFF) * inverse) / 255
-        val g = (((packed shr 8) and 0xFF) * alpha + ((targetColor shr 8) and 0xFF) * inverse) / 255
-        val b = ((packed and 0xFF) * alpha + (targetColor and 0xFF) * inverse) / 255
-        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+        return FillColorComposer.colorWithOptionalDetail(
+            isMaskPixel = maskPixels[index] == maskColor,
+            targetColor = targetColor,
+            detailColor = detailPixels?.getOrNull(index),
+        )
     }
 
     /**
@@ -177,17 +250,20 @@ class AnimatedFiller(
         val isFinished = currentRadius >= maxRadius
         if (isFinished) {
             // Khi kết thúc, gán toàn bộ pixel vào mảng chính
-            for (i in 0 until count) {
-                coloredPixels[indices[i]] = targetColor
+            for (idx in indices) {
+                coloredPixels[idx] = targetColor
             }
-            onFinished(maskColor)
         }
         return !isFinished
     }
 
+    fun dispatchFinished() {
+        onFinished(maskColor)
+    }
+
     fun clearHighlight(hlPx: IntArray) {
-        for (i in 0 until count) {
-            hlPx[indices[i]] = 0
+        for (idx in indices) {
+            hlPx[idx] = 0
         }
     }
 }
