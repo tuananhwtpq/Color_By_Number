@@ -9,6 +9,7 @@ data class PaintUiState(
     val title: String = "",
     val palette: List<PaletteItem> = emptyList(),
     val paletteProgress: List<Float> = emptyList(),
+    val overallProgress: Float = 0f,
     val selectedPaletteIndex: Int = -1,
     val completedMaskColors: Set<Int> = emptySet(),
     val completedColorMap: Map<Int, Int> = emptyMap(),

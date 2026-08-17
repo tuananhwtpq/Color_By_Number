@@ -36,7 +36,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val GUIDE_PALETTE_HORIZONTAL_PADDING_DP = 8f
         private const val GUIDE_PALETTE_VERTICAL_PADDING_DP = 14f
 
-        // Tag debug tạm thời — xoá cùng các Log.d bên dưới sau khi xác định xong nguyên nhân.
         private const val DBG_TAG = "PBN_DBG_a91f"
     }
 
@@ -158,7 +157,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         val renderData = state.renderData
         if (renderData != null) {
             val newRenderKey = "${renderData.category}/${renderData.levelId}"
-            if (currentRenderKey != newRenderKey) {
+            val isInitialRenderForLevel = currentRenderKey != newRenderKey
+
+            binding.progressBarLevel.setProgress(state.overallProgress, animate = !isInitialRenderForLevel)
+
+            if (isInitialRenderForLevel) {
                 currentRenderKey = newRenderKey
                 resetFullPreviewCache(newRenderKey)
                 exitFillAllPreviewState()
