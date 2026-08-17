@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_complete"
+    tools:context=".activities.PictureCompletedActivity">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        style="@style/Heading1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:text="@string/coloring_complete"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/btnSave"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:layout_marginBottom="70dp"
+        android:background="@drawable/bg_oval_trans"
+        android:padding="12dp"
+        android:src="@drawable/ic_save"
+        app:layout_constraintBottom_toTopOf="@id/btnContinue"
+        app:layout_constraintEnd_toStartOf="@id/btnVideo"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        style="@style/BodyL"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/save"
+        android:textColor="@color/grey_50"
+        app:layout_constraintEnd_toEndOf="@id/btnSave"
+        app:layout_constraintStart_toStartOf="@id/btnSave"
+        app:layout_constraintTop_toBottomOf="@id/btnSave" />
+
+    <ImageView
+        android:id="@+id/btnVideo"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:background="@drawable/bg_oval_trans"
+        android:padding="12dp"
+        android:src="@drawable/ic_video"
+        app:layout_constraintBottom_toBottomOf="@id/btnSave"
+        app:layout_constraintEnd_toStartOf="@id/btnShare"
+        app:layout_constraintStart_toEndOf="@id/btnSave" />
+
+    <TextView
+        android:id="@+id/tvVideo"
+        style="@style/BodyL"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/video"
+        android:textColor="@color/grey_50"
+        app:layout_constraintEnd_toEndOf="@id/btnVideo"
+        app:layout_constraintStart_toStartOf="@id/btnVideo"
+        app:layout_constraintTop_toBottomOf="@id/btnVideo" />
+
+    <ImageView
+        android:id="@+id/btnShare"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:background="@drawable/bg_oval_trans"
+        android:padding="12dp"
+        android:src="@drawable/ic_share"
+        app:layout_constraintBottom_toBottomOf="@id/btnSave"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/btnVideo" />
+
+    <TextView
+        android:id="@+id/tvShare"
+        style="@style/BodyL"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/share"
+        android:textColor="@color/white"
+        android:textColorHint="@color/grey_50"
+        app:layout_constraintEnd_toEndOf="@id/btnShare"
+        app:layout_constraintStart_toStartOf="@id/btnShare"
+        app:layout_constraintTop_toBottomOf="@id/btnShare" />
+
+    <TextView
+        android:id="@+id/btnContinue"
+        style="@style/ButtonL"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_orange_border"
+        android:gravity="center"
+        android:minHeight="56dp"
+        android:text="Continue"
+        android:textColor="@color/white"
+        app:layout_constraintBottom_toTopOf="@id/btnBackToHome"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+
+    <TextView
+        android:id="@+id/btnBackToHome"
+        style="@style/ButtonL"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/bg_orange_no_border"
+        android:gravity="center"
+        android:minHeight="56dp"
+        android:text="@string/back_to_home"
+        android:textColor="@color/orange300"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

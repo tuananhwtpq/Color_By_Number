@@ -17,7 +17,9 @@
         android:theme="@style/Theme.BaseProject"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
-
+        <activity
+            android:name=".activities.PictureCompletedActivity"
+            android:exported="false" />
         <activity
             android:name=".activities.SettingActivity"
             android:exported="false" />
@@ -51,19 +53,14 @@
             android:name=".activities.SplashActivity"
             android:configChanges="uiMode"
             android:exported="false"
-            android:screenOrientation="portrait">
-
-        </activity>
-
-        <!--        <service-->
-        <!--            android:name=".MyFirebaseMessagingService"-->
-        <!--            android:directBootAware="true"-->
-        <!--            android:exported="false">-->
-        <!--            <intent-filter>-->
-        <!--                <action android:name="com.google.firebase.MESSAGING_EVENT" />-->
-        <!--            </intent-filter>-->
-        <!--        </service>-->
-
+            android:screenOrientation="portrait"></activity> <!-- <service -->
+        <!-- android:name=".MyFirebaseMessagingService" -->
+        <!-- android:directBootAware="true" -->
+        <!-- android:exported="false"> -->
+        <!-- <intent-filter> -->
+        <!-- <action android:name="com.google.firebase.MESSAGING_EVENT" /> -->
+        <!-- </intent-filter> -->
+        <!-- </service> -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="@string/admob_app_id" />
