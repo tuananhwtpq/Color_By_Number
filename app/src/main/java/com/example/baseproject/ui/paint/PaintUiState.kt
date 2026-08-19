@@ -34,6 +34,11 @@ data class PaintRenderData(
 sealed interface PaintUiEvent {
     data class ShowToast(val message: String) : PaintUiEvent
     data class FocusOnMaskColor(val maskColor: Int) : PaintUiEvent
+    data class LevelCompleted(
+        val category: String,
+        val levelId: String,
+        val collectedCount: Int
+    ) : PaintUiEvent
     object FinishScreen : PaintUiEvent
     object RequestResetConfirmation : PaintUiEvent
 }

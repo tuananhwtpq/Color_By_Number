@@ -9,10 +9,11 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.baseproject.R
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.progressFraction
 import com.example.baseproject.data.repository.PaintingProgressRepository
 import com.example.baseproject.utils.AssetImageResolver
 import java.io.File
-import kotlin.math.roundToInt
+import kotlin.math.ceil
 
 class LevelAdapter(
     private val levels: List<LevelConfig>,
@@ -45,13 +46,12 @@ class LevelAdapter(
         val context = holder.itemView.context
         val completedMaskColors =
             paintingProgressRepository.loadProgress(level.category, level.id)
-        val totalRegions = level.regions?.size ?: level.totalRegions ?: level.palette.size
-        val progressFraction = if (totalRegions > 0) {
-            completedMaskColors.size.toFloat() / totalRegions.toFloat()
-        } else {
-            0f
+        val progress = level.progressFraction(completedMaskColors)
+        val progressPercent = when {
+            progress <= 0f -> 0
+            progress >= 1f -> 100
+            else -> ceil(progress * 100f).toInt().coerceIn(1, 99)
         }
-        val progressPercent = (progressFraction * 100f).roundToInt()
 
         if (progressPercent in 1..99) {
             holder.tvCurrentPercent.visibility = View.VISIBLE

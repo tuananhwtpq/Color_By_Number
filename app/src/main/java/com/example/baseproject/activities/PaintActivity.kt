@@ -1,5 +1,6 @@
 package com.example.baseproject.activities
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -35,6 +36,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val GUIDE_STEP_03 = 2
         private const val GUIDE_PALETTE_HORIZONTAL_PADDING_DP = 8f
         private const val GUIDE_PALETTE_VERTICAL_PADDING_DP = 14f
+        private const val WORK_PREVIEW_THUMBNAIL_SIZE = 900
+        private const val COMPLETED_NAVIGATION_DELAY_MS = 400L
 
         private const val DBG_TAG = "PBN_DBG_a91f"
     }
@@ -61,6 +64,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var isLoadingVisible: Boolean = false
     private var isFullColorPreviewVisible: Boolean = false
     private var isFillAllPreviewActive: Boolean = false
+    private var isNavigatingToCompleted: Boolean = false
     private var fullPreviewBitmap: Bitmap? = null
     private var fullPreviewRenderKey: String? = null
     private val guideRectBuffer = Rect()
@@ -504,9 +508,34 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         when (event) {
             PaintUiEvent.FinishScreen -> finish()
             is PaintUiEvent.FocusOnMaskColor -> binding.paintCanvas.focusOnRegionByMaskColor(event.maskColor)
+            is PaintUiEvent.LevelCompleted -> navigateToPictureCompleted(event)
             PaintUiEvent.RequestResetConfirmation -> showResetConfirmationDialog()
             is PaintUiEvent.ShowToast -> Toast.makeText(this, event.message, Toast.LENGTH_SHORT)
                 .show()
+        }
+    }
+
+    private fun navigateToPictureCompleted(event: PaintUiEvent.LevelCompleted) {
+        if (isNavigatingToCompleted) return
+        isNavigatingToCompleted = true
+
+        lifecycleScope.launch {
+            // Chờ một nhịp để vùng cuối cùng kịp hiện đầy đủ trên canvas trước khi chuyển màn.
+            kotlinx.coroutines.delay(COMPLETED_NAVIGATION_DELAY_MS)
+
+            // Ảnh hoàn thiện được ghi ra file rồi truyền category/levelId sang, KHÔNG nhét
+            // Bitmap thẳng vào Intent: bitmap 900x900 (~3MB) vượt xa giới hạn ~1MB của Binder
+            // và sẽ ném TransactionTooLargeException.
+            viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
+
+            startActivity(
+                Intent(this@PaintActivity, PictureCompletedActivity::class.java).apply {
+                    putExtra(PictureCompletedActivity.EXTRA_CATEGORY, event.category)
+                    putExtra(PictureCompletedActivity.EXTRA_LEVEL_ID, event.levelId)
+                    putExtra(PictureCompletedActivity.EXTRA_COLLECTED_COUNT, event.collectedCount)
+                }
+            )
+            finish()
         }
     }
 
@@ -526,7 +555,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         // Đang xem bản tô đầy thì canvas không phản ánh tiến trình thật — lưu lúc này sẽ ghi
         // đè thumbnail bằng ảnh đã hoàn thiện dù người dùng mới tô được vài mảng.
         if (isFillAllPreviewActive) return
-        viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(400))
+        // Luồng hoàn thành đã tự lưu ngay trước khi chuyển màn, khỏi dựng lại bitmap 900x900.
+        if (isNavigatingToCompleted) return
+        viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
     }
 
     override fun onDestroy() {

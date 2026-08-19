@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -137,13 +138,20 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
     }
 
     private fun showNoInternetDialog() {
+        showDialogOnce(NoInternetDialog.TAG) { NoInternetDialog.newInstance() }
+    }
+
+    // Chỉ cho phép đúng một dialog hiển thị tại một thời điểm: nếu đang có bất kỳ
+    // DialogFragment nào trên màn hình thì bỏ qua yêu cầu mở dialog mới.
+    protected fun showDialogOnce(tag: String, create: () -> DialogFragment) {
         if (isFinishing || isDestroyed || supportFragmentManager.isStateSaved) return
 
-        val exist = supportFragmentManager.findFragmentByTag(NoInternetDialog.TAG)
-        if (exist != null) return
+        val hasDialogShowing = supportFragmentManager.fragments.any {
+            it is DialogFragment && it.isAdded
+        }
+        if (hasDialogShowing) return
 
-        NoInternetDialog.newInstance().show(supportFragmentManager, NoInternetDialog.TAG)
-
+        create().show(supportFragmentManager, tag)
     }
 
     private fun applyImmersiveMode() {

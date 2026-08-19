@@ -1,14 +1,184 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    tools:background="@drawable/bg_full_main_theme_01"
     tools:context=".fragments.MyWorkFragment">
 
-    <!-- TODO: Update blank fragment layout -->
-    <TextView
+    <LinearLayout
+        android:id="@+id/llTop"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="My Work fragment" />
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tvMyWork"
+            style="@style/Heading1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="My Work"
+            android:textColor="@color/white" />
+
+        <ImageView
+            android:id="@+id/btnArchive"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_oval_trans"
+            android:padding="8dp"
+            android:src="@drawable/ic_archive" />
+
+        <ImageView
+            android:id="@+id/btnSetting"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_oval_trans"
+            android:padding="8dp"
+            android:src="@drawable/ic_setting" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llTabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="32dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/llTop">
+
+        <TextView
+            android:id="@+id/tvTabInProgress"
+            style="@style/Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_library_category_tab_selected"
+            android:gravity="center"
+            android:paddingVertical="8dp"
+            android:text="In Progress"
+            android:textColor="@color/white" />
+
+        <TextView
+            android:id="@+id/tvTabCompleted"
+            style="@style/Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_library_category_tab_unselected"
+            android:gravity="center"
+            android:paddingVertical="8dp"
+            android:text="Completed"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
+
+    <!--    <com.example.baseproject.views.MyWorkSummaryView-->
+    <!--        android:id="@+id/myWorkSummaryView"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="36dp"-->
+    <!--        android:layout_marginHorizontal="20dp"-->
+    <!--        android:layout_marginTop="32dp"-->
+    <!--        app:layout_constraintStart_toStartOf="parent"-->
+    <!--        app:layout_constraintTop_toBottomOf="@id/llTabs" />-->
+
+    <ImageView
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="20dp"
+        android:id="@+id/ivMiniImage"
+        android:layout_marginTop="32dp"
+        android:src="@drawable/ic_mini_image"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/llTabs" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="@id/ivMiniImage"
+        app:layout_constraintStart_toStartOf="@id/ivMiniImage"
+        app:layout_constraintBottom_toBottomOf="@id/ivMiniImage"
+        style="@style/sub2"
+        android:textColor="@color/white"
+        android:id="@+id/tvNumberCount"
+        tools:text="2"
+        android:paddingVertical="6dp"
+        android:paddingEnd="12dp"
+        android:background="@drawable/bg_white_20_percent"
+        android:paddingStart="50dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMyWork"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivMiniImage"
+        tools:listitem="@layout/item_level" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/llEmptyState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivMiniImage">
+
+        <ImageView
+            android:id="@+id/ivEmptyState"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:src="@drawable/ic_empty" />
+
+        <TextView
+            android:id="@+id/tvEmptyMessage"
+            style="@style/BodyL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="You haven't colored any pictures yet."
+            android:textColor="@color/white" />
+
+        <TextView
+            android:id="@+id/btnGoToLibrary"
+            style="@style/ButtonL"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_gradient"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="12dp"
+            android:text="Go to Library"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

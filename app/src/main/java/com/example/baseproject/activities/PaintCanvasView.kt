@@ -36,6 +36,12 @@ class PaintCanvasView @JvmOverloads constructor(
         private const val DBG_TAG = "PBN_DBG_a91f"
         private const val CANVAS_BACKGROUND_COLOR = 0xFFF3F1F3.toInt()
 
+        // Thumbnail phải nền TRẮNG, không dùng CANVAS_BACKGROUND_COLOR: nền xám trùng khít
+        // màu panel của CurrentPictureDialog (@color/grey_50 = #F3F1F3) khiến card chìm vào
+        // nền, chỉ còn bóng đổ làm ranh giới nên nhìn rất bẩn. Trắng cũng là phần tử đơn vị
+        // của phép nhân nên nét vẽ (multiplyPaint) vẫn giữ nguyên độ sắc.
+        private const val THUMBNAIL_BACKGROUND_COLOR = 0xFFFFFFFF.toInt()
+
         // Ngưỡng bán kính trên MÀN HÌNH (không phải trên bitmap) để quyết định có hiện số
         // hay không — giữ nguyên như trước, chỉ đổi nguồn region.radius (giờ chính xác hơn).
         private const val MIN_SCREEN_RADIUS_TO_SHOW_LABEL = 25f
@@ -492,7 +498,7 @@ class PaintCanvasView @JvmOverloads constructor(
         try {
             val result = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(result)
-            canvas.drawColor(CANVAS_BACKGROUND_COLOR)
+            canvas.drawColor(THUMBNAIL_BACKGROUND_COLOR)
             canvas.drawBitmap(colored, 0f, 0f, null)
             revealedDetailBitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
             drawBitmapInMaskBounds(canvas, line, multiplyPaint)

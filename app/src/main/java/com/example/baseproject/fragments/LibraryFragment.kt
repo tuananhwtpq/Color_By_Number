@@ -13,8 +13,12 @@ import com.example.baseproject.activities.PaintActivity
 import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseFragment
+import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.progressFraction
 import com.example.baseproject.databinding.FragmentLibraryBinding
 import com.example.baseproject.databinding.ItemLibraryCategoryTabBinding
+import com.example.baseproject.dialog.CurrentPictureDialog
+import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.ui.library.LibraryViewModel
 import kotlinx.coroutines.flow.collectLatest
 
@@ -47,10 +51,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                         appContainer.paintingProgressRepository,
                         lifecycleScope
                     ) { level ->
-                        val intent = Intent(requireActivity(), PaintActivity::class.java)
-                        intent.putExtra("CATEGORY", level.category)
-                        intent.putExtra("LEVEL_ID", level.id)
-                        startActivity(intent)
+                        onLevelClicked(level)
                     }
             }
         }
@@ -102,8 +103,47 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
 
     override fun onResume() {
         super.onResume()
-        // Cập nhật lại RecyclerView khi quay lại từ PaintActivity để load lại Thumbnail mới nhất
         binding.rvLevels.adapter?.notifyDataSetChanged()
+    }
+
+    private fun onLevelClicked(level: LevelConfig) {
+        val completedMaskColors =
+            appContainer.paintingProgressRepository.loadProgress(level.category, level.id)
+        val progress = level.progressFraction(completedMaskColors)
+
+        if (progress > 0f && progress < 1f) {
+            showCurrentPictureDialog(level)
+        } else {
+            openPaintActivity(level)
+        }
+    }
+
+    private fun showCurrentPictureDialog(level: LevelConfig) {
+        CurrentPictureDialog().apply {
+            previewFile = appContainer.thumbnailRepository.getThumbnailFile(level.category, level.id)
+            onColor = { openPaintActivity(level) }
+            onReset = {
+                showResetPictureDialog(level)
+                dismiss()
+            }
+        }.show(parentFragmentManager, CurrentPictureDialog::class.java.simpleName)
+    }
+
+    private fun showResetPictureDialog(level: LevelConfig) {
+        ResetPictureDialog().apply {
+            onRestart = {
+                appContainer.paintingProgressRepository.resetProgress(level.category, level.id)
+                appContainer.thumbnailRepository.deleteThumbnail(level.category, level.id)
+                binding.rvLevels.adapter?.notifyDataSetChanged()
+            }
+        }.show(parentFragmentManager, ResetPictureDialog::class.java.simpleName)
+    }
+
+    private fun openPaintActivity(level: LevelConfig) {
+        val intent = Intent(requireActivity(), PaintActivity::class.java)
+        intent.putExtra("CATEGORY", level.category)
+        intent.putExtra("LEVEL_ID", level.id)
+        startActivity(intent)
     }
 
 }

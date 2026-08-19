@@ -222,7 +222,13 @@ class PaintViewModel(
 
         if (completedIndexes.size == uniqueColors.size) {
             viewModelScope.launch {
-                _events.emit(PaintUiEvent.ShowToast("Level Completed! 🎉"))
+                _events.emit(
+                    PaintUiEvent.LevelCompleted(
+                        category = category,
+                        levelId = levelId,
+                        collectedCount = uniqueColors.size
+                    )
+                )
             }
         }
     }
@@ -232,7 +238,10 @@ class PaintViewModel(
         val levelId = levelId ?: return
         if (bitmap == null || _uiState.value.completedMaskColors.isEmpty()) return
         try {
-            thumbnailRepository.saveThumbnail(category, levelId, bitmap)
+            // Truyền thẳng kích thước đã chụp (PaintCanvasView.generateThumbnail): bỏ qua
+            // tham số này sẽ rơi vào mặc định 400px của repository, ép ảnh 900px xuống 400px
+            // rồi lại phóng to ~2.5x khi hiện full-width trong CurrentPictureDialog → mờ.
+            thumbnailRepository.saveThumbnail(category, levelId, bitmap, bitmap.width)
         } finally {
             bitmap.recycle()
         }

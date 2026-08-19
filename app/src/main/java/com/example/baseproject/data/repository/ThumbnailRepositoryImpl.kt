@@ -18,8 +18,20 @@ class ThumbnailRepositoryImpl(
 
     override fun saveThumbnail(category: String, levelId: String, bitmap: Bitmap, size: Int) {
         val file = getThumbnailFile(category, levelId)
-        file.outputStream().use { out ->
-            bitmap.compress(Bitmap.CompressFormat.WEBP, 80, out)
+        val thumbnail = if (bitmap.width == size && bitmap.height == size) {
+            bitmap
+        } else {
+            Bitmap.createScaledBitmap(bitmap, size, size, true)
+        }
+
+        try {
+            file.outputStream().use { out ->
+                thumbnail.compress(Bitmap.CompressFormat.WEBP, 95, out)
+            }
+        } finally {
+            if (thumbnail !== bitmap) {
+                thumbnail.recycle()
+            }
         }
     }
 

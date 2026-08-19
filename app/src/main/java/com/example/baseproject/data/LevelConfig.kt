@@ -44,6 +44,11 @@ data class LevelConfig(
     }
 }
 
+fun LevelConfig.progressFraction(completedMaskColors: Set<Int>): Float {
+    val totalRegions = regions?.size ?: totalRegions ?: palette.size
+    return if (totalRegions > 0) completedMaskColors.size.toFloat() / totalRegions.toFloat() else 0f
+}
+
 data class PaletteItem(
     @SerializedName("number") val number: Int,
     @SerializedName("mask_color") val maskColorHex: String? = null,

@@ -57,7 +57,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         collectWithLifecycle {
             viewModel.uiState.collectLatest { state ->
                 if (binding.viewPager2.currentItem != state.selectedTab) {
-                    binding.viewPager2.currentItem = state.selectedTab
+                    binding.viewPager2.setCurrentItem(state.selectedTab, false)
                 }
                 updateByPosition(state.selectedTab)
             }
