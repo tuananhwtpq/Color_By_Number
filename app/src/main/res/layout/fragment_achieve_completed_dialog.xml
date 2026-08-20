@@ -4,12 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_grey_50_20"
+    android:background="@drawable/bg_achieve_done"
     android:clipChildren="false"
     android:clipToPadding="false"
     android:minHeight="40dp"
     android:padding="20dp"
-    tools:context=".dialog.AchieveDetailDialog">
+    tools:context=".dialog.AchieveCompletedDialog">
 
     <ImageView
         android:id="@+id/btnClose"
@@ -53,52 +53,27 @@
         app:layout_constraintTop_toBottomOf="@id/tvAchieveName"
         tools:text="Complete your very first artwork." />
 
-    <com.example.baseproject.views.AchievementProgressView
-        android:id="@+id/progressAchieve"
-        android:layout_width="match_parent"
-        android:layout_height="24dp"
-        android:layout_marginTop="12dp"
+    <TextView
+        android:id="@+id/tvCompleted"
+        style="@style/sub2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="@string/completed"
+        android:textColor="@color/grey_700"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAchieveDetail" />
 
     <TextView
-        android:id="@+id/tvReward"
-        style="@style/sub2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="Reward:"
-        android:textColor="@color/grey_600"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/progressAchieve" />
-
-    <ImageView
-        android:id="@+id/btnHint"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_marginTop="14dp"
-        android:src="@drawable/ic_hint_new"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvReward" />
-
-    <TextView
-        android:id="@+id/tvHintCount"
+        android:id="@+id/tvDateTime"
         style="@style/BodyM"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="-8dp"
-        android:background="@drawable/bg_gradien_oval"
-        android:paddingHorizontal="8dp"
-        android:paddingVertical="2dp"
-        android:text="1"
-        android:textColor="@color/white"
-        android:visibility="visible"
-        app:layout_constraintBottom_toBottomOf="@id/btnHint"
-        app:layout_constraintEnd_toEndOf="@id/btnHint"
-        tools:visibility="visible" />
-
+        android:textColor="@color/grey_600"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvCompleted"
+        tools:text="17 July 2026" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

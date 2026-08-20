@@ -1,6 +1,7 @@
 package com.example.baseproject.activities
 
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.baseproject.MyApplication
@@ -9,9 +10,17 @@ import com.example.baseproject.adapters.AchievementAdapter
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.Achievement
 import com.example.baseproject.databinding.ActivityAchieveBinding
+import com.example.baseproject.dialog.AchieveCompletedDialog
+import com.example.baseproject.dialog.AchieveDetailDialog
 import com.example.baseproject.utils.setOnUnDoubleClick
 
 class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBinding::inflate) {
+
+    private val onBackPressCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            finish()
+        }
+    }
 
     private companion object {
         const val TAB_IN_PROGRESS = 0
@@ -37,10 +46,12 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
         binding.rcvAchievements.layoutManager = GridLayoutManager(this, 2)
         binding.rcvAchievements.adapter = achievementAdapter
         updateTabSelection(TAB_IN_PROGRESS)
+
+        onBackPressedDispatcher.addCallback(onBackPressCallback)
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnUnDoubleClick { finish() }
+        binding.btnBack.setOnUnDoubleClick { onBackPressedDispatcher.onBackPressed() }
         binding.tvTabInProgress.setOnUnDoubleClick { updateTabSelection(TAB_IN_PROGRESS) }
         binding.tvTabCompleted.setOnUnDoubleClick { updateTabSelection(TAB_COMPLETED) }
     }
@@ -76,7 +87,14 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
     }
 
     private fun onAchievementClicked(achievement: Achievement) {
-        // TODO: mở dialog chi tiết — chưa đạt thì hướng dẫn cần làm gì (descriptionRes),
-        // đã đạt thì hiện ngày hoàn thành (achievement.unlockedAtMillis).
+        if (achievement.isCompleted) {
+            showDialogOnce(AchieveCompletedDialog.TAG) {
+                AchieveCompletedDialog().apply { this.achievement = achievement }
+            }
+        } else {
+            showDialogOnce(AchieveDetailDialog.TAG) {
+                AchieveDetailDialog().apply { this.achievement = achievement }
+            }
+        }
     }
 }
