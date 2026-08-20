@@ -17,8 +17,54 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:lottie_autoPlay="true"
-        app:lottie_loop="true"
-        app:lottie_rawRes="@raw/sakura_heaven" />
+        app:lottie_loop="true" />
+
+    <TextView
+        android:id="@+id/tvRealmName"
+        style="@style/Heading1"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="20dp"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toStartOf="@id/btnFullScreen"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Sakura Haven" />
+
+    <ImageView
+        android:id="@+id/btnGuide"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="20dp"
+        android:background="@drawable/bg_oval_trans"
+        android:padding="8dp"
+        android:src="@drawable/ic_info"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/btnFullScreen"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_oval_trans"
+        android:padding="8dp"
+        android:src="@drawable/ic_full_screen"
+        app:layout_constraintEnd_toStartOf="@id/btnGuide"
+        app:layout_constraintTop_toTopOf="@id/btnGuide" />
+
+    <ImageView
+        android:id="@+id/btnNewRealm"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="60dp"
+        android:src="@drawable/ic_new_realm"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

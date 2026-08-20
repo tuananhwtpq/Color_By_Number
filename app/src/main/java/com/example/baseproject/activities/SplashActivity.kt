@@ -3,7 +3,9 @@ package com.example.baseproject.activities
 import android.content.Intent
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
+import com.example.baseproject.MyApplication
 import com.example.baseproject.app.SimpleViewModelFactory
+import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivitySplashBinding
 import com.example.baseproject.ui.splash.SplashUiEvent
@@ -24,6 +26,10 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
     }
 
     override fun initData() {
+        // Đếm số ngày mở app cho nhóm achievement "Return to the app for N days".
+        (application as MyApplication).appContainer.achievementRepository
+            .track(AchievementEvent.AppOpened)
+
         if (!isTaskRoot
             && intent.hasCategory(Intent.CATEGORY_LAUNCHER)
             && intent.action != null

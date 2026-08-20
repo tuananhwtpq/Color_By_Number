@@ -49,6 +49,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                     LevelAdapter(
                         state.visibleLevels,
                         appContainer.paintingProgressRepository,
+                        appContainer.thumbnailRepository,
                         lifecycleScope
                     ) { level ->
                         onLevelClicked(level)

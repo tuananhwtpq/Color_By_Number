@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.baseproject.MyApplication
 import com.example.baseproject.R
+import com.example.baseproject.activities.AchieveActivity
 import com.example.baseproject.activities.PaintActivity
 import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
@@ -37,7 +38,12 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
 
     private val viewModel: MyWorkViewModel by viewModels {
         SimpleViewModelFactory {
-            MyWorkViewModel(appContainer.assetLevelRepository, appContainer.paintingProgressRepository)
+            MyWorkViewModel(
+                appContainer.assetLevelRepository,
+                appContainer.collectionRepository,
+                appContainer.paintingProgressRepository,
+                appContainer.thumbnailRepository
+            )
         }
     }
 
@@ -66,6 +72,9 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     override fun initActionView() {
         binding.tvTabInProgress.setOnClickListener { updateTabSelection(TAB_IN_PROGRESS) }
         binding.tvTabCompleted.setOnClickListener { updateTabSelection(TAB_COMPLETED) }
+        binding.btnArchive.setOnClickListener {
+            startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+        }
         binding.btnGoToLibrary.setOnClickListener {
             mainViewModel.onTabSelected(LIBRARY_TAB_POSITION)
         }
@@ -73,7 +82,6 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
 
     override fun onResume() {
         super.onResume()
-        // Cập nhật lại phân loại In Progress/Completed khi quay về từ PaintActivity
         viewModel.loadData()
     }
 
@@ -104,6 +112,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
             binding.rvMyWork.adapter = LevelAdapter(
                 levels,
                 appContainer.paintingProgressRepository,
+                appContainer.thumbnailRepository,
                 lifecycleScope
             ) { level -> onMyWorkItemClicked(level) }
         } else {

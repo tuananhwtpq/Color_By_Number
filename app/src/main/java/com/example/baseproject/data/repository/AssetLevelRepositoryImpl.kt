@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import com.example.baseproject.data.CentroidCalculator
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.utils.AssetImageResolver
+import com.example.baseproject.utils.Constants
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +62,11 @@ class AssetLevelRepositoryImpl(
         try {
             val categories = assetManager.list("") ?: return@withContext emptyList()
             for (category in categories) {
-                if (category == "images" || category == "webkit" || category.contains(".")) continue
+                if (category == "images" ||
+                    category == "webkit" ||
+                    category == Constants.ASSET_COLLECTION_ROOT ||
+                    category.contains(".")
+                ) continue
 
                 val levelIds = assetManager.list(category) ?: continue
                 for (levelId in levelIds) {

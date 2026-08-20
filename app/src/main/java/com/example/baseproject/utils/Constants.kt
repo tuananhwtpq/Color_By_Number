@@ -7,4 +7,8 @@ object Constants {
     const val PRIVACY_POLICY = ""
     const val REMOVE_COMPLETED_COLORS_FROM_PALETTE = true
 
+    // Folder assets chứa dữ liệu cho tab Collection. Khác các folder cấp 1 còn lại — những
+    // folder kia là category của tab Library.
+    const val ASSET_COLLECTION_ROOT = "Collection"
+
 }

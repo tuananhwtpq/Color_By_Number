@@ -16,6 +16,7 @@ import com.example.baseproject.utils.ImageSharer
 import com.example.baseproject.utils.setOnUnDoubleClick
 import com.example.baseproject.utils.showToast
 import kotlinx.coroutines.launch
+import com.example.baseproject.utils.toFileNameKey
 
 class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     ActivityPictureCompletedBinding::inflate
@@ -97,7 +98,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         isSharingPicture = true
 
         val sourceFile = appContainer.thumbnailRepository.getThumbnailFile(category, levelId)
-        val displayName = "Pixlory_${category}_${levelId}"
+        val displayName = "Pixlory_${category}_${levelId}".toFileNameKey()
 
         lifecycleScope.launch {
             val result = ImageSharer.prepareShareUri(applicationContext, sourceFile, displayName)
@@ -150,7 +151,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         isSavingPicture = true
 
         val sourceFile = appContainer.thumbnailRepository.getThumbnailFile(category, levelId)
-        val displayName = "Pixlory_${category}_${levelId}_${System.currentTimeMillis()}"
+        val displayName = "Pixlory_${category}_${levelId}_${System.currentTimeMillis()}".toFileNameKey()
 
         lifecycleScope.launch {
             val result = ImageSaver.saveImageToGallery(applicationContext, sourceFile, displayName)

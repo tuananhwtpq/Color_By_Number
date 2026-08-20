@@ -19,13 +19,23 @@ class PaintingProgressRepositoryImpl(
                 progressKey(category, levelId),
                 completedMaskColors.map { it.toString() }.toSet()
             )
+            putLong(lastPaintedAtKey(category, levelId), System.currentTimeMillis())
         }
     }
 
     override fun resetProgress(category: String, levelId: String) {
-        preferences.edit { remove(progressKey(category, levelId)) }
+        preferences.edit {
+            remove(progressKey(category, levelId))
+            remove(lastPaintedAtKey(category, levelId))
+        }
     }
+
+    override fun lastPaintedAt(category: String, levelId: String): Long =
+        preferences.getLong(lastPaintedAtKey(category, levelId), 0L)
 
     private fun progressKey(category: String, levelId: String): String =
         "PROGRESS_${category}_${levelId}"
+
+    private fun lastPaintedAtKey(category: String, levelId: String): String =
+        "PAINTED_AT_${category}_${levelId}"
 }

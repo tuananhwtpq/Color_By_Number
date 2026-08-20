@@ -11,13 +11,14 @@ import com.example.baseproject.R
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.data.progressFraction
 import com.example.baseproject.data.repository.PaintingProgressRepository
+import com.example.baseproject.data.repository.ThumbnailRepository
 import com.example.baseproject.utils.AssetImageResolver
-import java.io.File
 import kotlin.math.ceil
 
 class LevelAdapter(
     private val levels: List<LevelConfig>,
     private val paintingProgressRepository: PaintingProgressRepository,
+    private val thumbnailRepository: ThumbnailRepository,
     private val scope: kotlinx.coroutines.CoroutineScope,
     private val onClick: (LevelConfig) -> Unit
 ) : RecyclerView.Adapter<LevelAdapter.ViewHolder>() {
@@ -61,9 +62,8 @@ class LevelAdapter(
         }
         
         // Kiểm tra xem đã có file Thumbnail (tiến trình đang tô dở) chưa
-        val dir = File(context.filesDir, "thumbnails")
-        val thumbFile = File(dir, "${level.category}_${level.id}.webp")
-        
+        val thumbFile = thumbnailRepository.getThumbnailFile(level.category, level.id)
+
         if (thumbFile.exists()) {
             // Load file Thumbnail WEBP (bỏ qua Cache để luôn update ảnh mới nhất khi người dùng tô thêm)
             Glide.with(context)

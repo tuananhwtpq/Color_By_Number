@@ -16,6 +16,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.baseproject.MyApplication
+import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.adapters.PaletteAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
@@ -40,6 +41,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val COMPLETED_NAVIGATION_DELAY_MS = 400L
 
         private const val DBG_TAG = "PBN_DBG_a91f"
+    }
+
+    private val achievementRepository by lazy {
+        (application as MyApplication).appContainer.achievementRepository
     }
 
     private val viewModel: PaintViewModel by viewModels {
@@ -507,7 +512,12 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun handleEvent(event: PaintUiEvent) {
         when (event) {
             PaintUiEvent.FinishScreen -> finish()
-            is PaintUiEvent.FocusOnMaskColor -> binding.paintCanvas.focusOnRegionByMaskColor(event.maskColor)
+            is PaintUiEvent.FocusOnMaskColor -> {
+                // Chỉ tính là đã dùng gợi ý khi thật sự có vùng để chỉ (bấm hụt thì
+                // PaintViewModel bắn ShowToast chứ không bắn event này).
+                achievementRepository.track(AchievementEvent.HintUsed)
+                binding.paintCanvas.focusOnRegionByMaskColor(event.maskColor)
+            }
             is PaintUiEvent.LevelCompleted -> navigateToPictureCompleted(event)
             PaintUiEvent.RequestResetConfirmation -> showResetConfirmationDialog()
             is PaintUiEvent.ShowToast -> Toast.makeText(this, event.message, Toast.LENGTH_SHORT)
@@ -516,6 +526,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun navigateToPictureCompleted(event: PaintUiEvent.LevelCompleted) {
+        // TODO: khi có màn Daily thì truyền isDaily = true cho tranh thuộc Daily.
+        achievementRepository.track(
+            AchievementEvent.ArtworkCompleted(event.category, event.levelId)
+        )
+
         if (isNavigatingToCompleted) return
         isNavigatingToCompleted = true
 

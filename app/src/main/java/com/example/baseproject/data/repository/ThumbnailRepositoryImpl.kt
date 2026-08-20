@@ -2,6 +2,7 @@ package com.example.baseproject.data.repository
 
 import android.content.Context
 import android.graphics.Bitmap
+import com.example.baseproject.utils.toFileNameKey
 import java.io.File
 
 class ThumbnailRepositoryImpl(
@@ -13,7 +14,7 @@ class ThumbnailRepositoryImpl(
         if (!dir.exists()) {
             dir.mkdirs()
         }
-        return File(dir, "${category}_${levelId}.webp")
+        return File(dir, "${category}_${levelId}".toFileNameKey() + ".webp")
     }
 
     override fun saveThumbnail(category: String, levelId: String, bitmap: Bitmap, size: Int) {

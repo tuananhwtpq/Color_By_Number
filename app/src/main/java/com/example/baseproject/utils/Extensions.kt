@@ -230,3 +230,8 @@ private fun Float.dpToPx(context: Context): Float {
         context.resources.displayMetrics
     )
 }
+
+// category của một bức tranh cũng chính là đường dẫn asset ("Collection/Cat moments"), nên
+// khi ghép vào tên file (thumbnail, ảnh lưu ra gallery) phải bỏ dấu "/" đi. Chỉ thay đúng ký
+// tự phân cách để tên file của các category cũ giữ nguyên, không làm mất thumbnail đã lưu.
+fun String.toFileNameKey(): String = replace('/', '_').replace('\\', '_')
