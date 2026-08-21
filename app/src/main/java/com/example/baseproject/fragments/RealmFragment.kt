@@ -1,6 +1,9 @@
 package com.example.baseproject.fragments
 
+import android.content.Intent
+import com.example.baseproject.activities.MainActivity
 import com.example.baseproject.activities.RealmFullScreenActivity
+import com.example.baseproject.activities.RealmRoadActivity
 import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.data.Realm
 import com.example.baseproject.data.RealmCatalog
@@ -17,8 +20,12 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     }
 
     override fun initView() {
-        binding.tvRealmName.text = realm.name
-        binding.lavRealmBackground.setAnimation(realm.animationRes)
+        renderRealm()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderRealm()
     }
 
     override fun initActionView() {
@@ -31,6 +38,21 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
                 )
             )
         }
+
+        binding.btnNewRealm.setOnUnDoubleClick {
+            startActivity(Intent(requireContext(), RealmRoadActivity::class.java))
+        }
+    }
+
+    private fun renderRealm() {
+        val requestedRealmId = activity?.intent?.getStringExtra(MainActivity.EXTRA_REALM_ID)
+        val nextRealm = RealmCatalog.findById(requestedRealmId) ?: RealmCatalog.default
+        if (nextRealm == realm && binding.tvRealmName.text == nextRealm.name) return
+
+        realm = nextRealm
+        binding.tvRealmName.text = realm.name
+        binding.lavRealmBackground.setAnimation(realm.animationRes)
+        binding.lavRealmBackground.playAnimation()
     }
 
 }

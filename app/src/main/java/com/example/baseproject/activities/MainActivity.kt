@@ -1,5 +1,6 @@
 package com.example.baseproject.activities
 
+import android.content.Intent
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.viewModels
@@ -19,6 +20,9 @@ import kotlinx.coroutines.flow.collectLatest
 class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::inflate) {
 
     companion object {
+        const val EXTRA_SELECTED_TAB = "EXTRA_SELECTED_TAB"
+        const val EXTRA_REALM_ID = "EXTRA_REALM_ID"
+        const val TAB_COLOR_REALM = 2
         private const val BOTTOM_NAV_ICON_SELECTED_SCALE = 1.22f
         private const val BOTTOM_NAV_ICON_SELECTED_LIFT_DP = 2f
     }
@@ -32,7 +36,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     }
 
     override fun initData() {
-        viewModel.onTabSelected(0)
+        viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
     }
 
     override fun initView() {
@@ -86,6 +90,12 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
             binding.ivMyWork.animateBottomNavPress()
             viewModel.onTabSelected(4)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
     }
 
     private fun resetItemSelector() {

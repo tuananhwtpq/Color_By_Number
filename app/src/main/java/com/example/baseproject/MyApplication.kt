@@ -14,6 +14,7 @@ class MyApplication : AdsApplication() {
         super.onCreate()
         SharedPrefManager.init(this)
         appContainer = DefaultAppContainer(this)
+        appContainer.paintDropRepository.trackAppOpened()
     }
 
 }

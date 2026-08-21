@@ -9,6 +9,8 @@ import com.example.baseproject.data.repository.AssetLevelRepositoryImpl
 import com.example.baseproject.data.repository.CollectionRepository
 import com.example.baseproject.data.repository.PaintingProgressRepository
 import com.example.baseproject.data.repository.PaintingProgressRepositoryImpl
+import com.example.baseproject.data.repository.PaintDropRepository
+import com.example.baseproject.data.repository.PaintDropRepositoryImpl
 import com.example.baseproject.data.repository.SettingsRepository
 import com.example.baseproject.data.repository.SettingsRepositoryImpl
 import com.example.baseproject.data.repository.ThumbnailRepository
@@ -21,6 +23,7 @@ interface AppContainer {
     val thumbnailRepository: ThumbnailRepository
     val settingsRepository: SettingsRepository
     val achievementRepository: AchievementRepository
+    val paintDropRepository: PaintDropRepository
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -47,6 +50,12 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val achievementRepository: AchievementRepository by lazy {
         AchievementRepositoryImpl(
             appContext.getSharedPreferences("Achievements", Context.MODE_PRIVATE)
+        )
+    }
+
+    override val paintDropRepository: PaintDropRepository by lazy {
+        PaintDropRepositoryImpl(
+            appContext.getSharedPreferences("PaintDrops", Context.MODE_PRIVATE)
         )
     }
 

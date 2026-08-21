@@ -18,6 +18,9 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
+            android:name=".activities.RealmRoadActivity"
+            android:exported="false" />
+        <activity
             android:name=".activities.AchieveActivity"
             android:exported="false" />
         <activity

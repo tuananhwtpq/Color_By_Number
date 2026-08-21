@@ -43,12 +43,15 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val DBG_TAG = "PBN_DBG_a91f"
     }
 
+    private val appContainer by lazy {
+        (application as MyApplication).appContainer
+    }
+
     private val achievementRepository by lazy {
-        (application as MyApplication).appContainer.achievementRepository
+        appContainer.achievementRepository
     }
 
     private val viewModel: PaintViewModel by viewModels {
-        val appContainer = (application as MyApplication).appContainer
         SimpleViewModelFactory {
             PaintViewModel(
                 appContainer.assetLevelRepository,
@@ -530,6 +533,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         achievementRepository.track(
             AchievementEvent.ArtworkCompleted(event.category, event.levelId)
         )
+        appContainer.paintDropRepository.trackArtworkCompleted(event.category, event.levelId)
 
         if (isNavigatingToCompleted) return
         isNavigatingToCompleted = true
