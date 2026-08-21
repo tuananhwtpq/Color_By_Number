@@ -23,9 +23,29 @@ class PaintingProgressRepositoryImpl(
         }
     }
 
+    override fun loadPaintHistory(category: String, levelId: String): List<Int> {
+        val rawHistory = preferences.getString(historyKey(category, levelId), null)
+            ?: return emptyList()
+        return rawHistory.split(HISTORY_SEPARATOR)
+            .mapNotNull { it.toIntOrNull() }
+    }
+
+    override fun appendPaintHistory(category: String, levelId: String, maskColor: Int) {
+        val currentHistory = loadPaintHistory(category, levelId)
+        if (maskColor in currentHistory) return
+
+        preferences.edit {
+            putString(
+                historyKey(category, levelId),
+                (currentHistory + maskColor).joinToString(HISTORY_SEPARATOR)
+            )
+        }
+    }
+
     override fun resetProgress(category: String, levelId: String) {
         preferences.edit {
             remove(progressKey(category, levelId))
+            remove(historyKey(category, levelId))
             remove(lastPaintedAtKey(category, levelId))
         }
     }
@@ -36,6 +56,13 @@ class PaintingProgressRepositoryImpl(
     private fun progressKey(category: String, levelId: String): String =
         "PROGRESS_${category}_${levelId}"
 
+    private fun historyKey(category: String, levelId: String): String =
+        "PAINT_HISTORY_${category}_${levelId}"
+
     private fun lastPaintedAtKey(category: String, levelId: String): String =
         "PAINTED_AT_${category}_${levelId}"
+
+    private companion object {
+        const val HISTORY_SEPARATOR = ","
+    }
 }

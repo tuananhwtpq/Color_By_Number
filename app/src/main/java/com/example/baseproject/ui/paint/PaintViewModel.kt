@@ -179,6 +179,7 @@ class PaintViewModel(
         val levelId = levelId ?: return
         val newCompleted = _uiState.value.completedMaskColors + maskInt
         val saveStart = System.currentTimeMillis()
+        paintingProgressRepository.appendPaintHistory(category, levelId, maskInt)
         paintingProgressRepository.saveProgress(category, levelId, newCompleted)
         Log.d(
             dbgTag,
