@@ -6,6 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieDrawable
 import com.example.baseproject.activities.MainActivity
 import com.example.baseproject.activities.RealmFullScreenActivity
+import com.example.baseproject.activities.RealmGuideActivity
 import com.example.baseproject.activities.RealmRoadActivity
 import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.data.Realm
@@ -49,6 +50,10 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
 
         binding.btnNewRealm.setOnUnDoubleClick {
             startActivity(Intent(requireContext(), RealmRoadActivity::class.java))
+        }
+
+        binding.btnGuide.setOnUnDoubleClick {
+            startActivity(Intent(requireActivity(), RealmGuideActivity::class.java))
         }
     }
 
