@@ -4,18 +4,23 @@ import android.content.Intent
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.example.baseproject.adapters.MainVPAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
+import com.example.baseproject.data.RealmCatalog
 import com.example.baseproject.databinding.ActivityMainBinding
 import com.example.baseproject.ui.main.MainViewModel
+import com.example.baseproject.utils.RealmAnimationCache
 import com.example.baseproject.utils.animateBottomNavPress
 import com.example.baseproject.utils.animateBottomNavSelection
 import com.example.baseproject.utils.enableMarquee
 import com.example.baseproject.utils.setBottomNavLabelSelected
 import com.example.baseproject.utils.setOnUnDoubleClick
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::inflate) {
 
@@ -37,6 +42,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
 
     override fun initData() {
         viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
+        preloadRealmAnimation()
     }
 
     override fun initView() {
@@ -96,6 +102,22 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         super.onNewIntent(intent)
         setIntent(intent)
         viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
+        preloadRealmAnimation()
+    }
+
+    private fun preloadRealmAnimation() {
+        val realm = RealmCatalog.findById(intent.getStringExtra(EXTRA_REALM_ID))
+            ?: RealmCatalog.default
+
+        lifecycleScope.launch {
+            try {
+                RealmAnimationCache.loadComposition(this@MainActivity, realm.animationRes)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Preload is only an optimisation; RealmFragment still has a loading fallback.
+            }
+        }
     }
 
     private fun resetItemSelector() {

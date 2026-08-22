@@ -11,6 +11,7 @@ import com.example.baseproject.data.RealmCatalog
 import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.data.repository.PaintDropStats
 import com.example.baseproject.databinding.ActivityRealmRoadBinding
+import com.example.baseproject.dialog.AreaLockedDialog
 import com.example.baseproject.dialog.NewAreaUnlockedDialog
 import com.example.baseproject.dialog.PaintDropInfoDialog
 import com.example.baseproject.utils.setOnUnDoubleClick
@@ -33,6 +34,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
                 )
             },
             onUnlockClick = ::unlockRealm,
+            onLockedClick = { showAreaLockedDialog() },
         )
     }
 
@@ -91,6 +93,12 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
             PaintDropInfoDialog().apply {
                 stats = currentPaintDropStats()
             }
+        }
+    }
+
+    private fun showAreaLockedDialog() {
+        showDialogOnce(AreaLockedDialog.TAG) {
+            AreaLockedDialog()
         }
     }
 
