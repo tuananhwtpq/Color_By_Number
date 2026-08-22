@@ -5,238 +5,423 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#abcacb"
+    android:background="@drawable/bg_full_main_theme_01"
     android:layoutDirection="ltr"
     tools:context=".activities.SettingActivity">
 
-    <LinearLayout
-        android:id="@+id/llTop"
+    <ImageView
+        android:id="@+id/btnBack"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_oval_trans"
+        android:padding="8dp"
+        android:src="@drawable/ic_left_arrow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvTitle"
+        style="@style/Heading1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="60dp"
         android:gravity="center"
-        android:minHeight="56dp"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
+        android:text="@string/setting"
+        android:textColor="@color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="@id/btnBack" />
 
-        <ImageView
-            android:id="@+id/btnBack"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="7dp"
-            android:src="@drawable/ic_back"
-            app:tint="@color/white" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <TextView
-            android:id="@+id/tvSelectGhostType"
-            style="@style/Heading1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Setting"
-            android:textColor="@color/white" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <View
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:padding="7dp"
-            android:src="@drawable/ic_back" />
-    </LinearLayout>
-
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nestedScrollView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="30dp"
-        android:gravity="center"
-        android:orientation="vertical"
+        android:layout_height="0dp"
+        android:layout_marginTop="32dp"
+        app:layout_constraintBottom_toTopOf="@id/frNative"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/llTop">
+        app:layout_constraintTop_toBottomOf="@id/btnBack">
 
-        <LinearLayout
-            android:id="@+id/btnLanguage"
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/setting_bg"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
-
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@drawable/ic_arabic" />
+            android:layout_marginHorizontal="20dp">
 
             <TextView
-                android:id="@+id/tvLanguage"
-                style="@style/BodyM"
+                android:id="@+id/tvFirst"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:text="@string/language"
-                android:textColor="@color/white" />
+                android:text="@string/color_experience"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <Space
-                android:layout_width="0dp"
+            <LinearLayout
+                android:id="@+id/btnTheme"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1" />
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/tvFirst">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_theme" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/theme"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_white_mini_arrow" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnHighLight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnTheme">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_highlight" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/hightlight_area"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_white_mini_arrow" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnAutoSwitchColor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnHighLight">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_auto_switch_color" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/auto_switch_color"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="47dp"
+                    android:layout_height="28dp"
+                    android:id="@+id/btnSwitchColor"
+                    android:src="@drawable/ic_switch_selector" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnFillInAnim"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnAutoSwitchColor">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_fill_in_anim" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/fill_in_animation"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="47dp"
+                    android:layout_height="28dp"
+                    android:id="@+id/btnFillInAnimation"
+                    android:src="@drawable/ic_switch_selector" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnBackgroundMusic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnFillInAnim">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_background_music" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/background_music"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="47dp"
+                    android:layout_height="28dp"
+                    android:id="@+id/btnBackgroundMusicSwitch"
+                    android:src="@drawable/ic_switch_selector" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnSoundEffect"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnBackgroundMusic">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_sound_effect" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/sound_effect"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="47dp"
+                    android:layout_height="28dp"
+                    android:id="@+id/btnSoundEffectSwitch"
+                    android:src="@drawable/ic_switch_selector" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/tvCurrentLanguage"
-                style="@style/BodyS"
+                style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#CCFFFFFF"
-                tools:text="Language" />
+                android:layout_marginTop="24dp"
+                android:text="@string/general"
+                android:textColor="@color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                android:id="@+id/tvGeneral"
+                app:layout_constraintTop_toBottomOf="@id/btnSoundEffect" />
 
-            <ImageView
-                android:layout_width="17dp"
-                android:layout_height="17dp"
-                android:layout_marginStart="12dp"
-                android:src="@drawable/ic_arabic" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/btnFeedBack"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/setting_bg"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
-
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@drawable/ic_arabic" />
-
-            <TextView
-                android:id="@+id/tvFeedBack"
-                style="@style/BodyM"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/btnLanguage"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:text="Feedback"
-                android:textColor="@color/white" />
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/tvGeneral">
 
-            <Space
-                android:layout_width="0dp"
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_language" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/language"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_white_mini_arrow" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnFeedback"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1" />
-        </LinearLayout>
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnLanguage">
 
-        <LinearLayout
-            android:id="@+id/btnShareApp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/setting_bg"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_feedback" />
 
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@drawable/ic_arabic" />
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/feedback"
+                    android:textColor="@color/grey_50" />
 
-            <TextView
-                android:id="@+id/tvShareApp"
-                style="@style/BodyM"
-                android:layout_width="wrap_content"
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_white_mini_arrow" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnShareApp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:text="Share App"
-                android:textColor="@color/white" />
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnFeedback">
 
-            <Space
-                android:layout_width="0dp"
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_share_app" />
+
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/share_app"
+                    android:textColor="@color/grey_50" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_white_mini_arrow" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnPrivacy"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1" />
-        </LinearLayout>
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnShareApp">
 
-        <LinearLayout
-            android:id="@+id/btnPrivacyPolicy"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/setting_bg"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_privacy" />
 
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@drawable/ic_arabic" />
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/privacy_policy"
+                    android:textColor="@color/grey_50" />
 
-            <TextView
-                android:id="@+id/tvPolicy"
-                style="@style/BodyM"
-                android:layout_width="wrap_content"
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_white_mini_arrow" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/btnAppInfo"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:text="Privacy Policy"
-                android:textColor="@color/white" />
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_no_colors"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                app:layout_constraintTop_toBottomOf="@id/btnPrivacy">
 
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-        </LinearLayout>
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_app_info" />
 
-        <LinearLayout
-            android:id="@+id/btnAppInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/setting_bg"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
+                <TextView
+                    style="@style/BodyL"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/app_info"
+                    android:textColor="@color/grey_50" />
 
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@drawable/ic_arabic" />
-
-            <TextView
-                android:id="@+id/tvAppInfo"
-                style="@style/BodyM"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:text="App Info"
-                android:textColor="@color/white" />
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-        </LinearLayout>
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_white_mini_arrow" />
+            </LinearLayout>
 
 
-    </LinearLayout>
+
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
 
     <View
         android:id="@+id/vShowInterAds"

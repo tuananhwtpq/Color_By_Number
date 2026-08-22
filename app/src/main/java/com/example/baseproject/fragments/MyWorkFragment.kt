@@ -11,6 +11,7 @@ import com.example.baseproject.MyApplication
 import com.example.baseproject.R
 import com.example.baseproject.activities.AchieveActivity
 import com.example.baseproject.activities.PaintActivity
+import com.example.baseproject.activities.SettingActivity
 import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseFragment
@@ -21,6 +22,7 @@ import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.ui.mywork.MyWorkUiState
 import com.example.baseproject.ui.mywork.MyWorkViewModel
+import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -78,6 +80,10 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
         binding.btnGoToLibrary.setOnClickListener {
             mainViewModel.onTabSelected(LIBRARY_TAB_POSITION)
         }
+
+        binding.btnSetting.setOnUnDoubleClick {
+            startActivity(Intent(requireActivity(), SettingActivity::class.java))
+        }
     }
 
     override fun onResume() {
@@ -101,11 +107,13 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     private fun renderState(state: MyWorkUiState) {
         binding.progressBar.visibility = if (state.isLoading) View.VISIBLE else View.GONE
 
-        val levels = if (selectedTab == TAB_IN_PROGRESS) state.inProgressLevels else state.completedLevels
+        val levels =
+            if (selectedTab == TAB_IN_PROGRESS) state.inProgressLevels else state.completedLevels
         binding.tvNumberCount.text = levels.size.toString()
 
         val hasData = levels.isNotEmpty()
-        binding.llEmptyState.visibility = if (!state.isLoading && !hasData) View.VISIBLE else View.GONE
+        binding.llEmptyState.visibility =
+            if (!state.isLoading && !hasData) View.VISIBLE else View.GONE
 
         if (hasData) {
             binding.rvMyWork.visibility = View.VISIBLE
@@ -130,7 +138,8 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
 
     private fun showCurrentPictureDialog(level: LevelConfig) {
         CurrentPictureDialog().apply {
-            previewFile = appContainer.thumbnailRepository.getThumbnailFile(level.category, level.id)
+            previewFile =
+                appContainer.thumbnailRepository.getThumbnailFile(level.category, level.id)
             onColor = { openPaintActivity(level) }
             onReset = {
                 showResetPictureDialog(level)
