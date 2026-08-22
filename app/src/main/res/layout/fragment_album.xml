@@ -13,11 +13,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
+        android:layout_marginTop="24dp"
         android:text="@string/collection"
         android:textColor="@color/white"
-        app:layout_constraintBottom_toBottomOf="@id/btnSetting"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/btnSetting" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
         android:id="@+id/btnSetting"
@@ -37,6 +37,7 @@
         android:layout_height="0dp"
         android:layout_marginHorizontal="20dp"
         android:layout_marginTop="32dp"
+        android:paddingBottom="60dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

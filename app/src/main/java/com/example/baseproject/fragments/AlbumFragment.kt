@@ -1,18 +1,16 @@
 package com.example.baseproject.fragments
 
-import android.content.Intent
+import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.baseproject.MyApplication
 import com.example.baseproject.activities.CollectionDetailActivity
-import com.example.baseproject.activities.SettingActivity
 import com.example.baseproject.adapters.CollectionAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.data.AlbumCollection
 import com.example.baseproject.databinding.FragmentAlbumBinding
 import com.example.baseproject.ui.album.AlbumViewModel
-import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -37,6 +35,7 @@ class AlbumFragment : BaseFragment<FragmentAlbumBinding>(FragmentAlbumBinding::i
     }
 
     override fun initView() {
+        binding.btnSetting.visibility = View.GONE
         binding.rcvCollection.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvCollection.adapter = collectionAdapter
 
@@ -48,10 +47,6 @@ class AlbumFragment : BaseFragment<FragmentAlbumBinding>(FragmentAlbumBinding::i
     }
 
     override fun initActionView() {
-
-        binding.btnSetting.setOnUnDoubleClick {
-            startActivity(Intent(requireActivity(), SettingActivity::class.java))
-        }
     }
 
     private fun onCollectionClicked(collection: AlbumCollection) {

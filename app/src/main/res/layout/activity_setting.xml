@@ -39,10 +39,11 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="32dp"
+        android:paddingBottom="60dp"
         app:layout_constraintBottom_toTopOf="@id/frNative"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnBack">
+        app:layout_constraintTop_toBottomOf="@id/tvTitle">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -147,9 +148,9 @@
                     android:textColor="@color/grey_50" />
 
                 <ImageView
+                    android:id="@+id/btnSwitchColor"
                     android:layout_width="47dp"
                     android:layout_height="28dp"
-                    android:id="@+id/btnSwitchColor"
                     android:src="@drawable/ic_switch_selector" />
             </LinearLayout>
 
@@ -179,9 +180,9 @@
                     android:textColor="@color/grey_50" />
 
                 <ImageView
+                    android:id="@+id/btnFillInAnimation"
                     android:layout_width="47dp"
                     android:layout_height="28dp"
-                    android:id="@+id/btnFillInAnimation"
                     android:src="@drawable/ic_switch_selector" />
             </LinearLayout>
 
@@ -211,9 +212,9 @@
                     android:textColor="@color/grey_50" />
 
                 <ImageView
+                    android:id="@+id/btnBackgroundMusicSwitch"
                     android:layout_width="47dp"
                     android:layout_height="28dp"
-                    android:id="@+id/btnBackgroundMusicSwitch"
                     android:src="@drawable/ic_switch_selector" />
             </LinearLayout>
 
@@ -243,13 +244,14 @@
                     android:textColor="@color/grey_50" />
 
                 <ImageView
+                    android:id="@+id/btnSoundEffectSwitch"
                     android:layout_width="47dp"
                     android:layout_height="28dp"
-                    android:id="@+id/btnSoundEffectSwitch"
                     android:src="@drawable/ic_switch_selector" />
             </LinearLayout>
 
             <TextView
+                android:id="@+id/tvGeneral"
                 style="@style/Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -257,7 +259,6 @@
                 android:text="@string/general"
                 android:textColor="@color/white"
                 app:layout_constraintStart_toStartOf="parent"
-                android:id="@+id/tvGeneral"
                 app:layout_constraintTop_toBottomOf="@id/btnSoundEffect" />
 
             <LinearLayout
@@ -414,9 +415,6 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_white_mini_arrow" />
             </LinearLayout>
-
-
-
 
 
         </androidx.constraintlayout.widget.ConstraintLayout>

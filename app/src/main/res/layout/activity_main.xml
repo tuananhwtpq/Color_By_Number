@@ -94,7 +94,7 @@
                 android:id="@+id/ivDaily"
                 android:layout_width="28dp"
                 android:layout_height="28dp"
-                android:src="@drawable/ic_daily_selector" />
+                android:src="@drawable/ic_album_selector" />
 
             <TextView
                 android:id="@+id/tvDaily"
@@ -105,7 +105,7 @@
                 android:ellipsize="marquee"
                 android:gravity="center"
                 android:singleLine="true"
-                android:text="@string/daily"
+                android:text="@string/collection"
                 android:textColor="@color/bottom_nav_color" />
         </LinearLayout>
 
@@ -156,7 +156,7 @@
                 android:id="@+id/ivAlbum"
                 android:layout_width="28dp"
                 android:layout_height="28dp"
-                android:src="@drawable/ic_album_selector" />
+                android:src="@drawable/ic_my_work_selector" />
 
             <TextView
                 android:id="@+id/tvAlbum"
@@ -167,7 +167,7 @@
                 android:ellipsize="marquee"
                 android:gravity="center"
                 android:singleLine="true"
-                android:text="@string/collection"
+                android:text="@string/my_work"
                 android:textColor="@color/bottom_nav_color" />
         </LinearLayout>
 
@@ -187,7 +187,7 @@
                 android:id="@+id/ivMyWork"
                 android:layout_width="28dp"
                 android:layout_height="28dp"
-                android:src="@drawable/ic_my_work_selector" />
+                android:src="@drawable/ic_setting_selector" />
 
             <TextView
                 android:id="@+id/tvMyWork"
@@ -198,7 +198,7 @@
                 android:ellipsize="marquee"
                 android:gravity="center"
                 android:singleLine="true"
-                android:text="@string/my_work"
+                android:text="@string/setting"
                 android:textColor="@color/bottom_nav_color" />
         </LinearLayout>
     </LinearLayout>

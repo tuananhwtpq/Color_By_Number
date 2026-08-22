@@ -11,7 +11,6 @@ import com.example.baseproject.MyApplication
 import com.example.baseproject.R
 import com.example.baseproject.activities.AchieveActivity
 import com.example.baseproject.activities.PaintActivity
-import com.example.baseproject.activities.SettingActivity
 import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseFragment
@@ -22,7 +21,6 @@ import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.ui.mywork.MyWorkUiState
 import com.example.baseproject.ui.mywork.MyWorkViewModel
-import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -61,6 +59,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     }
 
     override fun initView() {
+        binding.btnSetting.visibility = View.GONE
         binding.rvMyWork.layoutManager = GridLayoutManager(requireActivity(), 2)
         updateTabSelection(TAB_IN_PROGRESS)
         collectWithLifecycle {
@@ -79,10 +78,6 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
         }
         binding.btnGoToLibrary.setOnClickListener {
             mainViewModel.onTabSelected(LIBRARY_TAB_POSITION)
-        }
-
-        binding.btnSetting.setOnUnDoubleClick {
-            startActivity(Intent(requireActivity(), SettingActivity::class.java))
         }
     }
 

@@ -11,13 +11,13 @@
     <ImageView
         android:id="@+id/ivTopImage"
         android:layout_width="match_parent"
-        android:layout_height="218dp"
+        android:layout_height="200dp"
         android:scaleType="centerCrop"
         android:src="@drawable/bg_top_main_theme_01"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
 
     <ImageView
         android:id="@+id/btnSetting"
@@ -37,6 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
         android:text="Pixlory"
         android:textColor="@color/white"
         app:layout_constraintStart_toStartOf="parent"
@@ -84,6 +85,7 @@
         android:layout_marginTop="10dp"
         android:clipToPadding="false"
         android:padding="8dp"
+        android:paddingBottom="60dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/hsvCategories" />
 
