@@ -75,6 +75,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var isNavigatingToCompleted: Boolean = false
     private var fullPreviewBitmap: Bitmap? = null
     private var fullPreviewRenderKey: String? = null
+    private var lastRenderedSelectedPaletteIndex: Int = -1
     private val guideRectBuffer = Rect()
 
     private val previewMultiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
@@ -114,6 +115,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun initViews() {
+        syncPaintSettings()
         binding.rvPalette.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
@@ -164,6 +166,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                 completedIndexes = state.completedIndexes,
                 paletteProgress = state.paletteProgress
             )
+            scrollPaletteToSelectedColor(state.selectedPaletteIndex)
         }
 
         val renderData = state.renderData
@@ -364,6 +367,20 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.progressBar.visibility =
             if (isVisible && isLoadingVisible && !isGuideVisible) View.VISIBLE else View.GONE
         updateFullPreviewVisibility()
+    }
+
+    private fun syncPaintSettings() {
+        viewModel.setAutoSwitchColorEnabled(SharedPrefManager.isAutoSwitchColor)
+        binding.paintCanvas.setFillInAnimationEnabled(SharedPrefManager.isFillInAnimation)
+    }
+
+    private fun scrollPaletteToSelectedColor(selectedIndex: Int) {
+        if (selectedIndex == -1 || selectedIndex == lastRenderedSelectedPaletteIndex) return
+        lastRenderedSelectedPaletteIndex = selectedIndex
+        val displayPosition = adapter.displayPositionForOriginalIndex(selectedIndex)
+        if (displayPosition != -1) {
+            binding.rvPalette.smoothScrollToPosition(displayPosition)
+        }
     }
 
     private fun finishGuide() {
@@ -577,6 +594,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         // Luồng hoàn thành đã tự lưu ngay trước khi chuyển màn, khỏi dựng lại bitmap 900x900.
         if (isNavigatingToCompleted) return
         viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        syncPaintSettings()
     }
 
     override fun onDestroy() {

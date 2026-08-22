@@ -36,6 +36,7 @@ class PaintViewModel(
     private var regionMetadata: List<RegionData> = emptyList()
     private var category: String? = null
     private var levelId: String? = null
+    private var autoSwitchColorEnabled: Boolean = false
 
     // Tag debug tạm thời — xoá cùng các Log.d bên dưới sau khi xác định xong nguyên nhân.
     private val dbgTag = "PBN_DBG_a91f"
@@ -119,6 +120,10 @@ class PaintViewModel(
         }
     }
 
+    fun setAutoSwitchColorEnabled(enabled: Boolean) {
+        autoSwitchColorEnabled = enabled
+    }
+
     fun onHintRequested() {
         if (uniqueColors.isEmpty()) return
         val selectedColor = uniqueColors.getOrNull(_uiState.value.selectedPaletteIndex) ?: return
@@ -198,7 +203,11 @@ class PaintViewModel(
         } else {
             false
         }
-        val nextSelectedIndex = if (isSelectedColorCompleted) -1 else selectedIndex
+        val nextSelectedIndex = when {
+            !isSelectedColorCompleted -> selectedIndex
+            autoSwitchColorEnabled -> nextSelectableIndexAfter(selectedIndex, completedIndexes)
+            else -> -1
+        }
 
         _uiState.update {
             it.copy(
@@ -285,6 +294,16 @@ class PaintViewModel(
         return allRegions
             .filter { it.number == selectedColor.number }
             .associate { it.getMaskColorInt() to it.getTargetColorInt() }
+    }
+
+    private fun nextSelectableIndexAfter(
+        selectedIndex: Int,
+        completedIndexes: Set<Int>,
+    ): Int {
+        if (selectedIndex !in uniqueColors.indices) return -1
+        return ((selectedIndex + 1)..uniqueColors.lastIndex)
+            .firstOrNull { it !in completedIndexes }
+            ?: -1
     }
 
     private fun completedColorMap(completedMaskColors: Set<Int>): Map<Int, Int> {

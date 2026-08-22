@@ -50,6 +50,8 @@ class PaintCanvasView @JvmOverloads constructor(
         // scaleFactor, để số giữ nguyên kích thước khi zoom ra/vào (giống app mẫu), thay vì
         // co giãn theo zoom như trước.
         private const val LABEL_TEXT_SIZE_PX = 30f
+        private const val FILL_ANIMATION_DURATION_MS = 200f
+        private const val FRAME_DURATION_MS = 16.67f
 
         // Vùng nhỏ hơn mức "thoải mái" vẫn phải hiện số (nếu đã qua ngưỡng ẩn/hiện ở trên),
         // nhưng chữ phải co lại theo đúng khoảng trống thật để không tràn ra ngoài — hệ số
@@ -110,6 +112,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     private var hideAllLabels: Boolean = false
     private var isInteractionLocked: Boolean = false
+    private var fillInAnimationEnabled: Boolean = true
 
     private var currentValidMaskColors: Map<Int, Int> = emptyMap()
     private var highlightTheme: HighlightTheme = HighlightThemes.defaultChecker()
@@ -395,6 +398,10 @@ class PaintCanvasView @JvmOverloads constructor(
         hideAllLabels = enabled
         isInteractionLocked = enabled
         invalidate()
+    }
+
+    fun setFillInAnimationEnabled(enabled: Boolean) {
+        fillInAnimationEnabled = enabled
     }
 
     fun resetProgress() {
@@ -703,6 +710,11 @@ class PaintCanvasView @JvmOverloads constructor(
         // Tránh trùng lặp fill
         if (activeFillers.any { it.maskColor == clickedColor }) return
 
+        if (!fillInAnimationEnabled) {
+            completeInstantFill(clickedColor, targetColor)
+            return
+        }
+
         val region = regions.find { it.maskColorInt == clickedColor }
         val maxQueueSize = (region?.area ?: (maskWidth * maskHeight / 10)) + 1000
 
@@ -832,7 +844,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
                 // Tốc độ loang màu (pixel/frame)
                 val speed =
-                    Math.max(10f, filler.maxRadius / 15f) // Hoàn thành mượt mà trong ~15 frames
+                    Math.max(10f, filler.maxRadius / (FILL_ANIMATION_DURATION_MS / FRAME_DURATION_MS))
 
                 val isRunning = filler.tick(speed)
                 if (!isRunning) {
@@ -871,6 +883,34 @@ class PaintCanvasView @JvmOverloads constructor(
             invalidate()
             postOnAnimation(this)
         }
+    }
+
+    private fun completeInstantFill(maskColor: Int, targetColor: Int) {
+        completeRegionForMaskColor(maskColor, targetColor)
+        completedMaskColors = completedMaskColors + maskColor
+        clearHighlightForMaskColor(maskColor)
+        onRegionFilledListener?.invoke(maskColor)
+        invalidate()
+    }
+
+    private fun clearHighlightForMaskColor(maskColor: Int) {
+        val maskPx = maskPixelsArray ?: return
+        val hl = highlightBitmap ?: return
+        val hlPx = hlPixelsArray ?: return
+        var changed = false
+
+        for (index in maskPx.indices) {
+            if (maskPx[index] == maskColor && hlPx[index] != 0) {
+                hlPx[index] = 0
+                changed = true
+            }
+        }
+
+        if (changed) {
+            hl.setPixels(hlPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+        }
+        currentHighlightTargets =
+            currentHighlightTargets.filter { it != maskColor }.toIntArray()
     }
 
     private val clipPath = android.graphics.Path()

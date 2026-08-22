@@ -151,6 +151,10 @@ class PaletteAdapter(
         notifyDataSetChanged()
     }
 
+    fun displayPositionForOriginalIndex(originalIndex: Int): Int {
+        return displayItems.indexOfFirst { it.originalIndex == originalIndex }
+    }
+
     private fun buildDisplayItems(): List<DisplayPaletteItem> {
         return items.mapIndexedNotNull { index, item ->
             if (removeCompletedColors && completedIndexes.contains(index)) {

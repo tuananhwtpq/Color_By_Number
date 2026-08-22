@@ -10,6 +10,8 @@ import com.google.gson.reflect.TypeToken
 object SharedPrefManager {
     private const val PREF_NAME = "MyPreferences"
     private const val IS_SHOW_GUIDE = "is_show_guide"
+    private const val IS_AUTO_SWITCH_COLOR = "is_auto_switch_color"
+    private const val IS_FILL_IN_ANIMATION = "is_fill_in_animation"
     private lateinit var preferences: SharedPreferences
 
     var isShowGuide: Boolean
@@ -18,6 +20,18 @@ object SharedPrefManager {
         }
         set(value) {
             preferences.edit { putBoolean(IS_SHOW_GUIDE, value) }
+        }
+
+    var isAutoSwitchColor: Boolean
+        get() = preferences.getBoolean(IS_AUTO_SWITCH_COLOR, true)
+        set(value) {
+            preferences.edit { putBoolean(IS_AUTO_SWITCH_COLOR, value) }
+        }
+
+    var isFillInAnimation: Boolean
+        get() = preferences.getBoolean(IS_FILL_IN_ANIMATION, true)
+        set(value) {
+            preferences.edit { putBoolean(IS_FILL_IN_ANIMATION, value) }
         }
 
     fun init(context: Context) {

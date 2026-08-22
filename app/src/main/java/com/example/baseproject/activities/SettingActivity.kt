@@ -1,16 +1,11 @@
 package com.example.baseproject.activities
 
 import android.content.Intent
-import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.example.baseproject.R
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivitySettingBinding
 import com.example.baseproject.utils.Common
+import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 
 class SettingActivity : BaseActivity<ActivitySettingBinding>(ActivitySettingBinding::inflate) {
@@ -28,6 +23,7 @@ class SettingActivity : BaseActivity<ActivitySettingBinding>(ActivitySettingBind
 
     override fun initView() {
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
+        renderPaintSettings()
     }
 
     override fun initActionView() {
@@ -54,6 +50,37 @@ class SettingActivity : BaseActivity<ActivitySettingBinding>(ActivitySettingBind
         binding.btnAppInfo.setOnUnDoubleClick {
             // nav to app info
         }
+
+        binding.btnAutoSwitchColor.setOnUnDoubleClick {
+            toggleAutoSwitchColor()
+        }
+
+        binding.btnSwitchColor.setOnUnDoubleClick {
+            toggleAutoSwitchColor()
+        }
+
+        binding.btnFillInAnim.setOnUnDoubleClick {
+            toggleFillInAnimation()
+        }
+
+        binding.btnFillInAnimation.setOnUnDoubleClick {
+            toggleFillInAnimation()
+        }
+    }
+
+    private fun renderPaintSettings() {
+        binding.btnSwitchColor.isSelected = SharedPrefManager.isAutoSwitchColor
+        binding.btnFillInAnimation.isSelected = SharedPrefManager.isFillInAnimation
+    }
+
+    private fun toggleAutoSwitchColor() {
+        SharedPrefManager.isAutoSwitchColor = !SharedPrefManager.isAutoSwitchColor
+        renderPaintSettings()
+    }
+
+    private fun toggleFillInAnimation() {
+        SharedPrefManager.isFillInAnimation = !SharedPrefManager.isFillInAnimation
+        renderPaintSettings()
     }
 
 }
