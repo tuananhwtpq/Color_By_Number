@@ -30,13 +30,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/btnClose" />
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layoutOptions"
         android:layout_width="match_parent"
         android:layout_height="66dp"
         android:layout_marginTop="32dp"
-        android:gravity="center"
-        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle">
@@ -44,7 +42,11 @@
         <com.example.baseproject.views.HighlightOptionView
             android:id="@+id/btnGrayChecker"
             android:layout_width="66dp"
-            android:layout_height="66dp">
+            android:layout_height="66dp"
+            app:layout_constraintEnd_toStartOf="@id/btnOrangeChecker"
+            app:layout_constraintHorizontal_chainStyle="spread_inside"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
                 android:layout_width="56dp"
@@ -58,7 +60,9 @@
             android:id="@+id/btnOrangeChecker"
             android:layout_width="66dp"
             android:layout_height="66dp"
-            android:layout_marginStart="26dp">
+            app:layout_constraintEnd_toStartOf="@id/btnBlueChecker"
+            app:layout_constraintStart_toEndOf="@id/btnGrayChecker"
+            app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
                 android:layout_width="56dp"
@@ -72,7 +76,9 @@
             android:id="@+id/btnBlueChecker"
             android:layout_width="66dp"
             android:layout_height="66dp"
-            android:layout_marginStart="26dp">
+            app:layout_constraintEnd_toStartOf="@id/btnSolidGray"
+            app:layout_constraintStart_toEndOf="@id/btnOrangeChecker"
+            app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
                 android:layout_width="56dp"
@@ -86,7 +92,9 @@
             android:id="@+id/btnSolidGray"
             android:layout_width="66dp"
             android:layout_height="66dp"
-            android:layout_marginStart="26dp">
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/btnBlueChecker"
+            app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
                 android:layout_width="56dp"
@@ -96,7 +104,7 @@
 
         </com.example.baseproject.views.HighlightOptionView>
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <TextView
         android:id="@+id/btnConfirm"
