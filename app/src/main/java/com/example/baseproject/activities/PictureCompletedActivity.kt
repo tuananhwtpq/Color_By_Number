@@ -14,6 +14,8 @@ import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.TimelapseVideoGenerator
 import com.example.baseproject.databinding.ActivityPictureCompletedBinding
 import com.example.baseproject.dialog.SaveDialog
+import com.example.baseproject.dialog.SavePicSuccessDialog
+import com.example.baseproject.dialog.SavingDialog
 import com.example.baseproject.dialog.ShareDialog
 import com.example.baseproject.utils.ImageSaver
 import com.example.baseproject.utils.ImageSharer
@@ -26,6 +28,7 @@ import com.example.baseproject.utils.toFileNameKey
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 
 class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     ActivityPictureCompletedBinding::inflate
@@ -49,6 +52,8 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     private var isSharingPicture = false
     private var isSharingVideo = false
     private var isSavingVideo = false
+    private var savingVideoJob: Job? = null
+    private var savingDialog: SavingDialog? = null
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -289,11 +294,11 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         lifecycleScope.launch {
             val result = ImageSaver.saveImageToGallery(applicationContext, sourceFile, displayName)
             isSavingPicture = false
-            showToast(
-                getString(
-                    if (result.isSuccess) R.string.download_success else R.string.download_failed
-                )
-            )
+            if (result.isSuccess) {
+                showSaveSuccessDialog(R.string.picture_was_saved_to_your_device)
+            } else {
+                showToast(getString(R.string.download_failed))
+            }
         }
     }
 
@@ -310,16 +315,20 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         val displayName = "Pixlory_${category}_${levelId}_${System.currentTimeMillis()}".toFileNameKey()
         val outputFile = File(cacheDir, "timelapse_videos/$displayName.mp4")
 
-        lifecycleScope.launch {
-            showLoading(true)
+        showSavingDialog()
+        savingVideoJob = lifecycleScope.launch {
+            var wasCancelledByUser = false
+            var savedSuccessfully = false
             val messageRes = try {
                 saveTimelapseVideo(category, levelId, outputFile, displayName)
-                R.string.download_success
+                savedSuccessfully = true
+                null
             } catch (e: TimelapseUnavailableException) {
                 Log.w(TAG, "Cannot save timelapse video: ${e.message}")
                 R.string.timelapse_unavailable
             } catch (e: CancellationException) {
-                throw e
+                wasCancelledByUser = true
+                R.string.download_failed
             } catch (e: OutOfMemoryError) {
                 Log.e(TAG, "Out of memory while saving timelapse video", e)
                 R.string.download_failed
@@ -329,10 +338,15 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
             } finally {
                 outputFile.delete()
                 isSavingVideo = false
-                showLoading(false)
+                savingVideoJob = null
+                dismissSavingDialog()
             }
 
-            showToast(getString(messageRes))
+            when {
+                savedSuccessfully -> showSaveSuccessDialog(R.string.video_was_saved_to_your_device)
+                wasCancelledByUser -> Unit
+                messageRes != null -> showToast(getString(messageRes))
+            }
         }
     }
 
@@ -366,5 +380,29 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     }
 
     private class TimelapseUnavailableException(message: String) : Exception(message)
+
+    private fun showSavingDialog() {
+        if (supportFragmentManager.isStateSaved) return
+        savingDialog = SavingDialog().apply {
+            onClose = {
+                savingVideoJob?.cancel()
+                showToast(getString(R.string.download_failed))
+            }
+        }
+        savingDialog?.show(supportFragmentManager, SavingDialog.TAG)
+    }
+
+    private fun dismissSavingDialog() {
+        savingDialog?.dismissAllowingStateLoss()
+        savingDialog = null
+    }
+
+    private fun showSaveSuccessDialog(contentRes: Int) {
+        binding.root.post {
+            showDialogOnce(SavePicSuccessDialog.TAG) {
+                SavePicSuccessDialog.newInstance(contentRes)
+            }
+        }
+    }
 
 }
