@@ -23,6 +23,7 @@ import com.example.baseproject.adapters.PaletteAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivityPaintBinding
+import com.example.baseproject.highlight.HighlightThemes
 import com.example.baseproject.ui.paint.PaintUiEvent
 import com.example.baseproject.ui.paint.PaintUiState
 import com.example.baseproject.ui.paint.PaintViewModel
@@ -378,6 +379,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun syncPaintSettings() {
         viewModel.setAutoSwitchColorEnabled(SharedPrefManager.isAutoSwitchColor)
         binding.paintCanvas.setFillInAnimationEnabled(SharedPrefManager.isFillInAnimation)
+        binding.paintCanvas.setHighlightTheme(
+            HighlightThemes.fromId(SharedPrefManager.highlightThemeId)
+        )
     }
 
     private fun scrollPaletteToSelectedColor(selectedIndex: Int) {

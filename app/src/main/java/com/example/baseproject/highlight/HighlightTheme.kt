@@ -5,7 +5,8 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.Interpolator
 
 enum class HighlightStyle {
-    CHECKER
+    CHECKER,
+    SOLID
 }
 
 data class HighlightTheme(
@@ -25,12 +26,74 @@ data class HighlightTheme(
 )
 
 object HighlightThemes {
+    const val ID_GRAY_CHECKER = "gray_checker"
+    const val ID_ORANGE_CHECKER = "orange_checker"
+    const val ID_BLUE_CHECKER = "blue_checker"
+    const val ID_SOLID_GRAY = "solid_gray"
+
+    fun fromId(id: String): HighlightTheme {
+        return when (id) {
+            ID_ORANGE_CHECKER -> orangeChecker()
+            ID_BLUE_CHECKER -> blueChecker()
+            ID_SOLID_GRAY -> solidGray()
+            else -> defaultChecker()
+        }
+    }
+
     fun defaultChecker(): HighlightTheme {
         return HighlightTheme(
-            id = "checker_default",
+            id = ID_GRAY_CHECKER,
             style = HighlightStyle.CHECKER,
             primaryColor = Color.parseColor("#F5F2F8"),
             secondaryColor = Color.parseColor("#9A94A3"),
+            cellSizePx = 10,
+            baseAlpha = 255,
+            fadeInDurationMs = 200L,
+            interpolator = AccelerateInterpolator(),
+            tinyTargetHaloAlpha = 0
+        )
+    }
+
+    private fun orangeChecker(): HighlightTheme {
+        return checkerTheme(
+            id = ID_ORANGE_CHECKER,
+            primaryColor = Color.parseColor("#F5F2F8"),
+            secondaryColor = Color.parseColor("#E9752F"),
+        )
+    }
+
+    private fun blueChecker(): HighlightTheme {
+        return checkerTheme(
+            id = ID_BLUE_CHECKER,
+            primaryColor = Color.parseColor("#F5F2F8"),
+            secondaryColor = Color.parseColor("#336BCC"),
+        )
+    }
+
+    private fun solidGray(): HighlightTheme {
+        return HighlightTheme(
+            id = ID_SOLID_GRAY,
+            style = HighlightStyle.SOLID,
+            primaryColor = Color.parseColor("#9E92A0"),
+            secondaryColor = Color.parseColor("#9E92A0"),
+            cellSizePx = 10,
+            baseAlpha = 255,
+            fadeInDurationMs = 200L,
+            interpolator = AccelerateInterpolator(),
+            tinyTargetHaloAlpha = 0
+        )
+    }
+
+    private fun checkerTheme(
+        id: String,
+        primaryColor: Int,
+        secondaryColor: Int,
+    ): HighlightTheme {
+        return HighlightTheme(
+            id = id,
+            style = HighlightStyle.CHECKER,
+            primaryColor = primaryColor,
+            secondaryColor = secondaryColor,
             cellSizePx = 10,
             baseAlpha = 255,
             fadeInDurationMs = 200L,

@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.activity.OnBackPressedCallback
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivitySettingBinding
+import com.example.baseproject.dialog.HighlightAreaDialog
 import com.example.baseproject.utils.Common
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
@@ -51,6 +52,10 @@ class SettingActivity : BaseActivity<ActivitySettingBinding>(ActivitySettingBind
             // nav to app info
         }
 
+        binding.btnHighLight.setOnUnDoubleClick {
+            showHighlightAreaDialog()
+        }
+
         binding.btnAutoSwitchColor.setOnUnDoubleClick {
             toggleAutoSwitchColor()
         }
@@ -81,6 +86,16 @@ class SettingActivity : BaseActivity<ActivitySettingBinding>(ActivitySettingBind
     private fun toggleFillInAnimation() {
         SharedPrefManager.isFillInAnimation = !SharedPrefManager.isFillInAnimation
         renderPaintSettings()
+    }
+
+    private fun showHighlightAreaDialog() {
+        showDialogOnce(HighlightAreaDialog.TAG) {
+            HighlightAreaDialog.newInstance(SharedPrefManager.highlightThemeId).apply {
+                onThemeSelected = { themeId ->
+                    SharedPrefManager.highlightThemeId = themeId
+                }
+            }
+        }
     }
 
 }

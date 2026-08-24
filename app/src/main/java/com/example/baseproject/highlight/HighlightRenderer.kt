@@ -28,6 +28,36 @@ object HighlightRenderer {
                 theme = theme,
                 effectiveAlpha = effectiveAlpha
             )
+            HighlightStyle.SOLID -> renderSolid(
+                maskPixels = maskPixels,
+                outputPixels = outputPixels,
+                activeTargets = activeTargets,
+                theme = theme,
+                effectiveAlpha = effectiveAlpha
+            )
+        }
+    }
+
+    private fun renderSolid(
+        maskPixels: IntArray,
+        outputPixels: IntArray,
+        activeTargets: IntArray,
+        theme: HighlightTheme,
+        effectiveAlpha: Int
+    ) {
+        val total = outputPixels.size
+        for (i in 0 until total) {
+            val maskColor = maskPixels[i]
+            if (maskColor == 0 || java.util.Arrays.binarySearch(activeTargets, maskColor) < 0) {
+                continue
+            }
+
+            outputPixels[i] = argb(
+                effectiveAlpha,
+                red(theme.primaryColor),
+                green(theme.primaryColor),
+                blue(theme.primaryColor)
+            )
         }
     }
 

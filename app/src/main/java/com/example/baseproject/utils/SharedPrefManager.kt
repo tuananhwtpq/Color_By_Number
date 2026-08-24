@@ -12,6 +12,7 @@ object SharedPrefManager {
     private const val IS_SHOW_GUIDE = "is_show_guide"
     private const val IS_AUTO_SWITCH_COLOR = "is_auto_switch_color"
     private const val IS_FILL_IN_ANIMATION = "is_fill_in_animation"
+    private const val HIGHLIGHT_THEME_ID = "highlight_theme_id"
     private lateinit var preferences: SharedPreferences
 
     var isShowGuide: Boolean
@@ -32,6 +33,13 @@ object SharedPrefManager {
         get() = preferences.getBoolean(IS_FILL_IN_ANIMATION, true)
         set(value) {
             preferences.edit { putBoolean(IS_FILL_IN_ANIMATION, value) }
+        }
+
+    var highlightThemeId: String
+        get() = preferences.getString(HIGHLIGHT_THEME_ID, DEFAULT_HIGHLIGHT_THEME_ID)
+            ?: DEFAULT_HIGHLIGHT_THEME_ID
+        set(value) {
+            preferences.edit { putString(HIGHLIGHT_THEME_ID, value) }
         }
 
     fun init(context: Context) {
@@ -96,4 +104,6 @@ object SharedPrefManager {
         val type = object : TypeToken<LanguageModel>() {}.type
         return gson.fromJson(json, type)
     }
+
+    private const val DEFAULT_HIGHLIGHT_THEME_ID = "gray_checker"
 }
