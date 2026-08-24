@@ -1,6 +1,7 @@
 package com.example.baseproject.app
 
 import android.content.Context
+import com.example.baseproject.data.TimelapseVideoCache
 import com.example.baseproject.data.repository.AssetLevelRepository
 import com.example.baseproject.data.repository.AchievementRepository
 import com.example.baseproject.data.repository.AchievementRepositoryImpl
@@ -24,6 +25,7 @@ interface AppContainer {
     val settingsRepository: SettingsRepository
     val achievementRepository: AchievementRepository
     val paintDropRepository: PaintDropRepository
+    val timelapseVideoCache: TimelapseVideoCache
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -62,6 +64,14 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val settingsRepository: SettingsRepository by lazy {
         SettingsRepositoryImpl(
             appContext.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+        )
+    }
+
+    override val timelapseVideoCache: TimelapseVideoCache by lazy {
+        TimelapseVideoCache(
+            cacheDir = appContext.cacheDir,
+            assetLevelRepository = assetLevelRepository,
+            paintingProgressRepository = paintingProgressRepository,
         )
     }
 }

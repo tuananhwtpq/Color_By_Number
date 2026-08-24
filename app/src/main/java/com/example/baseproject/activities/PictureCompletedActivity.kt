@@ -11,7 +11,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.example.baseproject.MyApplication
 import com.example.baseproject.R
 import com.example.baseproject.bases.BaseActivity
-import com.example.baseproject.data.TimelapseVideoGenerator
+import com.example.baseproject.data.TimelapseVideoUnavailableException
 import com.example.baseproject.databinding.ActivityPictureCompletedBinding
 import com.example.baseproject.dialog.SaveDialog
 import com.example.baseproject.dialog.SavePicSuccessDialog
@@ -23,12 +23,13 @@ import com.example.baseproject.utils.VideoSharer
 import com.example.baseproject.utils.VideoSaver
 import com.example.baseproject.utils.setOnUnDoubleClick
 import com.example.baseproject.utils.showToast
-import kotlinx.coroutines.launch
 import com.example.baseproject.utils.toFileNameKey
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     ActivityPictureCompletedBinding::inflate
@@ -39,6 +40,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
         const val EXTRA_COLLECTED_COUNT = "COLLECTED_COUNT"
         private const val TAG = "PictureCompleted"
+        private const val PRE_GENERATE_DELAY_MS = 500L
     }
 
     private val appContainer by lazy {
@@ -54,6 +56,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     private var isSavingVideo = false
     private var savingVideoJob: Job? = null
     private var savingDialog: SavingDialog? = null
+    private var preGenerateVideoJob: Job? = null
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -86,6 +89,8 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
             .skipMemoryCache(true)
             .diskCacheStrategy(DiskCacheStrategy.NONE)
             .into(binding.ivImage)
+
+        preGenerateTimelapseVideo(category, levelId)
     }
 
     override fun initActionView() {
@@ -169,16 +174,12 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         if (isSharingVideo) return
         isSharingVideo = true
 
-        val displayName = "Pixlory_${category}_${levelId}_${System.currentTimeMillis()}".toFileNameKey()
-        val outputFile = File(cacheDir, "shared_videos/$displayName.mp4")
-
         lifecycleScope.launch {
             showLoading(true)
-            var keepSharedFile = false
             val shareUri = try {
-                prepareTimelapseVideoShare(category, levelId, outputFile)
-                    .also { keepSharedFile = true }
-            } catch (e: TimelapseUnavailableException) {
+                val cachedVideo = appContainer.timelapseVideoCache.ensureVideo(category, levelId)
+                prepareTimelapseVideoShare(cachedVideo)
+            } catch (e: TimelapseVideoUnavailableException) {
                 Log.w(TAG, "Cannot share timelapse video: ${e.message}")
                 showToast(getString(R.string.timelapse_unavailable))
                 null
@@ -193,14 +194,11 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
                 showToast(getString(R.string.share_failed))
                 null
             } finally {
-                if (!keepSharedFile) outputFile.delete()
                 isSharingVideo = false
                 showLoading(false)
             }
 
-            if (shareUri != null && !shareContent(shareUri, VideoSharer.SHARE_MIME_TYPE)) {
-                outputFile.delete()
-            }
+            if (shareUri != null) shareContent(shareUri, VideoSharer.SHARE_MIME_TYPE)
         }
     }
 
@@ -223,28 +221,10 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         return false
     }
 
-    private suspend fun prepareTimelapseVideoShare(
-        category: String,
-        levelId: String,
-        outputFile: File,
-    ): Uri {
-        val history = appContainer.paintingProgressRepository.loadPaintHistory(category, levelId)
-        if (history.isEmpty()) {
-            throw TimelapseUnavailableException("Paint history is empty for $category/$levelId")
-        }
-
-        val bundle = appContainer.assetLevelRepository.loadLevelBundle(category, levelId)
-        val generatedFile = TimelapseVideoGenerator.generateMp4(
-            bundle = bundle,
-            paintHistory = history,
-            outputFile = outputFile,
-        ).getOrElse { error ->
-            throw IOException("Generate timelapse video for share failed", error)
-        }
-
+    private suspend fun prepareTimelapseVideoShare(cachedVideo: File): Uri {
         return VideoSharer.prepareShareUri(
             context = applicationContext,
-            sourceFile = generatedFile,
+            sourceFile = cachedVideo,
         ).getOrElse { error ->
             throw IOException("Prepare timelapse video share uri failed", error)
         }
@@ -313,17 +293,17 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         isSavingVideo = true
 
         val displayName = "Pixlory_${category}_${levelId}_${System.currentTimeMillis()}".toFileNameKey()
-        val outputFile = File(cacheDir, "timelapse_videos/$displayName.mp4")
 
         showSavingDialog()
         savingVideoJob = lifecycleScope.launch {
             var wasCancelledByUser = false
             var savedSuccessfully = false
             val messageRes = try {
-                saveTimelapseVideo(category, levelId, outputFile, displayName)
+                val cachedVideo = appContainer.timelapseVideoCache.ensureVideo(category, levelId)
+                saveTimelapseVideo(cachedVideo, displayName)
                 savedSuccessfully = true
                 null
-            } catch (e: TimelapseUnavailableException) {
+            } catch (e: TimelapseVideoUnavailableException) {
                 Log.w(TAG, "Cannot save timelapse video: ${e.message}")
                 R.string.timelapse_unavailable
             } catch (e: CancellationException) {
@@ -336,7 +316,6 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
                 Log.e(TAG, "Cannot save timelapse video", e)
                 R.string.download_failed
             } finally {
-                outputFile.delete()
                 isSavingVideo = false
                 savingVideoJob = null
                 dismissSavingDialog()
@@ -351,40 +330,23 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     }
 
     private suspend fun saveTimelapseVideo(
-        category: String,
-        levelId: String,
-        outputFile: File,
+        cachedVideo: File,
         displayName: String,
     ) {
-        val history = appContainer.paintingProgressRepository.loadPaintHistory(category, levelId)
-        if (history.isEmpty()) {
-            throw TimelapseUnavailableException("Paint history is empty for $category/$levelId")
-        }
-
-        val bundle = appContainer.assetLevelRepository.loadLevelBundle(category, levelId)
-        val generatedFile = TimelapseVideoGenerator.generateMp4(
-            bundle = bundle,
-            paintHistory = history,
-            outputFile = outputFile,
-        ).getOrElse { error ->
-            throw IOException("Generate timelapse video failed", error)
-        }
-
         VideoSaver.saveVideoToGallery(
             context = applicationContext,
-            sourceFile = generatedFile,
+            sourceFile = cachedVideo,
             displayName = displayName,
         ).getOrElse { error ->
             throw IOException("Save timelapse video to gallery failed", error)
         }
     }
 
-    private class TimelapseUnavailableException(message: String) : Exception(message)
-
     private fun showSavingDialog() {
         if (supportFragmentManager.isStateSaved) return
         savingDialog = SavingDialog().apply {
             onClose = {
+                preGenerateVideoJob?.cancel()
                 savingVideoJob?.cancel()
                 showToast(getString(R.string.download_failed))
             }
@@ -401,6 +363,24 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         binding.root.post {
             showDialogOnce(SavePicSuccessDialog.TAG) {
                 SavePicSuccessDialog.newInstance(contentRes)
+            }
+        }
+    }
+
+    private fun preGenerateTimelapseVideo(category: String, levelId: String) {
+        preGenerateVideoJob?.cancel()
+        preGenerateVideoJob = lifecycleScope.launch {
+            delay(PRE_GENERATE_DELAY_MS)
+            try {
+                appContainer.timelapseVideoCache.ensureVideo(category, levelId)
+            } catch (e: TimelapseVideoUnavailableException) {
+                Log.w(TAG, "Cannot pre-generate timelapse video: ${e.message}")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: OutOfMemoryError) {
+                Log.e(TAG, "Out of memory while pre-generating timelapse video", e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Cannot pre-generate timelapse video", e)
             }
         }
     }
