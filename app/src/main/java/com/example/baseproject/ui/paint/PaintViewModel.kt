@@ -235,8 +235,7 @@ class PaintViewModel(
                 _events.emit(
                     PaintUiEvent.LevelCompleted(
                         category = category,
-                        levelId = levelId,
-                        collectedCount = uniqueColors.size
+                        levelId = levelId
                     )
                 )
             }

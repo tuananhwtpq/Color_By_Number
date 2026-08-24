@@ -39,6 +39,7 @@
         android:paddingHorizontal="14dp"
         android:text="Full"
         android:textColor="@color/white"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/btnHint"
         app:layout_constraintEnd_toStartOf="@id/btnHint"
         app:layout_constraintTop_toTopOf="@id/btnHint" />
@@ -55,6 +56,7 @@
         android:paddingHorizontal="14dp"
         android:text="Fill"
         android:textColor="@color/white"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/btnPreviewFull"
         app:layout_constraintEnd_toStartOf="@id/btnPreviewFull"
         app:layout_constraintTop_toTopOf="@id/btnPreviewFull" />
@@ -275,5 +277,29 @@
             app:layout_constraintEnd_toEndOf="@id/tvGuide03" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <FrameLayout
+        android:id="@+id/completionAnimationOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clickable="true"
+        android:elevation="48dp"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible">
+
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/lavCompletionBlast"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            app:lottie_autoPlay="false"
+            app:lottie_loop="false"
+            app:lottie_rawRes="@raw/color_blast" />
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

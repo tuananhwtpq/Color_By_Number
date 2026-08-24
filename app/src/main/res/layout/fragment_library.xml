@@ -20,14 +20,12 @@
         tools:visibility="visible" />
 
     <ImageView
-        android:id="@+id/btnSetting"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:id="@+id/btnAchieve"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
         android:layout_marginTop="10dp"
         android:layout_marginEnd="20dp"
-        android:background="@drawable/bg_oval_trans"
-        android:padding="8dp"
-        android:src="@drawable/ic_setting"
+        android:src="@drawable/ic_mini_achieve"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -37,11 +35,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
-        android:layout_marginTop="10dp"
         android:text="Pixlory"
         android:textColor="@color/white"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/btnSetting" />
+        app:layout_constraintTop_toTopOf="@id/btnAchieve" />
 
     <TextView
         android:id="@+id/tvAppName2"

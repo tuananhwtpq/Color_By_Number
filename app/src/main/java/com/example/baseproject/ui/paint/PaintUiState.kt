@@ -36,8 +36,7 @@ sealed interface PaintUiEvent {
     data class FocusOnMaskColor(val maskColor: Int) : PaintUiEvent
     data class LevelCompleted(
         val category: String,
-        val levelId: String,
-        val collectedCount: Int
+        val levelId: String
     ) : PaintUiEvent
     object FinishScreen : PaintUiEvent
     object RequestResetConfirmation : PaintUiEvent

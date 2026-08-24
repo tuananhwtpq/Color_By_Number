@@ -1,5 +1,7 @@
 package com.example.baseproject.activities
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -28,6 +30,8 @@ import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.SharedPrefManager
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::inflate) {
 
@@ -126,6 +130,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             viewModel.onRegionFilled(maskInt)
         }
         binding.fullPreviewOverlay.visibility = View.GONE
+        binding.completionAnimationOverlay.visibility = View.GONE
+        binding.lavCompletionBlast.cancelAnimation()
         binding.llGuide.setOnClickListener {
             when (guideStep) {
                 GUIDE_STEP_01 -> showGuideStep(GUIDE_STEP_02)
@@ -550,7 +556,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         achievementRepository.track(
             AchievementEvent.ArtworkCompleted(event.category, event.levelId)
         )
-        appContainer.paintDropRepository.trackArtworkCompleted(event.category, event.levelId)
+        val collectedPaintDrops = appContainer.paintDropRepository.trackArtworkCompleted(
+            event.category,
+            event.levelId
+        )
 
         if (isNavigatingToCompleted) return
         isNavigatingToCompleted = true
@@ -563,15 +572,54 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             // Bitmap thẳng vào Intent: bitmap 900x900 (~3MB) vượt xa giới hạn ~1MB của Binder
             // và sẽ ném TransactionTooLargeException.
             viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
+            playCompletionAnimation()
 
             startActivity(
                 Intent(this@PaintActivity, PictureCompletedActivity::class.java).apply {
                     putExtra(PictureCompletedActivity.EXTRA_CATEGORY, event.category)
                     putExtra(PictureCompletedActivity.EXTRA_LEVEL_ID, event.levelId)
-                    putExtra(PictureCompletedActivity.EXTRA_COLLECTED_COUNT, event.collectedCount)
+                    putExtra(PictureCompletedActivity.EXTRA_COLLECTED_COUNT, collectedPaintDrops)
                 }
             )
             finish()
+        }
+    }
+
+    private suspend fun playCompletionAnimation() {
+        suspendCancellableCoroutine { continuation ->
+            val animationView = binding.lavCompletionBlast
+            val listener = object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    animationView.removeAnimatorListener(this)
+                    binding.completionAnimationOverlay.visibility = View.GONE
+                    if (continuation.isActive) {
+                        continuation.resume(Unit)
+                    }
+                }
+
+                override fun onAnimationCancel(animation: Animator) {
+                    animationView.removeAnimatorListener(this)
+                    binding.completionAnimationOverlay.visibility = View.GONE
+                    if (continuation.isActive) {
+                        continuation.resume(Unit)
+                    }
+                }
+            }
+
+            continuation.invokeOnCancellation {
+                animationView.removeAnimatorListener(listener)
+                animationView.cancelAnimation()
+                binding.completionAnimationOverlay.visibility = View.GONE
+            }
+
+            binding.completionAnimationOverlay.visibility = View.VISIBLE
+            binding.completionAnimationOverlay.bringToFront()
+            animationView.apply {
+                removeAllAnimatorListeners()
+                addAnimatorListener(listener)
+                progress = 0f
+                playAnimation()
+            }
         }
     }
 

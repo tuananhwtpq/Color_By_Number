@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.baseproject.MyApplication
 import com.example.baseproject.R
+import com.example.baseproject.activities.AchieveActivity
 import com.example.baseproject.activities.PaintActivity
 import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
@@ -21,6 +22,7 @@ import com.example.baseproject.databinding.ItemLibraryCategoryTabBinding
 import com.example.baseproject.dialog.CurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.ui.library.LibraryViewModel
+import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
 
 class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBinding::inflate) {
@@ -40,7 +42,6 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     }
 
     override fun initView() {
-        binding.btnSetting.visibility = View.GONE
         binding.rvLevels.layoutManager = GridLayoutManager(requireActivity(), 2)
         collectWithLifecycle {
             viewModel.uiState.collectLatest { state ->
@@ -61,6 +62,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     }
 
     override fun initActionView() {
+
+        binding.btnAchieve.setOnUnDoubleClick {
+            startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+        }
     }
 
     private fun renderCategoryTabs(categories: List<String>, selectedCategory: String?) {
