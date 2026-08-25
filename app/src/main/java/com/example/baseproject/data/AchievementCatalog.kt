@@ -16,8 +16,7 @@ import com.example.baseproject.utils.Constants
  */
 sealed interface AchievementRule {
     /**
-     * Chuỗi ngày LIÊN TIẾP người dùng mở app. Nghỉ một ngày là chuỗi đứt và đếm lại từ 1 —
-     * nhưng achievement đã mở khoá thì vẫn giữ vĩnh viễn.
+     * Số ngày khác nhau người dùng mở app. Qua ngày mới thì tăng tiếp, không reset khi bỏ lỡ ngày.
      */
     data object ConsecutiveDaysOpened : AchievementRule
 

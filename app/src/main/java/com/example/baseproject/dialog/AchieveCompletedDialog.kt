@@ -1,5 +1,6 @@
 package com.example.baseproject.dialog
 
+import android.view.View
 import com.example.baseproject.R
 import com.example.baseproject.bases.BaseDialog
 import com.example.baseproject.data.Achievement
@@ -25,6 +26,7 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
     }
 
     var achievement: Achievement? = null
+    var onRewardClaimed: ((Achievement) -> Unit)? = null
 
     override fun initView() {
         val achievement = achievement ?: return
@@ -37,10 +39,33 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
         binding.tvAchieveName.text = getString(definition.titleRes)
         binding.tvAchieveDetail.text = getString(definition.descriptionRes)
         binding.tvDateTime.text = achievement.unlockedAtMillis?.let(::formatUnlockedDate).orEmpty()
+        renderRewardState(achievement.isRewardClaimed)
     }
 
     override fun initActionView() {
         binding.btnClose.setOnUnDoubleClick { dismiss() }
+        binding.btnHint.setOnUnDoubleClick { claimReward() }
+        binding.btnClaim.setOnUnDoubleClick { claimReward() }
+    }
+
+    private fun claimReward() {
+        val achievement = achievement ?: return
+        if (achievement.isRewardClaimed) return
+
+        onRewardClaimed?.invoke(achievement)
+        this.achievement = achievement.copy(isRewardClaimed = true)
+        renderRewardState(isRewardClaimed = true)
+    }
+
+    private fun renderRewardState(isRewardClaimed: Boolean) {
+        val claimedVisibility = if (isRewardClaimed) View.VISIBLE else View.GONE
+        val claimVisibility = if (isRewardClaimed) View.GONE else View.VISIBLE
+
+        binding.tvCompleted.visibility = claimedVisibility
+        binding.tvAchieveDetail.visibility = claimedVisibility
+        binding.tvDateTime.visibility = claimedVisibility
+        binding.llHint.visibility = claimVisibility
+        binding.btnClaim.visibility = claimVisibility
     }
 
     // Locale.getDefault() bám theo ngôn ngữ người dùng chọn trong app (BaseActivity đã set).

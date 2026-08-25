@@ -39,6 +39,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAchiveName" />
 
+    <ImageView
+        android:id="@+id/ivGift"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_oval_white"
+        android:padding="8dp"
+        android:src="@drawable/ic_gift"
+        app:layout_constraintBottom_toBottomOf="@id/progressAchieve"
+        app:layout_constraintEnd_toEndOf="@id/progressAchieve"
+        app:layout_constraintTop_toTopOf="@id/progressAchieve" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,6 +5,8 @@ import com.example.baseproject.data.Achievement
 interface AchievementRepository {
     fun loadAchievements(): List<Achievement>
 
+    fun claimReward(achievementId: String)
+
     /** Ghi nhận một hành động của người dùng và mở khoá achievement tương ứng nếu vừa đủ điều kiện. */
     fun track(event: AchievementEvent)
 }

@@ -10,7 +10,8 @@ package com.example.baseproject.data
 data class Achievement(
     val definition: AchievementDefinition,
     val currentCount: Int,
-    val unlockedAtMillis: Long?
+    val unlockedAtMillis: Long?,
+    val isRewardClaimed: Boolean
 ) {
     val id: String get() = definition.id
     val targetCount: Int get() = definition.targetCount

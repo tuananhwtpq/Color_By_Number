@@ -51,7 +51,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAchieveName"
-        tools:text="Complete your very first artwork." />
+        tools:text="Complete your very first artwork."
+        tools:visibility="gone" />
 
     <TextView
         android:id="@+id/tvCompleted"
@@ -63,7 +64,8 @@
         android:textColor="@color/grey_700"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvAchieveDetail" />
+        app:layout_constraintTop_toBottomOf="@id/tvAchieveDetail"
+        tools:visibility="gone" />
 
     <TextView
         android:id="@+id/tvDateTime"
@@ -74,6 +76,116 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvCompleted"
-        tools:text="17 July 2026" />
+        tools:text="17 July 2026"
+        tools:visibility="gone" />
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/llHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/bg_no_trans_big"
+        android:orientation="vertical"
+        android:padding="20dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAchieveName">
+
+        <TextView
+            android:id="@+id/tvYourReward"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/your_reward_is_ready_to_claim"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/btnHint"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_hint_new"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvYourReward" />
+
+        <TextView
+            android:id="@+id/tvHintCount"
+            style="@style/BodyM"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-8dp"
+            android:background="@drawable/bg_gradien_oval"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="1"
+            android:textColor="@color/white"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="@id/btnHint"
+            app:layout_constraintEnd_toEndOf="@id/btnHint"
+            tools:visibility="visible" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/tvYourReward">
+
+            <TextView
+                android:id="@+id/tvHintCountNew"
+                style="@style/Display3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1"
+                android:textColor="@color/grey_700" />
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="wrap_content" />
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_hint_new" />
+
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/bg_gradient"
+        android:gravity="center"
+        android:minHeight="49dp"
+        android:id="@+id/btnClaim"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/llHint">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_tick_white" />
+
+        <Space
+            android:layout_width="10dp"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            style="@style/ButtonM"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/claim_reward"
+            android:textColor="@color/white" />
+    </LinearLayout>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -55,18 +55,16 @@ class AchievementAdapter(
         holder.binding.ivImageAchieve.alpha =
             if (iconRes != null || achievement.isCompleted) 1f else 0.4f
 
-        // Đã đạt thì bỏ thanh tiến độ đi cho giống thiết kế tab Completed.
-        if (achievement.isCompleted) {
-            holder.binding.progressAchieve.visibility = View.GONE
-        } else {
-            holder.binding.progressAchieve.visibility = View.VISIBLE
-            // Không animate lúc bind: ô được tái sử dụng khi cuộn, animate sẽ thành chạy lung tung.
-            holder.binding.progressAchieve.setProgress(
-                achievement.currentCount,
-                achievement.targetCount,
-                animate = false
-            )
-        }
+        holder.binding.ivGift.visibility =
+            if (achievement.isCompleted && !achievement.isRewardClaimed) View.VISIBLE else View.GONE
+
+        holder.binding.progressAchieve.visibility = View.VISIBLE
+        // Không animate lúc bind: ô được tái sử dụng khi cuộn, animate sẽ thành chạy lung tung.
+        holder.binding.progressAchieve.setProgress(
+            achievement.currentCount,
+            achievement.targetCount,
+            animate = false
+        )
     }
 
     companion object {

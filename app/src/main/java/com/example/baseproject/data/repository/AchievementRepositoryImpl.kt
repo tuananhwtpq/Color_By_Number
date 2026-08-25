@@ -28,6 +28,7 @@ class AchievementRepositoryImpl(
         const val KEY_STREAK_DAYS = "ACHIEVEMENT_STREAK_DAYS"
         const val KEY_LAST_OPEN_DATE = "ACHIEVEMENT_LAST_OPEN_DATE"
         const val KEY_UNLOCKED_AT_PREFIX = "ACHIEVEMENT_UNLOCKED_AT_"
+        const val KEY_REWARD_CLAIMED_PREFIX = "ACHIEVEMENT_REWARD_CLAIMED_"
     }
 
     override fun loadAchievements(): List<Achievement> {
@@ -41,9 +42,14 @@ class AchievementRepositoryImpl(
                 // Đã mở khoá thì luôn hiển thị đầy, không tụt kể cả khi người dùng reset tranh.
                 currentCount = if (unlockedAt != null) definition.targetCount
                 else currentCount(definition).coerceAtMost(definition.targetCount),
-                unlockedAtMillis = unlockedAt
+                unlockedAtMillis = unlockedAt,
+                isRewardClaimed = isRewardClaimed(definition.id)
             )
         }
+    }
+
+    override fun claimReward(achievementId: String) {
+        preferences.edit { putBoolean(KEY_REWARD_CLAIMED_PREFIX + achievementId, true) }
     }
 
     override fun track(event: AchievementEvent) {
@@ -66,8 +72,8 @@ class AchievementRepositoryImpl(
     }
 
     /**
-     * Cập nhật chuỗi ngày mở app liên tiếp: mở tiếp vào đúng hôm sau thì chuỗi +1, cách quãng
-     * thì đứt và đếm lại từ 1. Achievement đã mở khoá không bị ảnh hưởng khi chuỗi đứt.
+     * Cập nhật số ngày khác nhau mà người dùng mở app. Cùng một ngày chỉ tính một lần; qua ngày
+     * mới thì tăng tiếp từ mốc hiện tại, không reset khi người dùng bỏ lỡ vài ngày.
      */
     private fun trackAppOpened() {
         val today = LocalDate.now()
@@ -76,15 +82,11 @@ class AchievementRepositoryImpl(
 
         if (lastOpenDate == today) return
 
-        val streak = if (lastOpenDate == today.minusDays(1)) {
-            preferences.getInt(KEY_STREAK_DAYS, 0) + 1
-        } else {
-            1
-        }
+        val openedDays = preferences.getInt(KEY_STREAK_DAYS, 0) + 1
 
         preferences.edit {
             putString(KEY_LAST_OPEN_DATE, today.toString())
-            putInt(KEY_STREAK_DAYS, streak)
+            putInt(KEY_STREAK_DAYS, openedDays)
         }
     }
 
@@ -129,6 +131,9 @@ class AchievementRepositoryImpl(
 
     private fun unlockedAt(achievementId: String): Long? =
         preferences.getLong(KEY_UNLOCKED_AT_PREFIX + achievementId, 0L).takeIf { it > 0L }
+
+    private fun isRewardClaimed(achievementId: String): Boolean =
+        preferences.getBoolean(KEY_REWARD_CLAIMED_PREFIX + achievementId, false)
 
     private fun readSet(key: String): Set<String> =
         preferences.getStringSet(key, emptySet()).orEmpty()

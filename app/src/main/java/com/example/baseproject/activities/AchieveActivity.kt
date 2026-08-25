@@ -9,6 +9,7 @@ import com.example.baseproject.R
 import com.example.baseproject.adapters.AchievementAdapter
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.Achievement
+import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.databinding.ActivityAchieveBinding
 import com.example.baseproject.dialog.AchieveCompletedDialog
 import com.example.baseproject.dialog.AchieveDetailDialog
@@ -89,7 +90,15 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
     private fun onAchievementClicked(achievement: Achievement) {
         if (achievement.isCompleted) {
             showDialogOnce(AchieveCompletedDialog.TAG) {
-                AchieveCompletedDialog().apply { this.achievement = achievement }
+                AchieveCompletedDialog().apply {
+                    this.achievement = achievement
+                    onRewardClaimed = { claimedAchievement ->
+                        achievementRepository.track(AchievementEvent.HintUsed)
+                        achievementRepository.claimReward(claimedAchievement.id)
+                        achievements = achievementRepository.loadAchievements()
+                        renderList()
+                    }
+                }
             }
         } else {
             showDialogOnce(AchieveDetailDialog.TAG) {
