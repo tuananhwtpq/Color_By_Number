@@ -5,6 +5,7 @@ import androidx.activity.OnBackPressedCallback
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivitySettingBinding
 import com.example.baseproject.dialog.HighlightAreaDialog
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.Common
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
@@ -23,14 +24,20 @@ class SettingActivity : BaseActivity<ActivitySettingBinding>(ActivitySettingBind
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.main)
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
         renderPaintSettings()
     }
 
+    override fun onResume() {
+        super.onResume()
+        AppThemeManager.applyFullBackground(binding.main)
+    }
+
     override fun initActionView() {
-        binding.btnBack.setOnUnDoubleClick {
-            onBackPressedDispatcher.onBackPressed()
-        }
+//        binding.btnBack.setOnUnDoubleClick {
+//            onBackPressedDispatcher.onBackPressed()
+//        }
 
         binding.btnLanguage.setOnUnDoubleClick {
             startActivity(Intent(this, LanguageActivity::class.java))

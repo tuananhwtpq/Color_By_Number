@@ -13,6 +13,7 @@ import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.data.AlbumCollection
 import com.example.baseproject.databinding.FragmentAlbumBinding
 import com.example.baseproject.ui.album.AlbumViewModel
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
 
@@ -37,6 +38,7 @@ class AlbumFragment : BaseFragment<FragmentAlbumBinding>(FragmentAlbumBinding::i
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.root)
         binding.rcvCollection.layoutManager = LinearLayoutManager(requireContext())
         binding.rcvCollection.adapter = collectionAdapter
 
@@ -52,6 +54,11 @@ class AlbumFragment : BaseFragment<FragmentAlbumBinding>(FragmentAlbumBinding::i
         binding.btnAchieve.setOnUnDoubleClick {
             startActivity(Intent(requireActivity(), AchieveActivity::class.java))
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppThemeManager.applyFullBackground(binding.root)
     }
 
     private fun onCollectionClicked(collection: AlbumCollection) {

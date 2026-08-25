@@ -17,6 +17,7 @@ import com.example.baseproject.dialog.SaveDialog
 import com.example.baseproject.dialog.SavePicSuccessDialog
 import com.example.baseproject.dialog.SavingDialog
 import com.example.baseproject.dialog.ShareDialog
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.ImageSaver
 import com.example.baseproject.utils.ImageSharer
 import com.example.baseproject.utils.VideoSharer
@@ -71,6 +72,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     }
 
     override fun initView() {
+        AppThemeManager.applyCompleteBackground(binding.main)
         onBackPressedDispatcher.addCallback(onBackPressCallback)
 
         binding.tvCollectedCount.text = collectedCount.toString()
@@ -109,6 +111,11 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         binding.btnVideo.setOnUnDoubleClick {
             openTimelapsePreview()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppThemeManager.applyCompleteBackground(binding.main)
     }
 
     private fun openTimelapsePreview() {

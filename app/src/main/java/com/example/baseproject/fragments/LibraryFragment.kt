@@ -21,6 +21,7 @@ import com.example.baseproject.databinding.FragmentLibraryBinding
 import com.example.baseproject.databinding.ItemLibraryCategoryTabBinding
 import com.example.baseproject.dialog.CurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.ui.library.LibraryViewModel
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
@@ -42,6 +43,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     }
 
     override fun initView() {
+        applyAppTheme()
         binding.rvLevels.layoutManager = GridLayoutManager(requireActivity(), 2)
         collectWithLifecycle {
             viewModel.uiState.collectLatest { state ->
@@ -111,7 +113,13 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
 
     override fun onResume() {
         super.onResume()
+        applyAppTheme()
         binding.rvLevels.adapter?.notifyDataSetChanged()
+    }
+
+    private fun applyAppTheme() {
+        AppThemeManager.applyFullBackground(binding.root)
+        AppThemeManager.applyTopImage(binding.ivTopImage)
     }
 
     private fun onLevelClicked(level: LevelConfig) {

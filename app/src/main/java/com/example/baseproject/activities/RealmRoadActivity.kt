@@ -15,6 +15,7 @@ import com.example.baseproject.dialog.AreaLockedDialog
 import com.example.baseproject.dialog.NeedMorePaintDialog
 import com.example.baseproject.dialog.NewAreaUnlockedDialog
 import com.example.baseproject.dialog.PaintDropInfoDialog
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 
@@ -40,6 +41,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.main)
         binding.rvRealmRoad.layoutManager = LinearLayoutManager(this)
         binding.rvRealmRoad.adapter = adapter
         renderRealmRoad()
@@ -60,6 +62,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
 
     override fun onResume() {
         super.onResume()
+        AppThemeManager.applyFullBackground(binding.main)
         renderRealmRoad()
     }
 

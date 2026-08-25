@@ -9,6 +9,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.example.baseproject.R
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivityRealmGuideBinding
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 
 class RealmGuideActivity : BaseActivity<ActivityRealmGuideBinding>(ActivityRealmGuideBinding::inflate) {
@@ -24,7 +25,13 @@ class RealmGuideActivity : BaseActivity<ActivityRealmGuideBinding>(ActivityRealm
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.main)
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppThemeManager.applyFullBackground(binding.main)
     }
 
     override fun initActionView() {

@@ -13,6 +13,7 @@ object SharedPrefManager {
     private const val IS_AUTO_SWITCH_COLOR = "is_auto_switch_color"
     private const val IS_FILL_IN_ANIMATION = "is_fill_in_animation"
     private const val HIGHLIGHT_THEME_ID = "highlight_theme_id"
+    private const val SELECTED_APP_THEME_ID = "selected_app_theme_id"
     private const val SELECTED_REALM_ID = "selected_realm_id"
     private lateinit var preferences: SharedPreferences
 
@@ -41,6 +42,13 @@ object SharedPrefManager {
             ?: DEFAULT_HIGHLIGHT_THEME_ID
         set(value) {
             preferences.edit { putString(HIGHLIGHT_THEME_ID, value) }
+        }
+
+    var selectedAppThemeId: String
+        get() = preferences.getString(SELECTED_APP_THEME_ID, DEFAULT_APP_THEME_ID)
+            ?: DEFAULT_APP_THEME_ID
+        set(value) {
+            preferences.edit { putString(SELECTED_APP_THEME_ID, value) }
         }
 
     var selectedRealmId: String
@@ -114,5 +122,6 @@ object SharedPrefManager {
     }
 
     private const val DEFAULT_HIGHLIGHT_THEME_ID = "gray_checker"
+    private const val DEFAULT_APP_THEME_ID = "midnight"
     private const val DEFAULT_SELECTED_REALM_ID = "sakura_haven"
 }

@@ -21,6 +21,7 @@ import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.ui.mywork.MyWorkUiState
 import com.example.baseproject.ui.mywork.MyWorkViewModel
+import com.example.baseproject.utils.AppThemeManager
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -59,6 +60,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.root)
         binding.btnSetting.visibility = View.GONE
         binding.rvMyWork.layoutManager = GridLayoutManager(requireActivity(), 2)
         updateTabSelection(TAB_IN_PROGRESS)
@@ -83,6 +85,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
 
     override fun onResume() {
         super.onResume()
+        AppThemeManager.applyFullBackground(binding.root)
         viewModel.loadData()
     }
 

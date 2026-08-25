@@ -13,6 +13,7 @@ import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.databinding.ActivityAchieveBinding
 import com.example.baseproject.dialog.AchieveCompletedDialog
 import com.example.baseproject.dialog.AchieveDetailDialog
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 
 class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBinding::inflate) {
@@ -44,6 +45,8 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.main)
+
         binding.rcvAchievements.layoutManager = GridLayoutManager(this, 2)
         binding.rcvAchievements.adapter = achievementAdapter
         updateTabSelection(TAB_IN_PROGRESS)
@@ -59,6 +62,7 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
 
     override fun onResume() {
         super.onResume()
+        AppThemeManager.applyFullBackground(binding.main)
         achievements = achievementRepository.loadAchievements()
         renderList()
     }

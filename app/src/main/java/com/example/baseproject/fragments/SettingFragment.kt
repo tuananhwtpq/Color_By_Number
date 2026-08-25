@@ -7,6 +7,7 @@ import com.example.baseproject.activities.ThemeActivity
 import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.databinding.ActivitySettingBinding
 import com.example.baseproject.dialog.HighlightAreaDialog
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.Common
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
@@ -17,8 +18,13 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
     }
 
     override fun initView() {
-        binding.btnBack.visibility = View.GONE
+        AppThemeManager.applyFullBackground(binding.main)
         renderPaintSettings()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppThemeManager.applyFullBackground(binding.main)
     }
 
     override fun initActionView() {

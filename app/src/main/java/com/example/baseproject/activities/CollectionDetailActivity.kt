@@ -16,6 +16,7 @@ import com.example.baseproject.data.progressFraction
 import com.example.baseproject.databinding.ActivityCollectionDetailBinding
 import com.example.baseproject.dialog.CurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.ui.collection.CollectionDetailUiState
 import com.example.baseproject.ui.collection.CollectionDetailViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -55,6 +56,8 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.main)
+
         binding.rvLevels.layoutManager = GridLayoutManager(this, 2)
         // rvLevels nằm trong NestedScrollView nên phải tắt cuộn riêng, để cả màn cuộn cùng nhau.
         binding.rvLevels.isNestedScrollingEnabled = false
@@ -70,6 +73,7 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
 
     override fun onResume() {
         super.onResume()
+        AppThemeManager.applyFullBackground(binding.main)
         // Quay lại từ màn tô: cập nhật lại % của từng tranh và số "đã xong / tổng".
         viewModel.refreshProgress()
         binding.rvLevels.adapter?.notifyDataSetChanged()

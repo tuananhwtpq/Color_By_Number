@@ -12,6 +12,7 @@ import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.RealmCatalog
 import com.example.baseproject.databinding.ActivityMainBinding
 import com.example.baseproject.ui.main.MainViewModel
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.RealmAnimationCache
 import com.example.baseproject.utils.animateBottomNavPress
 import com.example.baseproject.utils.animateBottomNavSelection
@@ -47,6 +48,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     }
 
     override fun initView() {
+        AppThemeManager.applyFullBackground(binding.main)
+
         binding.tvLib.enableMarquee()
         binding.tvDaily.enableMarquee()
         binding.tvColorRealm.enableMarquee()
@@ -104,6 +107,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         setIntent(intent)
         viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
         preloadRealmAnimation()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppThemeManager.applyFullBackground(binding.main)
     }
 
     private fun preloadRealmAnimation() {
