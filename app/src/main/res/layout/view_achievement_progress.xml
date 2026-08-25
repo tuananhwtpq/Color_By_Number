@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nội dung bên trong AchievementProgressView: thanh nền/progress/viền do view tự vẽ,
+     chỉ có phần chữ trạng thái là view thật để dùng đúng style chữ của app. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="android.widget.FrameLayout">
+
+    <TextView
+        android:id="@+id/tvProgressStatus"
+        style="@style/BodyM"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:textColor="@color/white"
+        tools:text="3/9" />
+
+</merge>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!--
+        Chỉ mở đúng thư mục cache chứa bản PNG dựng riêng để chia sẻ. KHÔNG mở thẳng
+        filesDir/thumbnails: đó là dữ liệu riêng của app, không có lý do gì để app ngoài
+        đọc được toàn bộ.
+    -->
+    <cache-path
+        name="shared_images"
+        path="shared_images/" />
+
+    <cache-path
+        name="shared_videos"
+        path="shared_videos/" />
+
+    <cache-path
+        name="timelapse_exports"
+        path="timelapse_exports/" />
+</paths>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_paint_drop_info"
+    android:minHeight="40dp"
+    android:padding="18dp"
+    tools:context=".dialog.PaintDropInfoDialog">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        style="@style/Heading2"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/paint_drops_collected"
+        android:textColor="@color/grey_700"
+        app:layout_constraintBottom_toBottomOf="@id/btnClose"
+        app:layout_constraintEnd_toStartOf="@id/btnClose"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btnClose" />
+
+    <ImageView
+        android:id="@+id/btnClose"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@drawable/ic_close_new"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/ivPaintDrop"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:layout_marginTop="20dp"
+        android:src="@drawable/ic_paint_drop"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+
+    <TextView
+        android:id="@+id/tvPaintDropCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:fontFamily="@font/nunito_bold"
+        android:textColor="@color/orange400"
+        android:textSize="60sp"
+        app:layout_constraintBottom_toBottomOf="@id/ivPaintDrop"
+        app:layout_constraintStart_toEndOf="@id/ivPaintDrop"
+        app:layout_constraintTop_toTopOf="@id/ivPaintDrop"
+        tools:text="2" />
+
+    <View
+        android:id="@+id/divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginTop="24dp"
+        android:background="@drawable/bg_paint_drop_divider"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivPaintDrop" />
+
+    <TextView
+        android:id="@+id/tvJourneyTitle"
+        style="@style/Caption"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text="@string/color_realm_journey_title"
+        android:textColor="@color/grey_500"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider" />
+
+    <TextView
+        android:id="@+id/tvDaysExplored"
+        style="@style/Display3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/grey_600"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvJourneyTitle"
+        tools:text="7" />
+
+    <TextView
+        android:id="@+id/tvDaysExploredLabel"
+        style="@style/BodyL"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/days_explore"
+        android:textColor="@color/grey_500"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvDaysExplored" />
+
+    <TextView
+        android:id="@+id/tvWorksCompleted"
+        style="@style/Display3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/grey_600"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvDaysExploredLabel"
+        tools:text="3" />
+
+    <TextView
+        android:id="@+id/tvWorksCompletedLabel"
+        style="@style/BodyL"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/works_completed"
+        android:textColor="@color/grey_500"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvWorksCompleted" />
+
+    <TextView
+        android:id="@+id/tvAreasUnlocked"
+        style="@style/Display3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/grey_600"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvWorksCompletedLabel"
+        tools:text="1" />
+
+    <TextView
+        android:id="@+id/tvAreasUnlockedLabel"
+        style="@style/BodyL"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/areas_unlocked"
+        android:textColor="@color/grey_500"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAreasUnlocked" />
+
+    <TextView
+        android:id="@+id/tvQuote"
+        style="@style/BodyL"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/color_realm_quote"
+        android:textColor="@color/orange450"
+        app:layout_constraintEnd_toStartOf="@id/ivDecorPaintDrop"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAreasUnlockedLabel" />
+
+    <ImageView
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_quote"
+        app:layout_constraintStart_toStartOf="@id/tvQuote"
+        app:layout_constraintTop_toTopOf="@id/ivDecorPaintDrop" />
+
+
+    <ImageView
+        android:id="@+id/ivDecorPaintDrop"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:src="@drawable/ic_paint_stain"
+        app:layout_constraintBottom_toBottomOf="@id/tvQuote"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

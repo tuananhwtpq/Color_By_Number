@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_grey_50_20"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:padding="20dp"
+    tools:context=".dialog.NewAreaUnlockedDialog">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        style="@style/Heading2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="40dp"
+        android:gravity="center"
+        android:text="@string/new_areas_unlocked"
+        android:textColor="@color/grey_700"
+        app:layout_constraintEnd_toStartOf="@id/btnClose"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btnClose" />
+
+    <ImageView
+        android:id="@+id/btnClose"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_close_new"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardRealm"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="20dp"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="8dp"
+        app:cardPreventCornerOverlap="false"
+        app:cardUseCompatPadding="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_realm_item_gradient"
+            android:paddingHorizontal="10dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="10dp">
+
+            <TextView
+                android:id="@+id/tvRealmName"
+                style="@style/Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="@color/grey_700"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Sakura Haven" />
+
+            <ImageView
+                android:id="@+id/ivRealmThumbnail"
+                android:layout_width="0dp"
+                android:layout_height="184dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_realm_thumbnail_clip"
+                android:clipToOutline="true"
+                android:scaleType="centerCrop"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tvRealmName"
+                tools:src="@drawable/sakura_haven_thumbnail" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <TextView
+        android:id="@+id/btnGoToColorRealm"
+        style="@style/ButtonM"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:background="@drawable/bg_gradient"
+        android:gravity="center"
+        android:paddingVertical="12dp"
+        android:text="@string/go_to_color_realm"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/cardRealm" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
