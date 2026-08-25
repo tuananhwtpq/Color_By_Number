@@ -1,6 +1,8 @@
 package com.example.baseproject.dialog
 
 import android.os.Bundle
+import androidx.core.content.ContextCompat
+import com.example.baseproject.R
 import com.example.baseproject.bases.BaseDialog
 import com.example.baseproject.databinding.FragmentHighlightAreaDialogBinding
 import com.example.baseproject.highlight.HighlightThemes
@@ -38,6 +40,7 @@ class HighlightAreaDialog : BaseDialog<FragmentHighlightAreaDialogBinding>(
             binding.btnBlueChecker to HighlightThemes.ID_BLUE_CHECKER,
             binding.btnSolidGray to HighlightThemes.ID_SOLID_GRAY,
         )
+        renderOptionPreviews()
         renderSelection()
     }
 
@@ -60,5 +63,23 @@ class HighlightAreaDialog : BaseDialog<FragmentHighlightAreaDialogBinding>(
             view.isSelected = themeId == selectedThemeId
         }
     }
+
+    private fun renderOptionPreviews() {
+        binding.btnGrayChecker.setCheckerPreview(
+            color(R.color.grey_100),
+            color(R.color.grey_400)
+        )
+        binding.btnOrangeChecker.setCheckerPreview(
+            color(R.color.grey_200),
+            color(R.color.orange450)
+        )
+        binding.btnBlueChecker.setCheckerPreview(
+            color(R.color.grey_200),
+            color(R.color.baby_blue_500)
+        )
+        binding.btnSolidGray.setSolidPreview(color(R.color.grey_400))
+    }
+
+    private fun color(colorRes: Int): Int = ContextCompat.getColor(requireContext(), colorRes)
 
 }

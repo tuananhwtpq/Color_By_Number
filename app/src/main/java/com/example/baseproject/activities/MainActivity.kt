@@ -27,6 +27,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     companion object {
         const val EXTRA_SELECTED_TAB = "EXTRA_SELECTED_TAB"
         const val EXTRA_REALM_ID = "EXTRA_REALM_ID"
+        const val TAB_LIBRARY = 0
         const val TAB_COLOR_REALM = 2
         private const val BOTTOM_NAV_ICON_SELECTED_SCALE = 1.22f
         private const val BOTTOM_NAV_ICON_SELECTED_LIFT_DP = 2f

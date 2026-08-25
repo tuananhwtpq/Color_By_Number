@@ -44,8 +44,8 @@ object HighlightThemes {
         return HighlightTheme(
             id = ID_GRAY_CHECKER,
             style = HighlightStyle.CHECKER,
-            primaryColor = Color.parseColor("#F5F2F8"),
-            secondaryColor = Color.parseColor("#9A94A3"),
+            primaryColor = Color.parseColor("#E7E4E7"),
+            secondaryColor = Color.parseColor("#9E92A0"),
             cellSizePx = 10,
             baseAlpha = 255,
             fadeInDurationMs = 200L,
@@ -57,7 +57,7 @@ object HighlightThemes {
     private fun orangeChecker(): HighlightTheme {
         return checkerTheme(
             id = ID_ORANGE_CHECKER,
-            primaryColor = Color.parseColor("#F5F2F8"),
+            primaryColor = Color.parseColor("#CFC9CF"),
             secondaryColor = Color.parseColor("#E9752F"),
         )
     }
@@ -65,7 +65,7 @@ object HighlightThemes {
     private fun blueChecker(): HighlightTheme {
         return checkerTheme(
             id = ID_BLUE_CHECKER,
-            primaryColor = Color.parseColor("#F5F2F8"),
+            primaryColor = Color.parseColor("#CFC9CF"),
             secondaryColor = Color.parseColor("#336BCC"),
         )
     }

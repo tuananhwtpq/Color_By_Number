@@ -12,8 +12,10 @@ import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.data.repository.PaintDropStats
 import com.example.baseproject.databinding.ActivityRealmRoadBinding
 import com.example.baseproject.dialog.AreaLockedDialog
+import com.example.baseproject.dialog.NeedMorePaintDialog
 import com.example.baseproject.dialog.NewAreaUnlockedDialog
 import com.example.baseproject.dialog.PaintDropInfoDialog
+import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 
 class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRoadBinding::inflate) {
@@ -24,16 +26,12 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
 
     private val adapter by lazy {
         RealmRoadAdapter(
-            onRealmClick = { realm ->
-                startActivity(
-                    RealmFullScreenActivity.newIntent(
-                        context = this,
-                        realmId = realm.id,
-                        progress = 0f,
-                    )
-                )
+            onRealmClick = {},
+            onRealmViewClick = { realm ->
+                openRealmFullScreen(realm)
             },
             onUnlockClick = ::unlockRealm,
+            onNeedMorePaintClick = { showNeedMorePaintDialog() },
             onLockedClick = { showAreaLockedDialog() },
         )
     }
@@ -68,15 +66,21 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
     private fun buildRealmRoadItems(): List<RealmRoadItem> {
         val currentPaintDrops = currentPaintDropStats().paintDrops
         val unlockedRealmIds = appContainer.paintDropRepository.loadUnlockedRealmIds()
+        val selectedRealmId = SharedPrefManager.selectedRealmId
         val realms = RealmCatalog.realms
 
         return realms.mapIndexed { index, realm ->
             val isUnlocked = realm.unlockCost == 0 || realm.id in unlockedRealmIds
+            val isPreviousRealmUnlocked = index > 0 && realms[index - 1].let { previousRealm ->
+                previousRealm.unlockCost == 0 || previousRealm.id in unlockedRealmIds
+            }
             RealmRoadItem(
                 realm = realm,
                 collectedPaintDrops = currentPaintDrops,
                 isUnlocked = isUnlocked,
                 isReadyToUnlock = !isUnlocked && currentPaintDrops >= realm.unlockCost,
+                isNextLockedRealm = !isUnlocked && isPreviousRealmUnlocked,
+                isSelected = isUnlocked && realm.id == selectedRealmId,
                 showDownArrow = index < realms.lastIndex,
             )
         }
@@ -102,6 +106,26 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
         }
     }
 
+    private fun showNeedMorePaintDialog() {
+        showDialogOnce(NeedMorePaintDialog.TAG) {
+            NeedMorePaintDialog().apply {
+                onGoToLibrary = {
+                    openLibrary()
+                }
+            }
+        }
+    }
+
+    private fun openLibrary() {
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                putExtra(MainActivity.EXTRA_SELECTED_TAB, MainActivity.TAB_LIBRARY)
+            }
+        )
+        finish()
+    }
+
     private fun unlockRealm(realm: Realm) {
         appContainer.paintDropRepository.unlockRealm(realm.id)
         appContainer.achievementRepository.track(AchievementEvent.RealmUnlocked(realm.id))
@@ -110,21 +134,20 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
             NewAreaUnlockedDialog().apply {
                 this.realm = realm
                 onGoToColorRealm = {
-                    openColorRealm(realm.id)
+                    openRealmFullScreen(realm)
                 }
             }
         }
     }
 
-    private fun openColorRealm(realmId: String) {
+    private fun openRealmFullScreen(realm: Realm) {
         startActivity(
-            Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                putExtra(MainActivity.EXTRA_SELECTED_TAB, MainActivity.TAB_COLOR_REALM)
-                putExtra(MainActivity.EXTRA_REALM_ID, realmId)
-            }
+            RealmFullScreenActivity.newIntent(
+                context = this,
+                realmId = realm.id,
+                progress = 0f,
+            )
         )
-        finish()
     }
 
     private fun currentPaintDropStats(): PaintDropStats {

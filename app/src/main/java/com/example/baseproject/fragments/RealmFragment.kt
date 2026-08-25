@@ -4,7 +4,6 @@ import android.content.Intent
 import android.view.View
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieDrawable
-import com.example.baseproject.activities.MainActivity
 import com.example.baseproject.activities.RealmFullScreenActivity
 import com.example.baseproject.activities.RealmGuideActivity
 import com.example.baseproject.activities.RealmRoadActivity
@@ -13,6 +12,7 @@ import com.example.baseproject.data.Realm
 import com.example.baseproject.data.RealmCatalog
 import com.example.baseproject.databinding.FragmentRealmBinding
 import com.example.baseproject.utils.RealmAnimationCache
+import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -58,7 +58,7 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     }
 
     private fun renderRealm() {
-        val requestedRealmId = activity?.intent?.getStringExtra(MainActivity.EXTRA_REALM_ID)
+        val requestedRealmId = SharedPrefManager.selectedRealmId
         val nextRealm = RealmCatalog.findById(requestedRealmId) ?: RealmCatalog.default
         if (nextRealm == realm && binding.tvRealmName.text == nextRealm.name) return
 
