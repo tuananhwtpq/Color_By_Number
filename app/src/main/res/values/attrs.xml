@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ThemeOptionView">
+        <attr name="themeOptionTitle" format="string" />
+        <attr name="themeOptionThumbnail" format="reference" />
+        <attr name="themeOptionType" format="enum">
+            <enum name="midnight" value="0" />
+            <enum name="sunset" value="1" />
+            <enum name="sunrise" value="2" />
+        </attr>
+    </declare-styleable>
+</resources>

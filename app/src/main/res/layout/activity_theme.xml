@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_full_main_theme_01"
+    tools:context=".activities.ThemeActivity">
+
+    <ImageView
+        android:id="@+id/ivTopImage"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/bg_top_main_theme_01"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
+
+    <ImageView
+        android:id="@+id/btnBack"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_oval_trans"
+        android:padding="8dp"
+        android:src="@drawable/ic_left_arrow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvTheme"
+        style="@style/Heading1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="70dp"
+        android:gravity="center"
+        android:text="@string/theme"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btnBack" />
+
+    <com.example.baseproject.views.ThemeOptionView
+        android:id="@+id/viewThemeMidnight"
+        android:layout_width="0dp"
+        android:layout_height="222dp"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="7dp"
+        app:layout_constraintEnd_toStartOf="@id/viewThemeSunset"
+        app:layout_constraintHorizontal_chainStyle="spread"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivTopImage"
+        app:themeOptionThumbnail="@drawable/bg_top_main_theme_01"
+        app:themeOptionTitle="Midnight"
+        app:themeOptionType="midnight" />
+
+    <com.example.baseproject.views.ThemeOptionView
+        android:id="@+id/viewThemeSunset"
+        android:layout_width="0dp"
+        android:layout_height="222dp"
+        android:layout_marginStart="7dp"
+        android:layout_marginEnd="36dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/viewThemeMidnight"
+        app:layout_constraintTop_toTopOf="@id/viewThemeMidnight"
+        app:themeOptionThumbnail="@drawable/bg_top_main_theme_02"
+        app:themeOptionTitle="Sunset"
+        app:themeOptionType="sunset" />
+
+    <com.example.baseproject.views.ThemeOptionView
+        android:id="@+id/viewThemeSunrise"
+        android:layout_width="0dp"
+        android:layout_height="222dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="@id/viewThemeMidnight"
+        app:layout_constraintStart_toStartOf="@id/viewThemeMidnight"
+        app:layout_constraintTop_toBottomOf="@id/viewThemeMidnight"
+        app:themeOptionThumbnail="@drawable/bg_top_main_theme_03"
+        app:themeOptionTitle="Sunrise"
+        app:themeOptionType="sunrise" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,6 +3,7 @@ package com.example.baseproject.fragments
 import android.content.Intent
 import android.view.View
 import com.example.baseproject.activities.LanguageActivity
+import com.example.baseproject.activities.ThemeActivity
 import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.databinding.ActivitySettingBinding
 import com.example.baseproject.dialog.HighlightAreaDialog
@@ -23,6 +24,10 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
     override fun initActionView() {
         binding.btnLanguage.setOnUnDoubleClick {
             startActivity(Intent(requireContext(), LanguageActivity::class.java))
+        }
+
+        binding.btnTheme.setOnUnDoubleClick {
+            startActivity(Intent(requireContext(), ThemeActivity::class.java))
         }
 
         binding.btnFeedback.setOnUnDoubleClick {
