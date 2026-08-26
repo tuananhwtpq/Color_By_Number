@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.airbnb.lottie.LottieDrawable
+import com.example.baseproject.MyApplication
 import com.example.baseproject.R
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.Realm
@@ -41,20 +43,56 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     private lateinit var realm: Realm
     private var isSavingImage = false
     private var savingImageJob: Job? = null
+    private var loadRealmJob: Job? = null
     private var savingDialog: SavingDialog? = null
+    private val requestedRealmId: String
+        get() = intent.getStringExtra(EXTRA_REALM_ID) ?: RealmCatalog.default.id
+    private val appContainer by lazy {
+        (application as MyApplication).appContainer
+    }
 
     override fun initData() {
-        realm = RealmCatalog.findById(intent.getStringExtra(EXTRA_REALM_ID)) ?: RealmCatalog.default
+        val realmId = requestedRealmId
+        realm = RealmCatalog.findById(realmId)
+            ?: RealmCatalog.findById(realmId.replace('-', '_'))
+            ?: RealmCatalog.default
     }
 
     override fun initView() {
+        renderRealm()
+        loadRealm()
+    }
+
+    private fun renderRealm() {
         binding.lavRealmBackground.apply {
-            setAnimation(realm.animationRes)
+            if (!realm.animationUrl.isNullOrBlank()) {
+                setAnimationFromUrl(realm.animationUrl)
+            } else {
+                setAnimation(realm.animationRes)
+            }
             progress = intent.getFloatExtra(EXTRA_PROGRESS, 0f).coerceIn(0f, 1f)
+            repeatCount = LottieDrawable.INFINITE
             // resumeAnimation() chạy tiếp từ frame hiện tại; playAnimation() sẽ tua về đầu.
             resumeAnimation()
         }
         updateSelectButton()
+    }
+
+    private fun loadRealm() {
+        loadRealmJob?.cancel()
+        loadRealmJob = lifecycleScope.launch {
+            val loadedRealm = try {
+                appContainer.realmRepository.loadRealm(requestedRealmId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (loadedRealm != null && loadedRealm != realm) {
+                realm = loadedRealm
+                renderRealm()
+            }
+        }
     }
 
     override fun initActionView() {
@@ -95,12 +133,16 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
         savingImageJob = lifecycleScope.launch {
             var wasCancelledByUser = false
             val saved = try {
-                val bitmap = LottieFrameRenderer.renderFrame(
-                    context = applicationContext,
-                    animationRes = realm.animationRes,
-                    progress = progress,
-                    targetAspectRatio = aspectRatio
-                ).getOrNull()
+                val bitmap = if (realm.animationRes != 0) {
+                    LottieFrameRenderer.renderFrame(
+                        context = applicationContext,
+                        animationRes = realm.animationRes,
+                        progress = progress,
+                        targetAspectRatio = aspectRatio
+                    ).getOrNull()
+                } else {
+                    null
+                }
 
                 if (bitmap == null) {
                     false
@@ -151,5 +193,13 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
                 SavePicSuccessDialog.newInstance(R.string.picture_was_saved_to_your_device)
             }
         }
+    }
+
+    override fun onDestroy() {
+        loadRealmJob?.cancel()
+        savingImageJob?.cancel()
+        loadRealmJob = null
+        savingImageJob = null
+        super.onDestroy()
     }
 }

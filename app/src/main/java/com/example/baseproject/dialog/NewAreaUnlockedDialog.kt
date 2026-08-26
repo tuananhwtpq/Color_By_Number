@@ -1,5 +1,6 @@
 package com.example.baseproject.dialog
 
+import com.bumptech.glide.Glide
 import com.example.baseproject.bases.BaseDialog
 import com.example.baseproject.data.Realm
 import com.example.baseproject.data.RealmCatalog
@@ -17,9 +18,17 @@ class NewAreaUnlockedDialog : BaseDialog<FragmentNewAreaUnlockedDialogBinding>(
     var realm: Realm = RealmCatalog.default
     var onGoToColorRealm: (() -> Unit)? = null
 
-    override fun initView() = with(binding) {
-        tvRealmName.text = realm.name
-        ivRealmThumbnail.setImageResource(realm.thumbnailRes)
+    override fun initView() {
+        with(binding) {
+            tvRealmName.text = realm.name
+            if (!realm.previewImageUrl.isNullOrBlank()) {
+                Glide.with(ivRealmThumbnail)
+                    .load(realm.previewImageUrl)
+                    .into(ivRealmThumbnail)
+            } else {
+                ivRealmThumbnail.setImageResource(realm.thumbnailRes)
+            }
+        }
     }
 
     override fun initActionView() {

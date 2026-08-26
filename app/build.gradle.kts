@@ -24,6 +24,7 @@ android {
         setProperty("archivesBaseName", "Base_project_($versionCode)_$dateTime")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "PIXCOLOR_BASE_URL", "\"http://192.168.1.18:3000/\"")
     }
 
     signingConfigs {
@@ -69,6 +70,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     bundle {
@@ -102,6 +104,10 @@ dependencies {
     implementation(libs.user.messaging.platform)
 
     implementation(libs.gson)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
 
     implementation(libs.play.services.ads)
 

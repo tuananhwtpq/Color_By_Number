@@ -3,7 +3,7 @@ package com.example.baseproject.data.repository
 import com.example.baseproject.data.Achievement
 
 interface AchievementRepository {
-    fun loadAchievements(): List<Achievement>
+    suspend fun loadAchievements(): List<Achievement>
 
     fun claimReward(achievementId: String)
 

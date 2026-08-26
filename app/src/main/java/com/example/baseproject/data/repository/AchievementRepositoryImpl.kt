@@ -17,7 +17,10 @@ import java.time.LocalDate
  * nghĩa vì tập không chứa phần tử trùng.
  */
 class AchievementRepositoryImpl(
-    private val preferences: SharedPreferences
+    private val preferences: SharedPreferences,
+    private val definitionsProvider: suspend () -> List<AchievementDefinition> = {
+        AchievementCatalog.definitions
+    }
 ) : AchievementRepository {
 
     private companion object {
@@ -31,11 +34,16 @@ class AchievementRepositoryImpl(
         const val KEY_REWARD_CLAIMED_PREFIX = "ACHIEVEMENT_REWARD_CLAIMED_"
     }
 
-    override fun loadAchievements(): List<Achievement> {
+    private var cachedDefinitions: List<AchievementDefinition> = AchievementCatalog.definitions
+
+    override suspend fun loadAchievements(): List<Achievement> {
+        cachedDefinitions = definitionsProvider()
+            .ifEmpty { AchievementCatalog.definitions }
+            .sortedBy { it.sortOrder }
         // Chạy trước để mốc mở khoá luôn được ghi, kể cả với dữ liệu có sẵn từ trước khi
         // tính năng này tồn tại.
-        syncUnlocks()
-        return AchievementCatalog.definitions.map { definition ->
+        syncUnlocks(cachedDefinitions)
+        return cachedDefinitions.map { definition ->
             val unlockedAt = unlockedAt(definition.id)
             Achievement(
                 definition = definition,
@@ -91,9 +99,9 @@ class AchievementRepositoryImpl(
     }
 
     /** Ghi lại thời điểm mở khoá cho những achievement vừa đạt đủ mốc. */
-    private fun syncUnlocks() {
+    private fun syncUnlocks(definitions: List<AchievementDefinition> = cachedDefinitions) {
         val now = System.currentTimeMillis()
-        val newlyUnlocked = AchievementCatalog.definitions.filter { definition ->
+        val newlyUnlocked = definitions.filter { definition ->
             unlockedAt(definition.id) == null &&
                     definition.targetCount > 0 &&
                     currentCount(definition) >= definition.targetCount
@@ -130,10 +138,20 @@ class AchievementRepositoryImpl(
     private fun hintsUsed(): Int = preferences.getInt(KEY_HINTS_USED, 0)
 
     private fun unlockedAt(achievementId: String): Long? =
-        preferences.getLong(KEY_UNLOCKED_AT_PREFIX + achievementId, 0L).takeIf { it > 0L }
+        achievementStorageIds(achievementId)
+            .firstNotNullOfOrNull { id ->
+                preferences.getLong(KEY_UNLOCKED_AT_PREFIX + id, 0L).takeIf { it > 0L }
+            }
 
     private fun isRewardClaimed(achievementId: String): Boolean =
-        preferences.getBoolean(KEY_REWARD_CLAIMED_PREFIX + achievementId, false)
+        achievementStorageIds(achievementId).any { id ->
+            preferences.getBoolean(KEY_REWARD_CLAIMED_PREFIX + id, false)
+        }
+
+    private fun achievementStorageIds(achievementId: String): List<String> {
+        val legacyId = achievementId.replace('-', '_')
+        return if (legacyId == achievementId) listOf(achievementId) else listOf(achievementId, legacyId)
+    }
 
     private fun readSet(key: String): Set<String> =
         preferences.getStringSet(key, emptySet()).orEmpty()

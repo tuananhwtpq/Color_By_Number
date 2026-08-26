@@ -1,6 +1,7 @@
 package com.example.baseproject.dialog
 
 import android.view.View
+import com.bumptech.glide.Glide
 import com.example.baseproject.R
 import com.example.baseproject.bases.BaseDialog
 import com.example.baseproject.data.Achievement
@@ -32,12 +33,21 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
         val achievement = achievement ?: return
         val definition = achievement.definition
 
+        val iconUrl = definition.iconCompletedUrl ?: definition.iconUrl
         val iconRes = definition.iconCompletedRes ?: definition.iconRes
-        binding.ivAchieveImage.setImageResource(iconRes ?: R.drawable.ic_mini_achieve)
-        binding.ivAchieveImage.alpha = if (iconRes != null) 1f else 0.4f
+        if (!iconUrl.isNullOrBlank()) {
+            Glide.with(binding.ivAchieveImage)
+                .load(iconUrl)
+                .placeholder(iconRes ?: R.drawable.ic_mini_achieve)
+                .error(iconRes ?: R.drawable.ic_mini_achieve)
+                .into(binding.ivAchieveImage)
+        } else {
+            binding.ivAchieveImage.setImageResource(iconRes ?: R.drawable.ic_mini_achieve)
+        }
+        binding.ivAchieveImage.alpha = if (iconRes != null || iconUrl != null) 1f else 0.4f
 
-        binding.tvAchieveName.text = getString(definition.titleRes)
-        binding.tvAchieveDetail.text = getString(definition.descriptionRes)
+        binding.tvAchieveName.text = definition.titleText(requireContext())
+        binding.tvAchieveDetail.text = definition.descriptionText(requireContext())
         binding.tvDateTime.text = achievement.unlockedAtMillis?.let(::formatUnlockedDate).orEmpty()
         renderRewardState(achievement.isRewardClaimed)
     }

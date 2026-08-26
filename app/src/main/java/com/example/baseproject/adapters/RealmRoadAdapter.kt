@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.baseproject.R
 import com.example.baseproject.data.Realm
 import com.example.baseproject.databinding.ItemRealmBinding
@@ -50,7 +51,13 @@ class RealmRoadAdapter(
 
         fun bind(item: RealmRoadItem) = with(binding) {
             tvRealmName.text = item.realm.name
-            ivRealmThumbnail.setImageResource(item.realm.thumbnailRes)
+            if (!item.realm.previewImageUrl.isNullOrBlank()) {
+                Glide.with(ivRealmThumbnail)
+                    .load(item.realm.previewImageUrl)
+                    .into(ivRealmThumbnail)
+            } else {
+                ivRealmThumbnail.setImageResource(item.realm.thumbnailRes)
+            }
 
             val isLocked = !item.isUnlocked
             val lockedVisibility = if (isLocked) View.VISIBLE else View.GONE

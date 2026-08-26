@@ -1,0 +1,95 @@
+package com.example.baseproject.data.repository
+
+import android.util.Log
+import com.example.baseproject.data.AlbumCollection
+import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.remote.PixcolorApi
+import com.example.baseproject.data.remote.RemoteApiException
+import com.example.baseproject.data.remote.RemoteAssetLoader
+import com.example.baseproject.data.remote.RemoteLevelMapper
+import com.example.baseproject.data.remote.RemoteLevelMetadataLoader
+import com.example.baseproject.data.remote.requireSuccessfulBody
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class RemoteCollectionRepositoryImpl(
+    private val api: PixcolorApi,
+    private val assetLoader: RemoteAssetLoader,
+    private val fallback: CollectionRepository? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : CollectionRepository {
+
+    private val metadataLoader = RemoteLevelMetadataLoader(api, assetLoader)
+
+    override suspend fun loadCollections(): List<AlbumCollection> =
+        withFallback("loadCollections", fallbackAction = { loadCollections() }) {
+            remoteCollections()
+        }
+
+    override suspend fun loadCollectionDetail(collectionId: String): CollectionDetail? =
+        withFallback("loadCollectionDetail($collectionId)", fallbackAction = {
+            loadCollectionDetail(collectionId)
+        }) {
+            val collection = remoteCollections().firstOrNull { it.id == collectionId }
+                ?: AlbumCollection(
+                    id = collectionId,
+                    title = collectionId,
+                    thumbnailUrl = "",
+                    imageCount = 0
+                )
+            val levels = loadCollectionLevels(collectionId)
+            CollectionDetail(
+                collection = collection.copy(imageCount = collection.imageCount.takeIf { it > 0 } ?: levels.size),
+                levels = levels
+            )
+        }
+
+    override suspend fun loadAllCollectionLevels(): List<LevelConfig> =
+        withFallback("loadAllCollectionLevels", fallbackAction = { loadAllCollectionLevels() }) {
+            remoteCollections().flatMap { collection ->
+                loadCollectionLevels(collection.id)
+            }
+        }
+
+    private suspend fun remoteCollections(): List<AlbumCollection> {
+        val response = api.collections()
+            .requireSuccessfulBody("/api/v1/collections")
+            .takeIf { it.success }
+            ?: throw RemoteApiException("Collections returned success=false")
+
+        val collections = RemoteLevelMapper.sortGroups(response.data?.collections.orEmpty())
+        if (collections.isEmpty()) {
+            throw RemoteApiException("Collections response did not include active collections")
+        }
+        return collections.map { RemoteLevelMapper.collectionFromGroup(it, assetLoader) }
+    }
+
+    private suspend fun loadCollectionLevels(collectionId: String): List<LevelConfig> {
+        return metadataLoader.loadGroupLevelConfigs(
+            RemoteLevelMapper.GROUP_TYPE_COLLECTION,
+            collectionId
+        )
+    }
+
+    private suspend fun <T> withFallback(
+        operation: String,
+        fallbackAction: (suspend CollectionRepository.() -> T)?,
+        remoteAction: suspend () -> T
+    ): T = withContext(ioDispatcher) {
+        runCatching { remoteAction() }
+            .getOrElse { error ->
+                Log.w(TAG, "$operation failed; falling back to local data", error)
+                val fallbackRepository = fallback
+                if (fallbackRepository != null && fallbackAction != null) {
+                    fallbackRepository.fallbackAction()
+                } else {
+                    throw error
+                }
+            }
+    }
+
+    private companion object {
+        const val TAG = "RemoteCollectionRepo"
+    }
+}

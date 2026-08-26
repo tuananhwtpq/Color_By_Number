@@ -15,6 +15,9 @@ data class Realm(
     @DrawableRes val thumbnailRes: Int,
     val unlockCost: Int,
     val sortOrder: Int,
+    val animationUrl: String? = null,
+    val previewImageUrl: String? = null,
+    val isPremium: Boolean = false,
 )
 
 object RealmCatalog {

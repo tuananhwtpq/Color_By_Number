@@ -72,6 +72,18 @@ class LevelAdapter(
                 .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
                 .into(holder.ivThumbnail)
         } else {
+            val remoteThumbnail = level.thumbnailUrl
+                ?: level.assets?.preview?.takeIf(::isRemoteUrl)
+                ?: level.assets?.sourceLine?.takeIf(::isRemoteUrl)
+                ?: level.assets?.displayLine?.takeIf(::isRemoteUrl)
+                ?: level.assets?.line?.takeIf(::isRemoteUrl)
+            if (remoteThumbnail != null) {
+                Glide.with(context)
+                    .load(remoteThumbnail)
+                    .into(holder.ivThumbnail)
+                return
+            }
+
             // Chưa tô gì cả, ưu tiên line gốc để thumbnail sắc nét hơn.
             val levelPath = "${level.category}/${level.id}"
             val configuredLine = level.assets?.sourceLine ?: level.assets?.debugSourceLine ?: level.assets?.line
@@ -91,4 +103,7 @@ class LevelAdapter(
     }
 
     override fun getItemCount() = levels.size
+
+    private fun isRemoteUrl(value: String): Boolean =
+        value.startsWith("http://") || value.startsWith("https://")
 }

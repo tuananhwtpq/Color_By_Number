@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.baseproject.R
 import com.example.baseproject.data.Achievement
 import com.example.baseproject.databinding.ItemAchieveBinding
@@ -41,19 +42,32 @@ class AchievementAdapter(
         val achievement = getItem(position)
         val context = holder.itemView.context
 
-        holder.binding.tvAchiveName.text = context.getString(achievement.definition.titleRes)
+        holder.binding.tvAchiveName.text = achievement.definition.titleText(context)
         holder.binding.tvAchiveName.runText()
 
         val definition = achievement.definition
+        val iconUrl = if (achievement.isCompleted) {
+            definition.iconCompletedUrl ?: definition.iconUrl
+        } else {
+            definition.iconUrl
+        }
         val iconRes = if (achievement.isCompleted) {
             definition.iconCompletedRes ?: definition.iconRes
         } else {
             definition.iconRes
         }
-        holder.binding.ivImageAchieve.setImageResource(iconRes ?: R.drawable.ic_mini_achieve)
+        if (!iconUrl.isNullOrBlank()) {
+            Glide.with(holder.binding.ivImageAchieve)
+                .load(iconUrl)
+                .placeholder(iconRes ?: R.drawable.ic_mini_achieve)
+                .error(iconRes ?: R.drawable.ic_mini_achieve)
+                .into(holder.binding.ivImageAchieve)
+        } else {
+            holder.binding.ivImageAchieve.setImageResource(iconRes ?: R.drawable.ic_mini_achieve)
+        }
         // Achievement chưa có art thì làm mờ ảnh tạm cho khỏi nhầm với huy hiệu thật.
         holder.binding.ivImageAchieve.alpha =
-            if (iconRes != null || achievement.isCompleted) 1f else 0.4f
+            if (iconRes != null || iconUrl != null || achievement.isCompleted) 1f else 0.4f
 
         holder.binding.ivGift.visibility =
             if (achievement.isCompleted && !achievement.isRewardClaimed) View.VISIBLE else View.GONE

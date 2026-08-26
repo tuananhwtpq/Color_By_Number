@@ -4,6 +4,8 @@ import android.content.Intent
 import android.view.View
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieDrawable
+import com.bumptech.glide.Glide
+import com.example.baseproject.MyApplication
 import com.example.baseproject.activities.RealmFullScreenActivity
 import com.example.baseproject.activities.RealmGuideActivity
 import com.example.baseproject.activities.RealmRoadActivity
@@ -22,7 +24,11 @@ import kotlinx.coroutines.launch
 class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::inflate) {
 
     private var realm: Realm = RealmCatalog.default
-    private var loadRealmJob: Job? = null
+    private var loadRealmAnimationJob: Job? = null
+    private var loadRemoteRealmJob: Job? = null
+    private val appContainer by lazy {
+        (requireActivity().application as MyApplication).appContainer
+    }
 
     override fun initData() {
 
@@ -59,41 +65,74 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
 
     private fun renderRealm() {
         val requestedRealmId = SharedPrefManager.selectedRealmId
-        val nextRealm = RealmCatalog.findById(requestedRealmId) ?: RealmCatalog.default
-        if (nextRealm == realm && binding.tvRealmName.text == nextRealm.name) return
+        val localRealm = RealmCatalog.findById(requestedRealmId) ?: RealmCatalog.default
+        renderRealm(localRealm)
 
-        val realmToRender = nextRealm
+        loadRemoteRealmJob?.cancel()
+        loadRemoteRealmJob = viewLifecycleOwner.lifecycleScope.launch {
+            val remoteRealm = try {
+                appContainer.realmRepository.loadRealm(requestedRealmId ?: localRealm.id)
+                    ?: appContainer.realmRepository.loadRealm(RealmCatalog.default.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            remoteRealm?.let(::renderRealm)
+        }
+    }
+
+    private fun renderRealm(realmToRender: Realm) {
+        if (realmToRender == realm && binding.tvRealmName.text == realmToRender.name) return
+
         realm = realmToRender
         binding.tvRealmName.text = realmToRender.name
-        binding.ivRealmPlaceholder.setImageResource(realmToRender.thumbnailRes)
+        if (!realmToRender.previewImageUrl.isNullOrBlank()) {
+            Glide.with(binding.ivRealmPlaceholder)
+                .load(realmToRender.previewImageUrl)
+                .into(binding.ivRealmPlaceholder)
+        } else {
+            binding.ivRealmPlaceholder.setImageResource(realmToRender.thumbnailRes)
+        }
         binding.ivRealmPlaceholder.visibility = View.VISIBLE
         binding.progressBar.visibility = View.VISIBLE
         binding.lavRealmBackground.visibility = View.GONE
         binding.lavRealmBackground.cancelAnimation()
 
-        loadRealmJob?.cancel()
-        loadRealmJob = viewLifecycleOwner.lifecycleScope.launch {
+        loadRealmAnimationJob?.cancel()
+        loadRealmAnimationJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val composition = RealmAnimationCache.loadComposition(
-                    requireContext(),
-                    realmToRender.animationRes
-                )
-                binding.lavRealmBackground.apply {
-                    setComposition(composition)
-                    repeatCount = LottieDrawable.INFINITE
-                    visibility = View.VISIBLE
-                    playAnimation()
+                if (!realmToRender.animationUrl.isNullOrBlank()) {
+                    binding.lavRealmBackground.apply {
+                        setAnimationFromUrl(realmToRender.animationUrl)
+                        repeatCount = LottieDrawable.INFINITE
+                        visibility = View.VISIBLE
+                        playAnimation()
+                    }
+                } else {
+                    val composition = RealmAnimationCache.loadComposition(
+                        requireContext(),
+                        realmToRender.animationRes
+                    )
+                    binding.lavRealmBackground.apply {
+                        setComposition(composition)
+                        repeatCount = LottieDrawable.INFINITE
+                        visibility = View.VISIBLE
+                        playAnimation()
+                    }
                 }
                 binding.progressBar.visibility = View.GONE
                 binding.ivRealmPlaceholder.visibility = View.GONE
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                binding.lavRealmBackground.apply {
-                    setAnimation(realmToRender.animationRes)
-                    repeatCount = LottieDrawable.INFINITE
-                    visibility = View.VISIBLE
-                    playAnimation()
+                if (realmToRender.animationRes != 0) {
+                    binding.lavRealmBackground.apply {
+                        setAnimation(realmToRender.animationRes)
+                        repeatCount = LottieDrawable.INFINITE
+                        visibility = View.VISIBLE
+                        playAnimation()
+                    }
                 }
                 binding.progressBar.visibility = View.GONE
             }
@@ -101,8 +140,10 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     }
 
     override fun onDestroyView() {
-        loadRealmJob?.cancel()
-        loadRealmJob = null
+        loadRealmAnimationJob?.cancel()
+        loadRemoteRealmJob?.cancel()
+        loadRealmAnimationJob = null
+        loadRemoteRealmJob = null
         super.onDestroyView()
     }
 

@@ -1,6 +1,7 @@
 package com.example.baseproject.activities
 
 import android.content.Intent
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.baseproject.MyApplication
 import com.example.baseproject.adapters.RealmRoadAdapter
@@ -18,6 +19,9 @@ import com.example.baseproject.dialog.PaintDropInfoDialog
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRoadBinding::inflate) {
 
@@ -36,6 +40,8 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
             onLockedClick = { showAreaLockedDialog() },
         )
     }
+    private var realms: List<Realm> = RealmCatalog.realms
+    private var loadRealmsJob: Job? = null
 
     override fun initData() {
     }
@@ -45,6 +51,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
         binding.rvRealmRoad.layoutManager = LinearLayoutManager(this)
         binding.rvRealmRoad.adapter = adapter
         renderRealmRoad()
+        loadRemoteRealms()
     }
 
     override fun initActionView() {
@@ -64,18 +71,18 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
         renderRealmRoad()
+        loadRemoteRealms()
     }
 
     private fun buildRealmRoadItems(): List<RealmRoadItem> {
         val currentPaintDrops = currentPaintDropStats().paintDrops
         val unlockedRealmIds = appContainer.paintDropRepository.loadUnlockedRealmIds()
         val selectedRealmId = SharedPrefManager.selectedRealmId
-        val realms = RealmCatalog.realms
 
         return realms.mapIndexed { index, realm ->
-            val isUnlocked = realm.unlockCost == 0 || realm.id in unlockedRealmIds
+            val isUnlocked = realm.unlockCost == 0 || realm.idMatchesAny(unlockedRealmIds)
             val isPreviousRealmUnlocked = index > 0 && realms[index - 1].let { previousRealm ->
-                previousRealm.unlockCost == 0 || previousRealm.id in unlockedRealmIds
+                previousRealm.unlockCost == 0 || previousRealm.idMatchesAny(unlockedRealmIds)
             }
             RealmRoadItem(
                 realm = realm,
@@ -83,7 +90,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
                 isUnlocked = isUnlocked,
                 isReadyToUnlock = !isUnlocked && currentPaintDrops >= realm.unlockCost,
                 isNextLockedRealm = !isUnlocked && isPreviousRealmUnlocked,
-                isSelected = isUnlocked && realm.id == selectedRealmId,
+                isSelected = isUnlocked && realm.idMatches(selectedRealmId),
                 showDownArrow = index < realms.lastIndex,
             )
         }
@@ -93,6 +100,23 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
         val stats = currentPaintDropStats()
         binding.tvPaintDropCount.text = stats.paintDrops.toString()
         adapter.submitList(buildRealmRoadItems())
+    }
+
+    private fun loadRemoteRealms() {
+        loadRealmsJob?.cancel()
+        loadRealmsJob = lifecycleScope.launch {
+            val loadedRealms = try {
+                appContainer.realmRepository.loadRealms()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                emptyList()
+            }
+            if (loadedRealms.isNotEmpty()) {
+                realms = loadedRealms
+                renderRealmRoad()
+            }
+        }
     }
 
     private fun showPaintDropInfoDialog() {
@@ -156,9 +180,24 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
     private fun currentPaintDropStats(): PaintDropStats {
         val stats = appContainer.paintDropRepository.loadStats()
         val unlockedRealmIds = appContainer.paintDropRepository.loadUnlockedRealmIds()
-        val unlockedAreas = RealmCatalog.realms.count { realm ->
-            realm.unlockCost == 0 || realm.id in unlockedRealmIds
+        val unlockedAreas = realms.count { realm ->
+            realm.unlockCost == 0 || realm.idMatchesAny(unlockedRealmIds)
         }
         return stats.copy(areasUnlocked = unlockedAreas)
+    }
+
+    private fun Realm.idMatches(otherId: String?): Boolean =
+        otherId != null && idVariants(id).contains(otherId)
+
+    private fun Realm.idMatchesAny(otherIds: Set<String>): Boolean =
+        idVariants(id).any { it in otherIds }
+
+    private fun idVariants(id: String): Set<String> =
+        setOf(id, id.replace('_', '-'), id.replace('-', '_'))
+
+    override fun onDestroy() {
+        loadRealmsJob?.cancel()
+        loadRealmsJob = null
+        super.onDestroy()
     }
 }

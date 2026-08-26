@@ -2,6 +2,8 @@ package com.example.baseproject.app
 
 import android.content.Context
 import com.example.baseproject.data.TimelapseVideoCache
+import com.example.baseproject.data.remote.PixcolorApiClient
+import com.example.baseproject.data.remote.RemoteAssetLoader
 import com.example.baseproject.data.repository.AssetLevelRepository
 import com.example.baseproject.data.repository.AchievementRepository
 import com.example.baseproject.data.repository.AchievementRepositoryImpl
@@ -12,6 +14,12 @@ import com.example.baseproject.data.repository.PaintingProgressRepository
 import com.example.baseproject.data.repository.PaintingProgressRepositoryImpl
 import com.example.baseproject.data.repository.PaintDropRepository
 import com.example.baseproject.data.repository.PaintDropRepositoryImpl
+import com.example.baseproject.data.repository.LocalRealmRepositoryImpl
+import com.example.baseproject.data.repository.RemoteCollectionRepositoryImpl
+import com.example.baseproject.data.repository.RemoteAchievementDefinitionProvider
+import com.example.baseproject.data.repository.RemoteLevelRepositoryImpl
+import com.example.baseproject.data.repository.RemoteRealmRepositoryImpl
+import com.example.baseproject.data.repository.RealmRepository
 import com.example.baseproject.data.repository.SettingsRepository
 import com.example.baseproject.data.repository.SettingsRepositoryImpl
 import com.example.baseproject.data.repository.ThumbnailRepository
@@ -25,18 +33,32 @@ interface AppContainer {
     val settingsRepository: SettingsRepository
     val achievementRepository: AchievementRepository
     val paintDropRepository: PaintDropRepository
+    val realmRepository: RealmRepository
     val timelapseVideoCache: TimelapseVideoCache
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
     private val appContext = context.applicationContext
+    private val pixcolorApi by lazy { PixcolorApiClient.create() }
+    private val remoteAssetLoader by lazy { RemoteAssetLoader() }
+    private val localAssetLevelRepository by lazy { AssetLevelRepositoryImpl(appContext) }
+    private val localCollectionRepository by lazy { AssetCollectionRepositoryImpl(appContext) }
+    private val localRealmRepository by lazy { LocalRealmRepositoryImpl() }
 
     override val assetLevelRepository: AssetLevelRepository by lazy {
-        AssetLevelRepositoryImpl(appContext)
+        RemoteLevelRepositoryImpl(
+            api = pixcolorApi,
+            assetLoader = remoteAssetLoader,
+            fallback = localAssetLevelRepository
+        )
     }
 
     override val collectionRepository: CollectionRepository by lazy {
-        AssetCollectionRepositoryImpl(appContext)
+        RemoteCollectionRepositoryImpl(
+            api = pixcolorApi,
+            assetLoader = remoteAssetLoader,
+            fallback = localCollectionRepository
+        )
     }
 
     override val paintingProgressRepository: PaintingProgressRepository by lazy {
@@ -50,14 +72,27 @@ class DefaultAppContainer(context: Context) : AppContainer {
     }
 
     override val achievementRepository: AchievementRepository by lazy {
+        val remoteDefinitions = RemoteAchievementDefinitionProvider(
+            api = pixcolorApi,
+            assetLoader = remoteAssetLoader
+        )
         AchievementRepositoryImpl(
-            appContext.getSharedPreferences("Achievements", Context.MODE_PRIVATE)
+            preferences = appContext.getSharedPreferences("Achievements", Context.MODE_PRIVATE),
+            definitionsProvider = remoteDefinitions::loadDefinitions
         )
     }
 
     override val paintDropRepository: PaintDropRepository by lazy {
         PaintDropRepositoryImpl(
             appContext.getSharedPreferences("PaintDrops", Context.MODE_PRIVATE)
+        )
+    }
+
+    override val realmRepository: RealmRepository by lazy {
+        RemoteRealmRepositoryImpl(
+            api = pixcolorApi,
+            assetLoader = remoteAssetLoader,
+            fallback = localRealmRepository
         )
     }
 

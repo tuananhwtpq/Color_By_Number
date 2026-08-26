@@ -1,5 +1,6 @@
 package com.example.baseproject.data
 
+import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.example.baseproject.R
@@ -44,8 +45,10 @@ sealed interface AchievementRule {
  */
 data class AchievementDefinition(
     val id: String,
-    @StringRes val titleRes: Int,
-    @StringRes val descriptionRes: Int,
+    @StringRes val titleRes: Int? = null,
+    @StringRes val descriptionRes: Int? = null,
+    val title: String? = null,
+    val description: String? = null,
     val targetCount: Int,
     val rule: AchievementRule,
     /**
@@ -53,8 +56,18 @@ data class AchievementDefinition(
      * nhờ vậy nhìn vào file này là biết ngay achievement nào còn thiếu ảnh.
      */
     @DrawableRes val iconRes: Int? = null,
-    @DrawableRes val iconCompletedRes: Int? = null
-)
+    @DrawableRes val iconCompletedRes: Int? = null,
+    val iconUrl: String? = null,
+    val iconCompletedUrl: String? = null,
+    val sortOrder: Int = Int.MAX_VALUE,
+    val isPremium: Boolean = false
+) {
+    fun titleText(context: Context): String =
+        title ?: titleRes?.let(context::getString) ?: id
+
+    fun descriptionText(context: Context): String =
+        description ?: descriptionRes?.let(context::getString).orEmpty()
+}
 
 object AchievementCatalog {
 

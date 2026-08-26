@@ -3,6 +3,7 @@ package com.example.baseproject.activities
 import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.baseproject.MyApplication
 import com.example.baseproject.R
@@ -15,6 +16,9 @@ import com.example.baseproject.dialog.AchieveCompletedDialog
 import com.example.baseproject.dialog.AchieveDetailDialog
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.setOnUnDoubleClick
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBinding::inflate) {
 
@@ -39,6 +43,7 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
 
     private var selectedTab = TAB_IN_PROGRESS
     private var achievements: List<Achievement> = emptyList()
+    private var loadAchievementsJob: Job? = null
 
     override fun initData() {
 
@@ -63,8 +68,22 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
     override fun onResume() {
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
-        achievements = achievementRepository.loadAchievements()
-        renderList()
+        loadAchievements()
+    }
+
+    private fun loadAchievements() {
+        loadAchievementsJob?.cancel()
+        loadAchievementsJob = lifecycleScope.launch {
+            val loadedAchievements = try {
+                achievementRepository.loadAchievements()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                emptyList()
+            }
+            achievements = loadedAchievements
+            renderList()
+        }
     }
 
     private fun updateTabSelection(tab: Int) {
@@ -99,8 +118,7 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
                     onRewardClaimed = { claimedAchievement ->
                         achievementRepository.track(AchievementEvent.HintUsed)
                         achievementRepository.claimReward(claimedAchievement.id)
-                        achievements = achievementRepository.loadAchievements()
-                        renderList()
+                        loadAchievements()
                     }
                 }
             }
@@ -109,5 +127,11 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
                 AchieveDetailDialog().apply { this.achievement = achievement }
             }
         }
+    }
+
+    override fun onDestroy() {
+        loadAchievementsJob?.cancel()
+        loadAchievementsJob = null
+        super.onDestroy()
     }
 }
