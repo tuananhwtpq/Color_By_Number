@@ -39,7 +39,8 @@ class RemoteLevelRepositoryImpl(
             categories.flatMap { category ->
                 metadataLoader.loadGroupLevelConfigs(
                     RemoteLevelMapper.GROUP_TYPE_CATEGORY,
-                    category.stableId
+                    category.stableId,
+                    category.displayName
                 )
             }
         }

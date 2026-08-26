@@ -31,12 +31,19 @@ class LibraryViewModel(
             }.onSuccess { levels ->
                 allLevels = levels
                 val categories = levels.map { it.category }.distinct().sorted()
+                val categoryNames = levels
+                    .groupBy { it.category }
+                    .mapValues { (_, categoryLevels) ->
+                        categoryLevels.firstNotNullOfOrNull { it.categoryName }
+                            ?: categoryLevels.first().category
+                    }
                 val selectedCategory = _uiState.value.selectedCategory?.takeIf { it in categories }
                     ?: categories.firstOrNull()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         categories = categories,
+                        categoryNames = categoryNames,
                         selectedCategory = selectedCategory,
                         visibleLevels = selectedCategory?.let(::filterLevels).orEmpty()
                     )
@@ -47,6 +54,7 @@ class LibraryViewModel(
                         isLoading = false,
                         errorMessage = throwable.message ?: "Failed to load levels",
                         categories = emptyList(),
+                        categoryNames = emptyMap(),
                         selectedCategory = null,
                         visibleLevels = emptyList()
                     )

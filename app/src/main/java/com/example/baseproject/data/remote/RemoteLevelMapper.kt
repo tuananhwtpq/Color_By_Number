@@ -10,7 +10,8 @@ object RemoteLevelMapper {
 
     fun levelSummaryToConfig(
         dto: RemoteLevelSummaryDto,
-        assetLoader: RemoteAssetLoader
+        assetLoader: RemoteAssetLoader,
+        groupName: String? = null
     ): LevelConfig =
         LevelConfig(
             id = dto.id,
@@ -18,6 +19,7 @@ object RemoteLevelMapper {
             category = categoryKey(dto.groupType, dto.groupId),
             groupType = dto.groupType,
             groupId = dto.groupId,
+            categoryName = groupName,
             thumbnailUrl = assetLoader.resolveUrl(dto.thumbnailPath),
             sortOrder = dto.sortOrder,
             isPremium = dto.isPremium,
@@ -37,6 +39,7 @@ object RemoteLevelMapper {
             category = categoryKey(detail.groupType, detail.groupId),
             groupType = detail.groupType,
             groupId = detail.groupId,
+            categoryName = config.categoryName,
             thumbnailUrl = assetLoader.resolveUrl(detail.thumbnailPath)
                 ?: config.thumbnailUrl
                 ?: assetUrl(detail.assets, "THUMBNAIL", assetLoader),

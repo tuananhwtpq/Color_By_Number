@@ -10,6 +10,7 @@ data class LevelConfig(
     @SerializedName("category") val category: String,
     @SerializedName("group_type") val groupType: String? = null,
     @SerializedName("group_id") val groupId: String? = null,
+    @SerializedName("category_name") val categoryName: String? = null,
     @SerializedName("thumbnail_url") val thumbnailUrl: String? = null,
     @SerializedName("sort_order") val sortOrder: Int? = null,
     @SerializedName("is_premium") val isPremium: Boolean? = null,

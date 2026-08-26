@@ -9,8 +9,11 @@ import com.example.baseproject.data.remote.RemoteAssetLoader
 import com.example.baseproject.data.remote.RemoteLevelMapper
 import com.example.baseproject.data.remote.RemoteLevelMetadataLoader
 import com.example.baseproject.data.remote.requireSuccessfulBody
+import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
 class RemoteCollectionRepositoryImpl(
@@ -62,8 +65,27 @@ class RemoteCollectionRepositoryImpl(
         if (collections.isEmpty()) {
             throw RemoteApiException("Collections response did not include active collections")
         }
-        return collections.map { RemoteLevelMapper.collectionFromGroup(it, assetLoader) }
+        return collectionsWithLevelCounts(collections)
     }
+
+    private suspend fun collectionsWithLevelCounts(groups: List<com.example.baseproject.data.remote.RemoteGroupDto>): List<AlbumCollection> =
+        coroutineScope {
+            groups.map { group ->
+                async {
+                    val collection = RemoteLevelMapper.collectionFromGroup(group, assetLoader)
+                    val levelCount = runCatching {
+                        metadataLoader.loadGroupLevelSummaries(
+                            RemoteLevelMapper.GROUP_TYPE_COLLECTION,
+                            collection.id
+                        ).size
+                    }.getOrElse { error ->
+                        Log.w(TAG, "Failed to count levels for collection ${collection.id}", error)
+                        collection.imageCount
+                    }
+                    collection.copy(imageCount = levelCount)
+                }
+            }.awaitAll()
+        }
 
     private suspend fun loadCollectionLevels(collectionId: String): List<LevelConfig> {
         return metadataLoader.loadGroupLevelConfigs(

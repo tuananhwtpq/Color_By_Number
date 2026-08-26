@@ -8,7 +8,30 @@ class RemoteLevelMetadataLoader(
     private val assetLoader: RemoteAssetLoader
 ) {
 
-    suspend fun loadGroupLevelConfigs(groupType: String, groupId: String): List<LevelConfig> {
+    suspend fun loadGroupLevelConfigs(
+        groupType: String,
+        groupId: String,
+        groupName: String? = null
+    ): List<LevelConfig> {
+        return loadGroupLevelSummaries(groupType, groupId)
+            .map { summary ->
+                val summaryConfig = RemoteLevelMapper.levelSummaryToConfig(
+                    dto = summary,
+                    assetLoader = assetLoader,
+                    groupName = groupName
+                )
+                runCatching { loadConfig(summaryConfig.id) }
+                    .getOrElse { error ->
+                        Log.w(TAG, "Failed to enrich level ${summaryConfig.id}; using summary", error)
+                        summaryConfig
+                    }
+            }
+    }
+
+    suspend fun loadGroupLevelSummaries(
+        groupType: String,
+        groupId: String
+    ): List<RemoteLevelSummaryDto> {
         val response = api.groupLevels(groupType, groupId)
             .requireSuccessfulBody("/api/v1/groups/$groupType/$groupId/levels")
         if (!response.success) {
@@ -18,14 +41,6 @@ class RemoteLevelMetadataLoader(
         return response.data?.levels.orEmpty()
             .filter { it.groupType.equals(groupType, ignoreCase = true) && it.groupId == groupId }
             .sortedBy { it.sortOrder ?: Int.MAX_VALUE }
-            .map { summary ->
-                val summaryConfig = RemoteLevelMapper.levelSummaryToConfig(summary, assetLoader)
-                runCatching { loadConfig(summaryConfig.id) }
-                    .getOrElse { error ->
-                        Log.w(TAG, "Failed to enrich level ${summaryConfig.id}; using summary", error)
-                        summaryConfig
-                    }
-            }
     }
 
     suspend fun loadConfig(levelId: String): LevelConfig {
@@ -50,4 +65,3 @@ class RemoteLevelMetadataLoader(
         const val TAG = "RemoteLevelMetadata"
     }
 }
-

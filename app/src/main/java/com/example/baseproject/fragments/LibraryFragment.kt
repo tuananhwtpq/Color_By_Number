@@ -49,7 +49,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
             viewModel.uiState.collectLatest { state ->
                 binding.progressBar.visibility =
                     if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
-                renderCategoryTabs(state.categories, state.selectedCategory)
+                renderCategoryTabs(state.categories, state.categoryNames, state.selectedCategory)
                 binding.rvLevels.adapter =
                     LevelAdapter(
                         state.visibleLevels,
@@ -70,14 +70,19 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         }
     }
 
-    private fun renderCategoryTabs(categories: List<String>, selectedCategory: String?) {
+    private fun renderCategoryTabs(
+        categories: List<String>,
+        categoryNames: Map<String, String>,
+        selectedCategory: String?
+    ) {
         binding.layoutCategories.removeAllViews()
         val inflater = LayoutInflater.from(requireContext())
 
         categories.forEachIndexed { index, category ->
             val tabBinding =
                 ItemLibraryCategoryTabBinding.inflate(inflater, binding.layoutCategories, false)
-            tabBinding.tvCategoryTab.text = category
+            tabBinding.tvCategoryTab.text = categoryNames[category] ?: category
+            tabBinding.tvCategoryTab.tag = category
             tabBinding.tvCategoryTab.setOnClickListener {
                 viewModel.selectCategory(category)
             }
@@ -96,7 +101,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     private fun updateTabSelection(selectedCategory: String?) {
         repeat(binding.layoutCategories.childCount) { index ->
             val tabView = binding.layoutCategories.getChildAt(index) as? TextView ?: return@repeat
-            val isSelected = tabView.text.toString() == selectedCategory
+            val isSelected = tabView.tag == selectedCategory
             tabView.background = ContextCompat.getDrawable(
                 requireContext(),
                 if (isSelected) R.drawable.bg_library_category_tab_selected else R.drawable.bg_library_category_tab_unselected
