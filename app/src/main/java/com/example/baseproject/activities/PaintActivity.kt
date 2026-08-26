@@ -369,8 +369,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 //        binding.topBar.visibility = visibility
         binding.paintCanvas.visibility = visibility
         binding.paletteContainer.visibility = visibility
-        binding.btnPreviewFull.visibility = visibility
-        binding.btnFillAll.visibility = visibility
+//        binding.btnPreviewFull.visibility = visibility
+//        binding.btnFillAll.visibility = visibility
         binding.progressBar.visibility =
             if (isVisible && isLoadingVisible && !isGuideVisible) View.VISIBLE else View.GONE
         updateFullPreviewVisibility()

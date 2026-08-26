@@ -120,50 +120,52 @@ class ExportBackendContentTest(unittest.TestCase):
         self.assertEqual(level["sortOrder"], 6)
         self.assertNotIn("width", level)
         self.assertNotIn("height", level)
-        self.assertEqual(level["difficulty"], 2)
-        self.assertEqual(level["totalRegions"], 1)
-        self.assertEqual(level["paletteSize"], 1)
+        self.assertNotIn("difficulty", level)
+        self.assertNotIn("totalRegions", level)
+        self.assertNotIn("paletteSize", level)
         self.assertEqual(level["thumbnailPath"], "levels/travel-06/thumbnail.png")
         self.assertEqual(level["configPath"], "levels/travel-06/config.json")
         self.assertEqual(level["minAppVersion"], "1.0.0")
+        self.assertFalse(level["isPremium"])
         self.assertTrue(level["contentVersion"].startswith("sha256:"))
         self.assertNotIn("configSizeBytes", level)
         self.assertNotIn("configSha256", level)
         self.assertNotIn("bundleSizeBytes", level)
+        self.assertNotIn("assets", level)
 
-        asset_by_role = {asset["role"]: asset for asset in level["assets"]}
-        self.assertEqual(asset_by_role["LINE"]["path"], "levels/travel-06/line.png")
-        self.assertEqual(asset_by_role["DISPLAY_LINE"]["path"], "levels/travel-06/display_line.png")
-        self.assertEqual(asset_by_role["MASK"]["path"], "levels/travel-06/mask.png")
-        self.assertEqual(asset_by_role["DETAIL"]["path"], "levels/travel-06/detail.png")
-        self.assertEqual(asset_by_role["THUMBNAIL"]["path"], "levels/travel-06/thumbnail.png")
-        for asset in level["assets"]:
-            self.assertEqual(set(asset), {"role", "path", "mimeType"})
-
-        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "config.json").exists())
+        exported_config_path = self.out / "files" / "levels" / "travel-06" / "config.json"
+        self.assertTrue(exported_config_path.exists())
+        exported_config = json.loads(exported_config_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            exported_config["assets"],
+            {
+                "line": "line.png",
+                "mask": "mask.png",
+                "display_line": "display_line.png",
+                "detail": "detail.png",
+            },
+        )
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line.png").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "mask.png").exists())
         self.assertFalse((self.out / "files" / "levels" / "travel-06" / "debug_regions.png").exists())
 
-    def test_optional_detail_can_be_missing(self):
+    def test_detail_is_required(self):
         self.make_level(with_detail=False)
 
-        _, levels = build_package(
-            assets_path=str(self.assets),
-            res_path=str(self.res),
-            src_path=str(self.src),
-            output_dir=str(self.out),
-            use_webp=False,
-            webp_quality=85,
-            thumbnail_size=512,
-            min_app_version=None,
-            min_supported_app_version=None,
-        )
+        with self.assertRaises(FileNotFoundError):
+            build_package(
+                assets_path=str(self.assets),
+                res_path=str(self.res),
+                src_path=str(self.src),
+                output_dir=str(self.out),
+                use_webp=False,
+                webp_quality=85,
+                thumbnail_size=512,
+                min_app_version=None,
+                min_supported_app_version=None,
+            )
 
-        roles = {asset["role"] for asset in levels[0]["assets"]}
-        self.assertNotIn("DETAIL", roles)
-
-    def test_exports_optional_hi_res_display_lines(self):
+    def test_ignores_hi_res_display_lines_for_backend_package(self):
         level_dir = self.make_level()
         config_path = level_dir / "config.json"
         config = json.loads(config_path.read_text(encoding="utf-8"))
@@ -186,11 +188,43 @@ class ExportBackendContentTest(unittest.TestCase):
         )
 
         level = levels[0]
-        asset_by_role = {asset["role"]: asset for asset in level["assets"]}
-        self.assertEqual(asset_by_role["DISPLAY_LINE_2X"]["path"], "levels/travel-06/display_line_2x.png")
-        self.assertEqual(asset_by_role["DISPLAY_LINE_4X"]["path"], "levels/travel-06/display_line_4x.png")
-        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line_2x.png").exists())
-        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line_4x.png").exists())
+        self.assertNotIn("assets", level)
+        self.assertFalse((self.out / "files" / "levels" / "travel-06" / "display_line_2x.png").exists())
+        self.assertFalse((self.out / "files" / "levels" / "travel-06" / "display_line_4x.png").exists())
+
+    def test_webp_export_rewrites_config_asset_names(self):
+        self.make_level()
+
+        _, levels = build_package(
+            assets_path=str(self.assets),
+            res_path=str(self.res),
+            src_path=str(self.src),
+            output_dir=str(self.out),
+            use_webp=True,
+            webp_quality=90,
+            thumbnail_size=512,
+            min_app_version=None,
+            min_supported_app_version=None,
+        )
+
+        level = levels[0]
+        self.assertEqual(level["thumbnailPath"], "levels/travel-06/thumbnail.webp")
+        exported_config = json.loads(
+            (self.out / "files" / "levels" / "travel-06" / "config.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            exported_config["assets"],
+            {
+                "line": "line.png",
+                "mask": "mask.png",
+                "display_line": "display_line.webp",
+                "detail": "detail.webp",
+            },
+        )
+        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "line.png").exists())
+        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "mask.png").exists())
+        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line.webp").exists())
+        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "detail.webp").exists())
 
 
 if __name__ == "__main__":

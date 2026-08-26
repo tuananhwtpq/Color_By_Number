@@ -26,7 +26,6 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
     }
 
     override fun initData() {
-        // Đếm số ngày mở app cho nhóm achievement "Return to the app for N days".
         (application as MyApplication).appContainer.achievementRepository
             .track(AchievementEvent.AppOpened)
 

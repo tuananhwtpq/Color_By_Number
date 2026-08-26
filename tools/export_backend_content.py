@@ -20,7 +20,7 @@ Cách chạy (dùng bản python có Pillow):
     /usr/bin/python3 tools/export_backend_content.py --webp --zip
 
 Các file KHÔNG được xuất vì runtime không đọc tới: debug_*.png, debug_report.json,
-preview_colored.png. Riêng line_render.png chỉ dùng làm đường lui cho display_line.
+preview_colored.png, line_render.png.
 """
 
 import argparse
@@ -52,17 +52,15 @@ DEFAULT_SRC = os.path.join("app", "src", "main", "java", "com", "example", "base
 COLLECTION_ROOT = "Collection"
 SKIP_DIRS = {"images", "webkit"}
 
-# role -> (tên file mặc định, khoá trong config["assets"], bắt buộc, cho phép nén lossy)
+# role -> (tên file mặc định, khoá trong config["assets"], cho phép nén lossy)
 #
 # MASK và LINE phải giữ nguyên PNG không mất dữ liệu: mỗi pixel là một mã vùng, nén lossy
 # sẽ làm sai logic tô màu.
 RUNTIME_ASSETS = (
-    ("LINE", "line.png", "line", True, False),
-    ("MASK", "mask.png", "mask", True, False),
-    ("DISPLAY_LINE", "display_line.png", "display_line", True, True),
-    ("DISPLAY_LINE_2X", "display_line_2x.png", "display_line_2x", False, True),
-    ("DISPLAY_LINE_4X", "display_line_4x.png", "display_line_4x", False, True),
-    ("DETAIL", "detail.png", "detail", False, True),
+    ("LINE", "line.png", "line", False),
+    ("MASK", "mask.png", "mask", False),
+    ("DISPLAY_LINE", "display_line.png", "display_line", True),
+    ("DETAIL", "detail.png", "detail", True),
 )
 
 # Ảnh nét gốc dùng để sinh thumbnail cho lưới danh sách. Không bao giờ dùng
@@ -241,6 +239,14 @@ class FileWriter:
             output_file.write(data)
         return self.describe(relative_path)
 
+    def write_json(self, payload, relative_path):
+        destination = self._absolute(relative_path)
+        os.makedirs(os.path.dirname(destination), exist_ok=True)
+        with open(destination, "w", encoding="utf-8") as output_file:
+            json.dump(payload, output_file, ensure_ascii=False, indent=2)
+            output_file.write("\n")
+        return self.describe(relative_path)
+
     def write_image_bytes(self, data, relative_path, max_size=None):
         """Ghi ảnh lấy từ bộ nhớ, có thu nhỏ và chuyển WebP như các ảnh khác."""
         if Image is None:
@@ -281,14 +287,11 @@ def build_level(level_dir, level_id, group_type, group_id, sort_order,
                 writer, thumbnail_size, min_app_version):
     config_path = os.path.join(level_dir, "config.json")
     config = load_json(config_path)
-    stats = config.get("stats") or {}
     base = os.path.join("levels", level_id)
 
-    files = [writer.copy(config_path, os.path.join(base, "config.json"))]
-    config_entry = files[0]
-
     assets = []
-    for role, default_name, config_key, required, allow_lossy in RUNTIME_ASSETS:
+    exported_config_assets = {}
+    for role, default_name, config_key, allow_lossy in RUNTIME_ASSETS:
         source_path = os.path.join(level_dir, configured_name(config, config_key, default_name))
 
         if not os.path.exists(source_path) and role == "DISPLAY_LINE":
@@ -296,9 +299,7 @@ def build_level(level_dir, level_id, group_type, group_id, sort_order,
             source_path = os.path.join(level_dir, "line_render.png")
 
         if not os.path.exists(source_path):
-            if required:
-                raise FileNotFoundError("Thiếu file bắt buộc: %s (%s)" % (source_path, role))
-            continue
+            raise FileNotFoundError("Thiếu file bắt buộc: %s (%s)" % (source_path, role))
 
         entry = writer.copy_image(
             source_path,
@@ -307,7 +308,12 @@ def build_level(level_dir, level_id, group_type, group_id, sort_order,
         )
         entry["role"] = role
         assets.append(entry)
-        files.append(entry)
+        exported_config_assets[config_key] = os.path.basename(entry["path"])
+
+    exported_config = dict(config)
+    exported_config["assets"] = exported_config_assets
+    config_entry = writer.write_json(exported_config, os.path.join(base, "config.json"))
+    files = [config_entry, *assets]
 
     thumbnail_source = next(
         (os.path.join(level_dir, name) for name in THUMBNAIL_SOURCES
@@ -324,8 +330,6 @@ def build_level(level_dir, level_id, group_type, group_id, sort_order,
         if thumbnail is None:
             warn("Thiếu Pillow nên không tạo được thumbnail cho %s" % level_id)
         else:
-            thumbnail["role"] = "THUMBNAIL"
-            assets.append(thumbnail)
             files.append(thumbnail)
 
     payload = {
@@ -334,16 +338,12 @@ def build_level(level_dir, level_id, group_type, group_id, sort_order,
         "groupId": group_id,
         "name": None,
         "sortOrder": sort_order,
-        "paletteSize": palette_size_of(config),
-        "totalRegions": config.get("total_regions") or stats.get("total_regions"),
-        "difficulty": config.get("estimated_difficulty") or stats.get("estimated_difficulty"),
-        "smallRegionsCount": config.get("small_regions_count") or stats.get("small_regions_count"),
         "thumbnailPath": thumbnail["path"] if thumbnail else None,
         "configPath": config_entry["path"],
         "contentVersion": bundle_version(files),
+        "isPremium": False,
         "isActive": True,
         "publishedAt": None,
-        "assets": [public_asset(asset) for asset in assets],
     }
     if min_app_version is not None:
         payload["minAppVersion"] = min_app_version
