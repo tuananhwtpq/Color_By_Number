@@ -1,6 +1,7 @@
 package com.example.baseproject.adapters
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.baseproject.R
@@ -24,10 +25,11 @@ class LanguageAdapter(
             languageName.setText(language.name)
             languageName.setHorizontallyScrolling(true)
             languageName.isSelected = true
+            ivRadio.visibility = View.INVISIBLE
 
             layoutRoot.setBackgroundResource(
-                if (isSelected) R.drawable.bg_language_selected
-                else R.drawable.bg_language_unselected
+                if (isSelected) R.drawable.bg_language_enable
+                else R.drawable.bg_language_disable
             )
             ivRadio.setImageResource(
                 if (isSelected) R.drawable.ic_checked_language

@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SplashViewModel : ViewModel() {
+    companion object {
+        private const val ADS_FLOW_TIMEOUT_MS = 5_000L
+    }
+
     private val _uiState = MutableStateFlow(SplashUiState())
     val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()
 
@@ -40,6 +44,10 @@ class SplashViewModel : ViewModel() {
             viewModelScope.launch {
                 _events.emit(SplashUiEvent.RequestConsent)
             }
+            viewModelScope.launch {
+                delay(ADS_FLOW_TIMEOUT_MS)
+                onAdsFlowCompleted()
+            }
         }
     }
 
@@ -62,6 +70,7 @@ class SplashViewModel : ViewModel() {
     }
 
     private fun onAdsFlowCompleted() {
+        if (adsFlowCompleted) return
         adsFlowCompleted = true
         _uiState.update { it.copy(showAdsLoading = false) }
         viewModelScope.launch {

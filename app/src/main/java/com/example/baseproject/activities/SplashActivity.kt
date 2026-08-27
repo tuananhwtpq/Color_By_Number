@@ -110,8 +110,9 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
     }
 
     private fun replaceActivity() {
-        val intent = Intent(this@SplashActivity, MainActivity::class.java)
+        val intent = Intent(this@SplashActivity, LanguageActivity::class.java)
         intent.putExtra(Constants.LANGUAGE_EXTRA, false)
+        intent.putExtra(LanguageActivity.EXTRA_FROM_SPLASH, true)
         startActivity(intent)
         finish()
     }

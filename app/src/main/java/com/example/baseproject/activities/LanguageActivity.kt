@@ -20,6 +20,9 @@ import com.example.baseproject.utils.visible
 import kotlinx.coroutines.flow.collectLatest
 
 class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageBinding::inflate) {
+    companion object {
+        const val EXTRA_FROM_SPLASH = "EXTRA_FROM_SPLASH"
+    }
 
     private val viewModel: LanguageViewModel by viewModels {
         val appContainer = (application as MyApplication).appContainer
@@ -31,7 +34,8 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
     private var isFromHome = true
 
     override fun initData() {
-        isFromHome = intent.getBooleanExtra(Constants.LANGUAGE_EXTRA, true)
+        isFromHome = !intent.getBooleanExtra(EXTRA_FROM_SPLASH, false) &&
+            intent.getBooleanExtra(Constants.LANGUAGE_EXTRA, true)
         viewModel.initialize(isFromHome)
     }
 
