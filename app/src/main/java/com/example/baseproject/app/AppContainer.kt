@@ -24,6 +24,7 @@ import com.example.baseproject.data.repository.SettingsRepository
 import com.example.baseproject.data.repository.SettingsRepositoryImpl
 import com.example.baseproject.data.repository.ThumbnailRepository
 import com.example.baseproject.data.repository.ThumbnailRepositoryImpl
+import java.io.File
 
 interface AppContainer {
     val assetLevelRepository: AssetLevelRepository
@@ -40,7 +41,9 @@ interface AppContainer {
 class DefaultAppContainer(context: Context) : AppContainer {
     private val appContext = context.applicationContext
     private val pixcolorApi by lazy { PixcolorApiClient.create() }
-    private val remoteAssetLoader by lazy { RemoteAssetLoader() }
+    private val remoteAssetLoader by lazy {
+        RemoteAssetLoader(cacheDir = File(appContext.cacheDir, "remote_assets"))
+    }
     private val localAssetLevelRepository by lazy { AssetLevelRepositoryImpl(appContext) }
     private val localCollectionRepository by lazy { AssetCollectionRepositoryImpl(appContext) }
     private val localRealmRepository by lazy { LocalRealmRepositoryImpl() }

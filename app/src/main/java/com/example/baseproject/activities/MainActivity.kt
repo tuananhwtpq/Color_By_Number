@@ -59,6 +59,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         binding.viewPager2.apply {
             adapter = mAdapter
             isUserInputEnabled = false
+            offscreenPageLimit = mAdapter.itemCount
         }
 
         binding.viewPager2.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {

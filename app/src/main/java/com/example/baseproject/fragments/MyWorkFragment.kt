@@ -86,7 +86,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     override fun onResume() {
         super.onResume()
         AppThemeManager.applyFullBackground(binding.root)
-        viewModel.loadData()
+        viewModel.loadData(showLoading = false)
     }
 
     private fun updateTabSelection(tab: Int) {

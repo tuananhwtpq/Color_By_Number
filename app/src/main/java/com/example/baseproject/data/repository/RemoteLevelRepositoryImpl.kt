@@ -12,6 +12,10 @@ import com.example.baseproject.data.remote.RemoteLevelMetadataLoader
 import com.example.baseproject.data.remote.requireSuccessfulBody
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class RemoteLevelRepositoryImpl(
@@ -23,25 +27,34 @@ class RemoteLevelRepositoryImpl(
 ) : AssetLevelRepository {
 
     private val metadataLoader = RemoteLevelMetadataLoader(api, assetLoader)
+    private val levelsMutex = Mutex()
+    private var cachedAllLevels: List<LevelConfig>? = null
 
     override suspend fun loadAllLevels(): List<LevelConfig> =
+        cachedAllLevels ?: loadAllLevelsFromRemote()
+
+    private suspend fun loadAllLevelsFromRemote(): List<LevelConfig> =
         withFallback("loadAllLevels", fallbackAction = { loadAllLevels() }) {
-            val response = api.categories()
-                .requireSuccessfulBody("/api/v1/categories")
-                .takeIf { it.success }
-                ?: throw RemoteApiException("Categories returned success=false")
+            levelsMutex.withLock {
+                cachedAllLevels?.let { return@withLock it }
 
-            val categories = RemoteLevelMapper.sortGroups(response.data?.categories.orEmpty())
-            if (categories.isEmpty()) {
-                throw RemoteApiException("Categories response did not include active categories")
-            }
+                val response = api.categories()
+                    .requireSuccessfulBody("/api/v1/categories")
+                    .takeIf { it.success }
+                    ?: throw RemoteApiException("Categories returned success=false")
 
-            categories.flatMap { category ->
-                metadataLoader.loadGroupLevelConfigs(
-                    RemoteLevelMapper.GROUP_TYPE_CATEGORY,
-                    category.stableId,
-                    category.displayName
-                )
+                val categories = RemoteLevelMapper.sortGroups(response.data?.categories.orEmpty())
+                if (categories.isEmpty()) {
+                    throw RemoteApiException("Categories response did not include active categories")
+                }
+
+                categories.flatMap { category ->
+                    metadataLoader.loadGroupLevelConfigs(
+                        RemoteLevelMapper.GROUP_TYPE_CATEGORY,
+                        category.stableId,
+                        category.displayName
+                    )
+                }.also { cachedAllLevels = it }
             }
         }
 
@@ -69,28 +82,50 @@ class RemoteLevelRepositoryImpl(
             val displayLineUrl = assetPath(detail, "DISPLAY_LINE") ?: lineUrl
             val detailUrl = assetPath(detail, "DETAIL")
 
-            val lineBitmap = assetLoader.downloadBitmap(lineUrl, "LINE")
-            val displayLineBitmap = assetLoader.downloadBitmap(displayLineUrl, "DISPLAY_LINE")
-            val maskBitmap = assetLoader.downloadBitmap(maskUrl, "MASK")
-            val detailBitmap = detailUrl?.let { assetLoader.downloadBitmap(it, "DETAIL") }
+            val bitmaps = coroutineScope {
+                val lineDeferred = async { assetLoader.downloadBitmap(lineUrl, "LINE") }
+                val displayLineDeferred = async {
+                    if (displayLineUrl == lineUrl) {
+                        lineDeferred.await()
+                    } else {
+                        assetLoader.downloadBitmap(displayLineUrl, "DISPLAY_LINE")
+                    }
+                }
+                val maskDeferred = async { assetLoader.downloadBitmap(maskUrl, "MASK") }
+                val detailDeferred = detailUrl?.let { async { assetLoader.downloadBitmap(it, "DETAIL") } }
+
+                LevelBitmaps(
+                    line = lineDeferred.await(),
+                    displayLine = displayLineDeferred.await(),
+                    mask = maskDeferred.await(),
+                    detail = detailDeferred?.await()
+                )
+            }
 
             val regions = if (config.hasRegionMetadata()) {
                 config.toRegionDataList()
             } else {
                 withContext(defaultDispatcher) {
-                    CentroidCalculator.calculateCentroids(maskBitmap, config.palette)
+                    CentroidCalculator.calculateCentroids(bitmaps.mask, config.palette)
                 }
             }
 
             LevelBundle(
                 config = config,
-                lineBitmap = lineBitmap,
-                displayLineBitmap = displayLineBitmap,
-                maskBitmap = maskBitmap,
-                detailBitmap = detailBitmap,
+                lineBitmap = bitmaps.line,
+                displayLineBitmap = bitmaps.displayLine,
+                maskBitmap = bitmaps.mask,
+                detailBitmap = bitmaps.detail,
                 regions = regions
             )
         }
+
+    private data class LevelBitmaps(
+        val line: android.graphics.Bitmap,
+        val displayLine: android.graphics.Bitmap,
+        val mask: android.graphics.Bitmap,
+        val detail: android.graphics.Bitmap?
+    )
 
     private fun requireAsset(detail: RemoteLevelDetailDto, role: String): String =
         assetPath(detail, role) ?: throw RemoteApiException("Level ${detail.id} is missing $role asset")

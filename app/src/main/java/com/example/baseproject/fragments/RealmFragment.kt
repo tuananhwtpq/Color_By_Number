@@ -18,6 +18,7 @@ import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 
@@ -26,6 +27,8 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     private var realm: Realm = RealmCatalog.default
     private var loadRealmAnimationJob: Job? = null
     private var loadRemoteRealmJob: Job? = null
+    private var lastRemoteRealmRequestId: String? = null
+    private var loadedRemoteRealmRequestId: String? = null
     private val appContainer by lazy {
         (requireActivity().application as MyApplication).appContainer
     }
@@ -66,19 +69,30 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     private fun renderRealm() {
         val requestedRealmId = SharedPrefManager.selectedRealmId
         val localRealm = RealmCatalog.findById(requestedRealmId) ?: RealmCatalog.default
+        val remoteRequestId = requestedRealmId ?: localRealm.id
+        if (remoteRequestId == lastRemoteRealmRequestId &&
+            (remoteRequestId == loadedRemoteRealmRequestId || loadRemoteRealmJob?.isActive == true)
+        ) {
+            return
+        }
+
+        lastRemoteRealmRequestId = remoteRequestId
         renderRealm(localRealm)
 
         loadRemoteRealmJob?.cancel()
         loadRemoteRealmJob = viewLifecycleOwner.lifecycleScope.launch {
             val remoteRealm = try {
-                appContainer.realmRepository.loadRealm(requestedRealmId ?: localRealm.id)
+                appContainer.realmRepository.loadRealm(remoteRequestId)
                     ?: appContainer.realmRepository.loadRealm(RealmCatalog.default.id)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 null
             }
-            remoteRealm?.let(::renderRealm)
+            remoteRealm?.let {
+                loadedRemoteRealmRequestId = remoteRequestId
+                renderRealm(it)
+            }
         }
     }
 

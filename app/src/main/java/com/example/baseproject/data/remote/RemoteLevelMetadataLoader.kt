@@ -20,7 +20,7 @@ class RemoteLevelMetadataLoader(
                     assetLoader = assetLoader,
                     groupName = groupName
                 )
-                runCatching { loadConfig(summaryConfig.id) }
+                runCatching { loadConfig(summaryConfig) }
                     .getOrElse { error ->
                         Log.w(TAG, "Failed to enrich level ${summaryConfig.id}; using summary", error)
                         summaryConfig
@@ -44,18 +44,37 @@ class RemoteLevelMetadataLoader(
     }
 
     suspend fun loadConfig(levelId: String): LevelConfig {
-        val detail = api.levelDetail(levelId)
-            .requireSuccessfulBody("/api/v1/levels/$levelId")
+        return loadConfig(
+            LevelConfig(
+                id = levelId,
+                name = levelId,
+                category = "",
+                width = 0,
+                height = 0,
+                palette = emptyList()
+            )
+        )
+    }
+
+    private suspend fun loadConfig(summaryConfig: LevelConfig): LevelConfig {
+        val detail = api.levelDetail(summaryConfig.id)
+            .requireSuccessfulBody("/api/v1/levels/${summaryConfig.id}")
             .takeIf { it.success }
             ?.data
             ?.level
-            ?: throw RemoteApiException("Level detail for $levelId is missing")
+            ?: throw RemoteApiException("Level detail for ${summaryConfig.id} is missing")
 
         val configPath = detail.configPath
-            ?: throw RemoteApiException("Level $levelId does not include configPath")
+            ?: throw RemoteApiException("Level ${summaryConfig.id} does not include configPath")
 
+        val downloadedConfig = assetLoader.downloadLevelConfig(configPath)
         return RemoteLevelMapper.enrichConfig(
-            config = assetLoader.downloadLevelConfig(configPath),
+            config = downloadedConfig.copy(
+                categoryName = summaryConfig.categoryName ?: downloadedConfig.categoryName,
+                thumbnailUrl = downloadedConfig.thumbnailUrl ?: summaryConfig.thumbnailUrl,
+                sortOrder = downloadedConfig.sortOrder ?: summaryConfig.sortOrder,
+                isPremium = downloadedConfig.isPremium ?: summaryConfig.isPremium
+            ),
             detail = detail,
             assetLoader = assetLoader
         )

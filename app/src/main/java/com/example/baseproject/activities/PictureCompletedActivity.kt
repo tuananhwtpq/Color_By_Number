@@ -3,6 +3,7 @@ package com.example.baseproject.activities
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
@@ -42,6 +43,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         const val EXTRA_COLLECTED_COUNT = "COLLECTED_COUNT"
         private const val TAG = "PictureCompleted"
         private const val PRE_GENERATE_DELAY_MS = 500L
+        private const val MIN_SAVE_VIDEO_DIALOG_MS = 2_000L
     }
 
     private val appContainer by lazy {
@@ -303,11 +305,13 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
 
         showSavingDialog()
         savingVideoJob = lifecycleScope.launch {
+            val savingStartedAt = SystemClock.elapsedRealtime()
             var wasCancelledByUser = false
             var savedSuccessfully = false
             val messageRes = try {
                 val cachedVideo = appContainer.timelapseVideoCache.ensureVideo(category, levelId)
                 saveTimelapseVideo(cachedVideo, displayName)
+                waitForMinimumSaveVideoDialogDuration(savingStartedAt)
                 savedSuccessfully = true
                 null
             } catch (e: TimelapseVideoUnavailableException) {
@@ -346,6 +350,13 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
             displayName = displayName,
         ).getOrElse { error ->
             throw IOException("Save timelapse video to gallery failed", error)
+        }
+    }
+
+    private suspend fun waitForMinimumSaveVideoDialogDuration(startedAt: Long) {
+        val remainingMs = MIN_SAVE_VIDEO_DIALOG_MS - (SystemClock.elapsedRealtime() - startedAt)
+        if (remainingMs > 0L) {
+            delay(remainingMs)
         }
     }
 

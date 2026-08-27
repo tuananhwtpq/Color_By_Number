@@ -9,6 +9,8 @@ import com.example.baseproject.data.repository.CollectionRepository
 import com.example.baseproject.data.repository.PaintingProgressRepository
 import com.example.baseproject.data.repository.ThumbnailRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,14 +26,19 @@ class MyWorkViewModel(
 
     private val _uiState = MutableStateFlow(MyWorkUiState())
     val uiState: StateFlow<MyWorkUiState> = _uiState.asStateFlow()
+    private var loadJob: Job? = null
 
     init {
         loadData()
     }
 
-    fun loadData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoading = true) }
+    fun loadData(showLoading: Boolean = true) {
+        if (!showLoading && loadJob?.isActive == true) return
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch(Dispatchers.IO) {
+            if (showLoading) {
+                _uiState.update { it.copy(isLoading = true) }
+            }
             runCatching {
                 // Tranh trong Collection không nằm trong loadAllLevels() (tab Library bỏ qua
                 // folder Collection), nên phải gộp thêm ở đây để My Work thấy được chúng.

@@ -14,6 +14,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class RemoteCollectionRepositoryImpl(
@@ -24,6 +26,11 @@ class RemoteCollectionRepositoryImpl(
 ) : CollectionRepository {
 
     private val metadataLoader = RemoteLevelMetadataLoader(api, assetLoader)
+    private val collectionsMutex = Mutex()
+    private val collectionLevelsMutex = Mutex()
+    private var cachedCollections: List<AlbumCollection>? = null
+    private var cachedAllCollectionLevels: List<LevelConfig>? = null
+    private val cachedCollectionLevels = mutableMapOf<String, List<LevelConfig>>()
 
     override suspend fun loadCollections(): List<AlbumCollection> =
         withFallback("loadCollections", fallbackAction = { loadCollections() }) {
@@ -49,23 +56,36 @@ class RemoteCollectionRepositoryImpl(
         }
 
     override suspend fun loadAllCollectionLevels(): List<LevelConfig> =
+        cachedAllCollectionLevels ?: loadAllCollectionLevelsFromRemote()
+
+    private suspend fun loadAllCollectionLevelsFromRemote(): List<LevelConfig> =
         withFallback("loadAllCollectionLevels", fallbackAction = { loadAllCollectionLevels() }) {
-            remoteCollections().flatMap { collection ->
-                loadCollectionLevels(collection.id)
+            collectionLevelsMutex.withLock {
+                cachedAllCollectionLevels?.let { return@withLock it }
+
+                remoteCollections().flatMap { collection ->
+                    loadCollectionLevels(collection.id)
+                }.also { cachedAllCollectionLevels = it }
             }
         }
 
     private suspend fun remoteCollections(): List<AlbumCollection> {
-        val response = api.collections()
-            .requireSuccessfulBody("/api/v1/collections")
-            .takeIf { it.success }
-            ?: throw RemoteApiException("Collections returned success=false")
+        cachedCollections?.let { return it }
 
-        val collections = RemoteLevelMapper.sortGroups(response.data?.collections.orEmpty())
-        if (collections.isEmpty()) {
-            throw RemoteApiException("Collections response did not include active collections")
+        return collectionsMutex.withLock {
+            cachedCollections?.let { return@withLock it }
+
+            val response = api.collections()
+                .requireSuccessfulBody("/api/v1/collections")
+                .takeIf { it.success }
+                ?: throw RemoteApiException("Collections returned success=false")
+
+            val collections = RemoteLevelMapper.sortGroups(response.data?.collections.orEmpty())
+            if (collections.isEmpty()) {
+                throw RemoteApiException("Collections response did not include active collections")
+            }
+            collectionsWithLevelCounts(collections).also { cachedCollections = it }
         }
-        return collectionsWithLevelCounts(collections)
     }
 
     private suspend fun collectionsWithLevelCounts(groups: List<com.example.baseproject.data.remote.RemoteGroupDto>): List<AlbumCollection> =
@@ -88,10 +108,12 @@ class RemoteCollectionRepositoryImpl(
         }
 
     private suspend fun loadCollectionLevels(collectionId: String): List<LevelConfig> {
+        cachedCollectionLevels[collectionId]?.let { return it }
+
         return metadataLoader.loadGroupLevelConfigs(
             RemoteLevelMapper.GROUP_TYPE_COLLECTION,
             collectionId
-        )
+        ).also { cachedCollectionLevels[collectionId] = it }
     }
 
     private suspend fun <T> withFallback(
