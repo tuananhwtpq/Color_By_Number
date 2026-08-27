@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/grey_50">
+    android:background="@color/grey_50"
+    android:layoutDirection="ltr">
 
     <ImageView
         android:id="@+id/btnBack"
@@ -12,7 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="20dp"
         android:layout_marginTop="14dp"
-        android:contentDescription="Back"
+        android:contentDescription="@string/back"
         android:src="@drawable/ic_back_new"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -37,7 +38,7 @@
         android:gravity="center"
         android:minWidth="72dp"
         android:paddingHorizontal="14dp"
-        android:text="Full"
+        android:text="@string/full"
         android:textColor="@color/white"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/btnHint"
@@ -54,7 +55,7 @@
         android:gravity="center"
         android:minWidth="72dp"
         android:paddingHorizontal="14dp"
-        android:text="Fill"
+        android:text="@string/fill"
         android:textColor="@color/white"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/btnPreviewFull"
@@ -70,7 +71,7 @@
         android:background="@drawable/bg_gradien_oval"
         android:paddingHorizontal="8dp"
         android:paddingVertical="2dp"
-        android:text="1"
+        android:text="@string/number_one"
         android:textColor="@color/white"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="@id/btnHint"

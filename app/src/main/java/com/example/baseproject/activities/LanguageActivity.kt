@@ -54,7 +54,7 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
                     LanguageUiEvent.RequestNotificationPermission -> requestNotiPer()
                     is LanguageUiEvent.ShowToast -> Toast.makeText(
                         this@LanguageActivity,
-                        event.message,
+                        getString(event.messageRes),
                         Toast.LENGTH_SHORT
                     ).show()
 

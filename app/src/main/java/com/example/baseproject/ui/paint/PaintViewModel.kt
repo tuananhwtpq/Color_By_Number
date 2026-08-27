@@ -3,6 +3,7 @@ package com.example.baseproject.ui.paint
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.baseproject.R
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.data.PaletteItem
 import com.example.baseproject.data.RegionData
@@ -102,7 +103,7 @@ class PaintViewModel(
                         errorMessage = throwable.message ?: "Failed to load level"
                     )
                 }
-                _events.emit(PaintUiEvent.ShowToast("Failed to load level"))
+                _events.emit(PaintUiEvent.ShowToast(R.string.failed_to_load_level))
                 _events.emit(PaintUiEvent.FinishScreen)
             }
         }
@@ -147,7 +148,7 @@ class PaintViewModel(
             if (preferredMaskColor != null) {
                 _events.emit(PaintUiEvent.FocusOnMaskColor(preferredMaskColor))
             } else {
-                _events.emit(PaintUiEvent.ShowToast("Bạn đã tô xong màu này rồi!"))
+                _events.emit(PaintUiEvent.ShowToast(R.string.you_have_finished_this_color))
             }
         }
     }

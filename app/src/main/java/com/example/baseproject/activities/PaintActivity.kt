@@ -550,7 +550,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             }
             is PaintUiEvent.LevelCompleted -> navigateToPictureCompleted(event)
             PaintUiEvent.RequestResetConfirmation -> showResetConfirmationDialog()
-            is PaintUiEvent.ShowToast -> Toast.makeText(this, event.message, Toast.LENGTH_SHORT)
+            is PaintUiEvent.ShowToast -> Toast.makeText(this, getString(event.messageRes), Toast.LENGTH_SHORT)
                 .show()
         }
     }

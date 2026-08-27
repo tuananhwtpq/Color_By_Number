@@ -2,6 +2,7 @@ package com.example.baseproject.ui.language
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.baseproject.R
 import com.example.baseproject.data.repository.SettingsRepository
 import com.example.baseproject.models.LanguageModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,7 +38,7 @@ class LanguageViewModel(
 
     fun applyLanguage(selectedLanguage: LanguageModel?) {
         if (selectedLanguage == null) {
-            emitEvent(LanguageUiEvent.ShowToast("Please select language first"))
+            emitEvent(LanguageUiEvent.ShowToast(R.string.please_select_language_first))
             return
         }
         settingsRepository.setSelectedLanguage(selectedLanguage)

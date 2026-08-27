@@ -6,7 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_complete_theme_01"
-    tools:context=".activities.PictureCompletedActivity">
+    tools:context=".activities.PictureCompletedActivity"
+    android:layoutDirection="ltr">
 
     <TextView
         android:id="@+id/tvTitle"
@@ -192,7 +193,7 @@
         android:background="@drawable/bg_orange_border"
         android:gravity="center"
         android:minHeight="56dp"
-        android:text="Continue"
+        android:text="@string/continue_text"
         android:textColor="@color/white"
         app:layout_constraintBottom_toTopOf="@id/btnBackToHome"
         app:layout_constraintEnd_toEndOf="parent"

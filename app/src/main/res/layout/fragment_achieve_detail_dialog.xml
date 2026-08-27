@@ -9,7 +9,8 @@
     android:clipToPadding="false"
     android:minHeight="40dp"
     android:padding="20dp"
-    tools:context=".dialog.AchieveDetailDialog">
+    tools:context=".dialog.AchieveDetailDialog"
+    android:layoutDirection="ltr">
 
     <ImageView
         android:id="@+id/btnClose"
@@ -68,7 +69,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Reward:"
+        android:text="@string/reward"
         android:textColor="@color/grey_600"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -93,7 +94,7 @@
         android:background="@drawable/bg_gradien_oval"
         android:paddingHorizontal="8dp"
         android:paddingVertical="2dp"
-        android:text="1"
+        android:text="@string/number_one"
         android:textColor="@color/white"
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="@id/btnHint"

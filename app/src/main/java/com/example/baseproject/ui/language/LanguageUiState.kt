@@ -1,5 +1,6 @@
 package com.example.baseproject.ui.language
 
+import androidx.annotation.StringRes
 import com.example.baseproject.models.LanguageModel
 
 data class LanguageUiState(
@@ -10,7 +11,7 @@ data class LanguageUiState(
 
 sealed interface LanguageUiEvent {
     object RequestNotificationPermission : LanguageUiEvent
-    data class ShowToast(val message: String) : LanguageUiEvent
+    data class ShowToast(@param:StringRes val messageRes: Int) : LanguageUiEvent
     object NavigateToIntro : LanguageUiEvent
     object NavigateToMain : LanguageUiEvent
 }

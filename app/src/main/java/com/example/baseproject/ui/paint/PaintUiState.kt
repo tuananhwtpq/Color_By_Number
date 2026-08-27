@@ -1,6 +1,7 @@
 package com.example.baseproject.ui.paint
 
 import android.graphics.Bitmap
+import androidx.annotation.StringRes
 import com.example.baseproject.data.PaletteItem
 import com.example.baseproject.data.RegionData
 
@@ -32,7 +33,7 @@ data class PaintRenderData(
 )
 
 sealed interface PaintUiEvent {
-    data class ShowToast(val message: String) : PaintUiEvent
+    data class ShowToast(@param:StringRes val messageRes: Int) : PaintUiEvent
     data class FocusOnMaskColor(val maskColor: Int) : PaintUiEvent
     data class LevelCompleted(
         val category: String,

@@ -3,7 +3,8 @@
      chỉ có phần chữ trạng thái là view thật để dùng đúng style chữ của app. -->
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:parentTag="android.widget.FrameLayout">
+    tools:parentTag="android.widget.FrameLayout"
+    android:layoutDirection="ltr">
 
     <TextView
         android:id="@+id/tvProgressStatus"

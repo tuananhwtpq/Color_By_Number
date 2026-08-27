@@ -6,7 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_full_main_theme_01"
-    tools:context=".activities.AchieveActivity">
+    tools:context=".activities.AchieveActivity"
+    android:layoutDirection="ltr">
 
     <ImageView
         android:id="@+id/btnBack"
@@ -51,7 +52,7 @@
             android:background="@drawable/bg_library_category_tab_selected"
             android:gravity="center"
             android:paddingVertical="8dp"
-            android:text="In Progress"
+            android:text="@string/in_progress"
             android:textColor="@color/white" />
 
         <TextView
@@ -64,7 +65,7 @@
             android:background="@drawable/bg_library_category_tab_unselected"
             android:gravity="center"
             android:paddingVertical="8dp"
-            android:text="Completed"
+            android:text="@string/completed"
             android:textColor="@color/white" />
     </LinearLayout>
 

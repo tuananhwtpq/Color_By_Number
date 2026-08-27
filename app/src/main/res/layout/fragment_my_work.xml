@@ -5,7 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:background="@drawable/bg_full_main_theme_01"
-    tools:context=".fragments.MyWorkFragment">
+    tools:context=".fragments.MyWorkFragment"
+    android:layoutDirection="ltr">
 
     <LinearLayout
         android:id="@+id/llTop"
@@ -25,7 +26,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="My Work"
+            android:text="@string/my_work"
             android:textColor="@color/white" />
 
         <ImageView
@@ -67,7 +68,7 @@
             android:background="@drawable/bg_library_category_tab_selected"
             android:gravity="center"
             android:paddingVertical="8dp"
-            android:text="In Progress"
+            android:text="@string/in_progress"
             android:textColor="@color/white" />
 
         <TextView
@@ -80,7 +81,7 @@
             android:background="@drawable/bg_library_category_tab_unselected"
             android:gravity="center"
             android:paddingVertical="8dp"
-            android:text="Completed"
+            android:text="@string/completed"
             android:textColor="@color/white" />
 
     </LinearLayout>
@@ -168,7 +169,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="You haven't colored any pictures yet."
+            android:text="@string/you_havent_colored_any_pictures_yet"
             android:textColor="@color/white" />
 
         <TextView
@@ -180,7 +181,7 @@
             android:background="@drawable/bg_gradient"
             android:paddingHorizontal="24dp"
             android:paddingVertical="12dp"
-            android:text="Go to Library"
+            android:text="@string/go_to_library"
             android:textColor="@color/white" />
 
     </LinearLayout>
