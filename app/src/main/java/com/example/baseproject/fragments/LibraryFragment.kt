@@ -23,6 +23,7 @@ import com.example.baseproject.dialog.CurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.ui.library.LibraryViewModel
+import com.example.baseproject.utils.CompletedPictureActions
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.flow.collectLatest
 
@@ -36,6 +37,15 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         SimpleViewModelFactory {
             LibraryViewModel(appContainer.assetLevelRepository)
         }
+    }
+    private val completedPictureActions by lazy {
+        CompletedPictureActions(
+            activity = requireActivity(),
+            fragmentManager = parentFragmentManager,
+            lifecycleScope = lifecycleScope,
+            appContainer = appContainer,
+            onResetComplete = { binding.rvLevels.adapter?.notifyDataSetChanged() }
+        )
     }
 
     override fun initData() {
@@ -134,6 +144,8 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
 
         if (progress > 0f && progress < 1f) {
             showCurrentPictureDialog(level)
+        } else if (progress >= 1f) {
+            completedPictureActions.showCurrentPictureDialog(level)
         } else {
             openPaintActivity(level)
         }

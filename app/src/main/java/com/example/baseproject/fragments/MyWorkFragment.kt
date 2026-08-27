@@ -22,6 +22,7 @@ import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.ui.mywork.MyWorkUiState
 import com.example.baseproject.ui.mywork.MyWorkViewModel
 import com.example.baseproject.utils.AppThemeManager
+import com.example.baseproject.utils.CompletedPictureActions
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -54,6 +55,15 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
 
     private var selectedTab = TAB_IN_PROGRESS
     private var latestState = MyWorkUiState()
+    private val completedPictureActions by lazy {
+        CompletedPictureActions(
+            activity = requireActivity(),
+            fragmentManager = parentFragmentManager,
+            lifecycleScope = lifecycleScope,
+            appContainer = appContainer,
+            onResetComplete = { viewModel.loadData() }
+        )
+    }
 
     override fun initData() {
 
@@ -130,7 +140,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
         if (selectedTab == TAB_IN_PROGRESS) {
             showCurrentPictureDialog(level)
         } else {
-            openPaintActivity(level)
+            completedPictureActions.showCurrentPictureDialog(level)
         }
     }
 

@@ -17,6 +17,7 @@ import com.example.baseproject.databinding.ActivityCollectionDetailBinding
 import com.example.baseproject.dialog.CurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.utils.AppThemeManager
+import com.example.baseproject.utils.CompletedPictureActions
 import com.example.baseproject.ui.collection.CollectionDetailUiState
 import com.example.baseproject.ui.collection.CollectionDetailViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -47,6 +48,18 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
                 appContainer.paintingProgressRepository
             )
         }
+    }
+    private val completedPictureActions by lazy {
+        CompletedPictureActions(
+            activity = this,
+            fragmentManager = supportFragmentManager,
+            lifecycleScope = lifecycleScope,
+            appContainer = appContainer,
+            onResetComplete = {
+                viewModel.refreshProgress()
+                binding.rvLevels.adapter?.notifyDataSetChanged()
+            }
+        )
     }
 
     override fun initData() {
@@ -113,6 +126,8 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
 
         if (progress > 0f && progress < 1f) {
             showCurrentPictureDialog(level)
+        } else if (progress >= 1f) {
+            completedPictureActions.showCurrentPictureDialog(level)
         } else {
             openPaintActivity(level)
         }
