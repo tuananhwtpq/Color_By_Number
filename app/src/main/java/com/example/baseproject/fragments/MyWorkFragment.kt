@@ -16,7 +16,8 @@ import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.databinding.FragmentMyWorkBinding
-import com.example.baseproject.dialog.CurrentPictureDialog
+import com.example.baseproject.dialog.DeletePictureDialog
+import com.example.baseproject.dialog.MyworkCurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.ui.mywork.MyWorkUiState
@@ -137,15 +138,12 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     }
 
     private fun onMyWorkItemClicked(level: LevelConfig) {
-        if (selectedTab == TAB_IN_PROGRESS) {
-            showCurrentPictureDialog(level)
-        } else {
-            completedPictureActions.showCurrentPictureDialog(level)
-        }
+        showMyworkCurrentPictureDialog(level, isCompleted = selectedTab == TAB_COMPLETED)
     }
 
-    private fun showCurrentPictureDialog(level: LevelConfig) {
-        CurrentPictureDialog().apply {
+    private fun showMyworkCurrentPictureDialog(level: LevelConfig, isCompleted: Boolean) {
+        MyworkCurrentPictureDialog().apply {
+            this.isCompleted = isCompleted
             previewFile =
                 appContainer.thumbnailRepository.getThumbnailFile(level.category, level.id)
             onColor = { openPaintActivity(level) }
@@ -153,7 +151,19 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
                 showResetPictureDialog(level)
                 dismiss()
             }
-        }.show(parentFragmentManager, CurrentPictureDialog::class.java.simpleName)
+            onDelete = {
+                showDeletePictureDialog(level)
+                dismiss()
+            }
+            onSave = {
+                completedPictureActions.showSaveDialog(level.category, level.id)
+                dismiss()
+            }
+            onShare = {
+                completedPictureActions.showShareDialog(level.category, level.id)
+                dismiss()
+            }
+        }.show(parentFragmentManager, MyworkCurrentPictureDialog.TAG)
     }
 
     private fun showResetPictureDialog(level: LevelConfig) {
@@ -164,6 +174,16 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
                 viewModel.loadData()
             }
         }.show(parentFragmentManager, ResetPictureDialog::class.java.simpleName)
+    }
+
+    private fun showDeletePictureDialog(level: LevelConfig) {
+        DeletePictureDialog().apply {
+            onDelete = {
+                appContainer.paintingProgressRepository.resetProgress(level.category, level.id)
+                appContainer.thumbnailRepository.deleteThumbnail(level.category, level.id)
+                viewModel.loadData()
+            }
+        }.show(parentFragmentManager, DeletePictureDialog.TAG)
     }
 
     private fun openPaintActivity(level: LevelConfig) {

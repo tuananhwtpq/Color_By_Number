@@ -15,6 +15,7 @@ import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.data.TimelapseVideoUnavailableException
 import com.example.baseproject.dialog.CurrentPictureCompletedDialog
 import com.example.baseproject.dialog.LoadingDialog
+import com.example.baseproject.dialog.MyworkCurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.dialog.SaveDialog
 import com.example.baseproject.dialog.SavePicSuccessDialog
@@ -71,7 +72,7 @@ class CompletedPictureActions(
         }
     }
 
-    private fun showShareDialog(category: String, levelId: String) {
+    fun showShareDialog(category: String, levelId: String) {
         showDialogOnce(ShareDialog.TAG) {
             ShareDialog().apply {
                 onSharePicture = { sharePicture(category, levelId) }
@@ -80,7 +81,7 @@ class CompletedPictureActions(
         }
     }
 
-    private fun showSaveDialog(category: String, levelId: String) {
+    fun showSaveDialog(category: String, levelId: String) {
         showDialogOnce(SaveDialog.TAG) {
             SaveDialog().apply {
                 onSavePicture = { savePictureToGallery(category, levelId) }
@@ -298,9 +299,10 @@ class CompletedPictureActions(
             if (activity.isFinishing || activity.isDestroyed || fragmentManager.isStateSaved) return@post
 
             val hasDialogShowing = fragmentManager.fragments.any {
-                it is DialogFragment &&
+                    it is DialogFragment &&
                     it.isAdded &&
-                    it.tag != CurrentPictureCompletedDialog.TAG
+                    it.tag != CurrentPictureCompletedDialog.TAG &&
+                    it.tag != MyworkCurrentPictureDialog.TAG
             }
             if (hasDialogShowing) return@post
 
