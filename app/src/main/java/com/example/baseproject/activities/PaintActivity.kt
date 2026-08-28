@@ -23,6 +23,7 @@ import com.example.baseproject.adapters.PaletteAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivityPaintBinding
+import com.example.baseproject.dialog.WatchAdsDialog
 import com.example.baseproject.highlight.HighlightThemes
 import com.example.baseproject.ui.paint.PaintUiEvent
 import com.example.baseproject.ui.paint.PaintUiState
@@ -105,7 +106,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     override fun initActionView() {
         binding.btnBack.setOnClickListener { finish() }
-        binding.btnHint.setOnClickListener { viewModel.onHintRequested() }
+        binding.btnHint.setOnClickListener { showWatchAdsDialog() }
         binding.btnPreviewFull.setOnClickListener { toggleFullColorPreview() }
         binding.btnFillAll.setOnClickListener { toggleFillAllOnCanvas() }
         binding.btnCloseFullPreview.setOnClickListener { hideFullColorPreview() }
@@ -543,8 +544,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         when (event) {
             PaintUiEvent.FinishScreen -> finish()
             is PaintUiEvent.FocusOnMaskColor -> {
-                // Chỉ tính là đã dùng gợi ý khi thật sự có vùng để chỉ (bấm hụt thì
-                // PaintViewModel bắn ShowToast chứ không bắn event này).
                 achievementRepository.track(AchievementEvent.HintUsed)
                 binding.paintCanvas.focusOnRegionByMaskColor(event.maskColor)
             }
@@ -556,7 +555,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun navigateToPictureCompleted(event: PaintUiEvent.LevelCompleted) {
-        // TODO: khi có màn Daily thì truyền isDaily = true cho tranh thuộc Daily.
         achievementRepository.track(
             AchievementEvent.ArtworkCompleted(event.category, event.levelId)
         )
@@ -569,12 +567,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         isNavigatingToCompleted = true
 
         lifecycleScope.launch {
-            // Chờ một nhịp để vùng cuối cùng kịp hiện đầy đủ trên canvas trước khi chuyển màn.
             kotlinx.coroutines.delay(COMPLETED_NAVIGATION_DELAY_MS)
 
-            // Ảnh hoàn thiện được ghi ra file rồi truyền category/levelId sang, KHÔNG nhét
-            // Bitmap thẳng vào Intent: bitmap 900x900 (~3MB) vượt xa giới hạn ~1MB của Binder
-            // và sẽ ném TransactionTooLargeException.
             viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
             playCompletionAnimation()
 
@@ -638,12 +632,19 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             .show()
     }
 
+    private fun showWatchAdsDialog() {
+        showDialogOnce(WatchAdsDialog.TAG) {
+            WatchAdsDialog().apply {
+                onWatchAd = {
+                    viewModel.onHintRequested()
+                }
+            }
+        }
+    }
+
     override fun onPause() {
         super.onPause()
-        // Đang xem bản tô đầy thì canvas không phản ánh tiến trình thật — lưu lúc này sẽ ghi
-        // đè thumbnail bằng ảnh đã hoàn thiện dù người dùng mới tô được vài mảng.
         if (isFillAllPreviewActive) return
-        // Luồng hoàn thành đã tự lưu ngay trước khi chuyển màn, khỏi dựng lại bitmap 900x900.
         if (isNavigatingToCompleted) return
         viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
     }

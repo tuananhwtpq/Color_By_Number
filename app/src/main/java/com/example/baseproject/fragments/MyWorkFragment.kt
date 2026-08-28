@@ -19,6 +19,7 @@ import com.example.baseproject.databinding.FragmentMyWorkBinding
 import com.example.baseproject.dialog.DeletePictureDialog
 import com.example.baseproject.dialog.MyworkCurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
+import com.example.baseproject.dialog.WatchAdsDialog
 import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.ui.mywork.MyWorkUiState
 import com.example.baseproject.ui.mywork.MyWorkViewModel

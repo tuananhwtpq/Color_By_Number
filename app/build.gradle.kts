@@ -24,7 +24,7 @@ android {
         setProperty("archivesBaseName", "Base_project_($versionCode)_$dateTime")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "PIXCOLOR_BASE_URL", "\"http://192.168.1.18:3000/\"")
+        buildConfigField("String", "PIXCOLOR_BASE_URL", "\"http://139.180.215.49/\"")
     }
 
     signingConfigs {
