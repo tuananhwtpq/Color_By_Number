@@ -190,10 +190,27 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
 
     private fun openPaintActivity(level: LevelConfig) {
         val intent = Intent(requireActivity(), PaintActivity::class.java)
-        intent.putExtra("CATEGORY", level.category)
-        intent.putExtra("LEVEL_ID", level.id)
+        intent.putExtra(PaintActivity.EXTRA_CATEGORY, level.category)
+        intent.putExtra(PaintActivity.EXTRA_LEVEL_ID, level.id)
+        preparationThumbnailFor(level)?.let { thumbnail ->
+            intent.putExtra(PaintActivity.EXTRA_PREPARATION_THUMBNAIL, thumbnail)
+        }
         startActivity(intent)
     }
+
+    private fun preparationThumbnailFor(level: LevelConfig): String? {
+        val thumbFile = appContainer.thumbnailRepository.getThumbnailFile(level.category, level.id)
+        if (thumbFile.exists()) return thumbFile.absolutePath
+
+        return level.thumbnailUrl
+            ?: level.assets?.preview?.takeIf(::isRemoteUrl)
+            ?: level.assets?.sourceLine?.takeIf(::isRemoteUrl)
+            ?: level.assets?.displayLine?.takeIf(::isRemoteUrl)
+            ?: level.assets?.line?.takeIf(::isRemoteUrl)
+    }
+
+    private fun isRemoteUrl(value: String): Boolean =
+        value.startsWith("http://") || value.startsWith("https://")
 
     private fun showLibraryLoading(isLoading: Boolean) {
         binding.progressBar.visibility = View.GONE

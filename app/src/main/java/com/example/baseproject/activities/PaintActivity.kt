@@ -17,6 +17,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import com.example.baseproject.MyApplication
 import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.adapters.PaletteAdapter
@@ -30,6 +31,7 @@ import com.example.baseproject.ui.paint.PaintUiState
 import com.example.baseproject.ui.paint.PaintViewModel
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.SharedPrefManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -45,8 +47,14 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val GUIDE_PALETTE_VERTICAL_PADDING_DP = 14f
         private const val WORK_PREVIEW_THUMBNAIL_SIZE = 900
         private const val COMPLETED_NAVIGATION_DELAY_MS = 400L
+        private const val PREPARATION_MIN_DURATION_MS = 850L
+        private const val PREPARATION_FADE_OUT_MS = 220L
 
         private const val DBG_TAG = "PBN_DBG_a91f"
+
+        const val EXTRA_CATEGORY = "CATEGORY"
+        const val EXTRA_LEVEL_ID = "LEVEL_ID"
+        const val EXTRA_PREPARATION_THUMBNAIL = "EXTRA_PREPARATION_THUMBNAIL"
     }
 
     private val appContainer by lazy {
@@ -72,8 +80,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var lastCompletedMaskColors: Set<Int> = emptySet()
     private var category: String? = null
     private var levelId: String? = null
+    private var preparationThumbnail: String? = null
     private var guideStep: Int = GUIDE_STEP_01
     private var isGuideVisible: Boolean = false
+    private var isPreparationVisible: Boolean = true
+    private var preparationStartedAtMillis: Long = 0L
     private var shouldStartGuideWhenContentReady: Boolean = false
     private var isLoadingVisible: Boolean = false
     private var isFullColorPreviewVisible: Boolean = false
@@ -89,8 +100,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     override fun initData() {
-        category = intent.getStringExtra("CATEGORY")
-        levelId = intent.getStringExtra("LEVEL_ID")
+        category = intent.getStringExtra(EXTRA_CATEGORY)
+        levelId = intent.getStringExtra(EXTRA_LEVEL_ID)
+        preparationThumbnail = intent.getStringExtra(EXTRA_PREPARATION_THUMBNAIL)
 
         if (category == null || levelId == null) {
             finish()
@@ -122,6 +134,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     private fun initViews() {
         syncPaintSettings()
+        showPreparationOverlay()
         binding.rvPalette.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
@@ -155,7 +168,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun renderState(state: PaintUiState) {
         isLoadingVisible = state.isLoading
         binding.progressBar.visibility =
-            if (state.isLoading && !isGuideVisible) View.VISIBLE else View.GONE
+            if (state.isLoading && !isGuideVisible && !isPreparationVisible) View.VISIBLE else View.GONE
 //        binding.tvTitle.text = state.title
 
         if (state.palette.isNotEmpty() && (!this::adapter.isInitialized || adapter.sourceItemCount != state.palette.size)) {
@@ -203,6 +216,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     binding.paintCanvas.setCompletedRegions(state.completedMaskColors)
                     binding.paintCanvas.highlightNumber(state.highlightMaskColors)
                     binding.paintCanvas.setActiveColors(state.activeColors)
+                    hidePreparationOverlayWhenReady()
                     showPendingGuideIfNeeded()
                     binding.root.post { updateGuideOverlayForCurrentStep() }
                 }
@@ -366,15 +380,64 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun setMainContentVisible(isVisible: Boolean) {
-        val visibility = if (isVisible) View.VISIBLE else View.GONE
+        val visibility = if (isVisible && !isPreparationVisible) View.VISIBLE else View.GONE
 //        binding.topBar.visibility = visibility
         binding.paintCanvas.visibility = visibility
         binding.paletteContainer.visibility = visibility
+        binding.progressBarLevel.visibility = visibility
 //        binding.btnPreviewFull.visibility = visibility
 //        binding.btnFillAll.visibility = visibility
         binding.progressBar.visibility =
-            if (isVisible && isLoadingVisible && !isGuideVisible) View.VISIBLE else View.GONE
+            if (isVisible && isLoadingVisible && !isGuideVisible && !isPreparationVisible) View.VISIBLE else View.GONE
         updateFullPreviewVisibility()
+    }
+
+    private fun showPreparationOverlay() {
+        isPreparationVisible = true
+        preparationStartedAtMillis = System.currentTimeMillis()
+        binding.paintPreparationOverlay.visibility = View.VISIBLE
+        binding.paintPreparationOverlay.alpha = 1f
+        binding.shimmerPreparationThumbnail.startShimmer()
+        binding.ivPreparationThumbnail.setImageDrawable(null)
+        preparationThumbnail?.let { thumbnail ->
+            Glide.with(this)
+                .load(thumbnail)
+                .into(binding.ivPreparationThumbnail)
+        }
+        setPaintChromeVisible(false)
+        setMainContentVisible(false)
+    }
+
+    private suspend fun hidePreparationOverlayWhenReady() {
+        if (!isPreparationVisible) return
+
+        val elapsed = System.currentTimeMillis() - preparationStartedAtMillis
+        val remaining = PREPARATION_MIN_DURATION_MS - elapsed
+        if (remaining > 0L) {
+            delay(remaining)
+        }
+
+        if (!isPreparationVisible) return
+        isPreparationVisible = false
+        setPaintChromeVisible(true)
+        setMainContentVisible(true)
+        binding.paintPreparationOverlay.animate()
+            .alpha(0f)
+            .setDuration(PREPARATION_FADE_OUT_MS)
+            .withEndAction {
+                if (!isPreparationVisible) {
+                    binding.shimmerPreparationThumbnail.stopShimmer()
+                    binding.paintPreparationOverlay.visibility = View.GONE
+                }
+            }
+            .start()
+    }
+
+    private fun setPaintChromeVisible(isVisible: Boolean) {
+        val visibility = if (isVisible && !isPreparationVisible) View.VISIBLE else View.GONE
+        binding.btnBack.visibility = visibility
+        binding.btnHint.visibility = visibility
+        binding.tvHintCount.visibility = visibility
     }
 
     private fun syncPaintSettings() {
@@ -467,6 +530,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         val shouldShow = isFullColorPreviewVisible &&
                 !isGuideVisible &&
                 !isLoadingVisible &&
+                !isPreparationVisible &&
                 fullPreviewBitmap != null
 
         binding.fullPreviewOverlay.visibility = if (shouldShow) View.VISIBLE else View.GONE
