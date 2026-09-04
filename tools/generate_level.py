@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict, deque
 
 from PIL import Image, ImageChops, ImageFilter, ImageStat
@@ -291,10 +292,99 @@ def _format_svg_number(value):
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
+NON_VISIBLE_SVG_TAGS = {
+    "clipPath",
+    "defs",
+    "filter",
+    "linearGradient",
+    "mask",
+    "pattern",
+    "radialGradient",
+    "style",
+}
+VISIBLE_WHITE_FILL_TAGS = {
+    "circle",
+    "ellipse",
+    "path",
+    "polygon",
+    "polyline",
+    "rect",
+}
+WHITE_FILL_VALUES = {
+    "#fff",
+    "#ffffff",
+    "rgb(255,255,255)",
+    "rgb(255, 255, 255)",
+    "white",
+}
+
+
+def _svg_local_name(tag):
+    return tag.rsplit("}", 1)[-1] if "}" in tag else tag
+
+
+def _svg_style_value(style, attr):
+    if not style:
+        return None
+    for part in style.split(";"):
+        if ":" not in part:
+            continue
+        key, value = part.split(":", 1)
+        if key.strip() == attr:
+            return value.strip()
+    return None
+
+
+def _svg_attr_or_style(element, attr):
+    return element.attrib.get(attr) or _svg_style_value(element.attrib.get("style"), attr)
+
+
+def _is_white_svg_fill(value):
+    return bool(value) and value.strip().lower().replace(" ", "") in {
+        color.replace(" ", "") for color in WHITE_FILL_VALUES
+    }
+
+
+def _is_visible_white_fill_element(element):
+    if _svg_local_name(element.tag) not in VISIBLE_WHITE_FILL_TAGS:
+        return False
+    fill = _svg_attr_or_style(element, "fill")
+    if not _is_white_svg_fill(fill):
+        return False
+    stroke = _svg_attr_or_style(element, "stroke")
+    return not stroke or stroke.strip().lower() == "none"
+
+
+def strip_visible_white_fills_from_svg(svg_text):
+    """Remove visible white paint from display SVG while preserving defs/clipPath geometry."""
+    try:
+        ET.register_namespace("", "http://www.w3.org/2000/svg")
+        root = ET.fromstring(svg_text)
+    except ET.ParseError:
+        return svg_text, 0
+
+    removed_count = 0
+
+    def prune(parent, inside_non_visible):
+        nonlocal removed_count
+        parent_name = _svg_local_name(parent.tag)
+        child_inside_non_visible = inside_non_visible or parent_name in NON_VISIBLE_SVG_TAGS
+        for child in list(parent):
+            if not child_inside_non_visible and _is_visible_white_fill_element(child):
+                parent.remove(child)
+                removed_count += 1
+                continue
+            prune(child, child_inside_non_visible)
+
+    prune(root, False)
+    return ET.tostring(root, encoding="unicode"), removed_count
+
+
 def normalize_svg_to_canvas(svg_path, output_path, width, height):
     """Write a display SVG whose coordinate system matches the generated level canvas."""
     with open(svg_path, "r", encoding="utf-8") as input_file:
         svg_text = input_file.read()
+    svg_text, removed_white_fill_count = strip_visible_white_fills_from_svg(svg_text)
 
     open_match = SVG_OPEN_TAG_RE.search(svg_text)
     close_matches = list(SVG_CLOSE_TAG_RE.finditer(svg_text))
@@ -347,7 +437,6 @@ def normalize_svg_to_canvas(svg_path, output_path, width, height):
     prefix = svg_text[:open_match.start()]
     normalized_svg = (
         f"{prefix}{normalized_tag}\n"
-        f'<rect width="{width}" height="{height}" fill="white"/>\n'
         f"<g{transform_attr}>"
         f"{inner_svg}"
         f"</g>\n"
@@ -366,6 +455,7 @@ def normalize_svg_to_canvas(svg_path, output_path, width, height):
         "target_view_box": [0, 0, width, height],
         "scale_x": scale_x,
         "scale_y": scale_y,
+        "removed_visible_white_fill_count": removed_white_fill_count,
     }
 
 
@@ -3866,7 +3956,9 @@ def generate_level_assets(
             f"(source_viewBox={display_line_svg_normalization['source_view_box']}, "
             f"target_viewBox={display_line_svg_normalization['target_view_box']}, "
             f"scale={display_line_svg_normalization['scale_x']:.3f}x"
-            f"{display_line_svg_normalization['scale_y']:.3f})"
+            f"{display_line_svg_normalization['scale_y']:.3f}, "
+            "removed_visible_white_fills="
+            f"{display_line_svg_normalization['removed_visible_white_fill_count']})"
         )
         print(f"Đã lưu bản raster debug của SVG Line: {display_line_raster_out_path}")
     else:

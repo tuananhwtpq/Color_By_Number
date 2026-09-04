@@ -90,6 +90,10 @@ class PaintCanvasView @JvmOverloads constructor(
     private val multiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
     }
+    private val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+    }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.DKGRAY
@@ -929,6 +933,12 @@ class PaintCanvasView @JvmOverloads constructor(
         val hl = highlightBitmap ?: return
         val line = displayLineBitmap ?: return
 
+        canvas.save()
+        canvas.concat(drawMatrix)
+        bitmapBounds.set(0f, 0f, maskWidth.toFloat(), maskHeight.toFloat())
+        canvas.drawRect(bitmapBounds, whitePaint)
+        canvas.restore()
+
         canvas.drawBitmap(colored, drawMatrix, normalPaint)
 
         // Vẽ các mảng màu đang được animation loang ra (Hardware Accelerated)
@@ -1019,13 +1029,10 @@ class PaintCanvasView @JvmOverloads constructor(
         }
 
         bitmapBounds.set(0f, 0f, maskWidth.toFloat(), maskHeight.toFloat())
-        val layer = canvas.saveLayer(bitmapBounds, multiplyPaint)
         try {
             svg.renderToCanvas(canvas, bitmapBounds)
         } catch (_: Exception) {
-            canvas.drawBitmap(fallbackBitmap, null, bitmapBounds, null)
-        } finally {
-            canvas.restoreToCount(layer)
+            drawBitmapInMaskBounds(canvas, fallbackBitmap, multiplyPaint)
         }
     }
 }
