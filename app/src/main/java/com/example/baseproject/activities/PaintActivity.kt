@@ -29,6 +29,7 @@ import com.example.baseproject.highlight.HighlightThemes
 import com.example.baseproject.ui.paint.PaintUiEvent
 import com.example.baseproject.ui.paint.PaintUiState
 import com.example.baseproject.ui.paint.PaintViewModel
+import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.SharedPrefManager
 import kotlinx.coroutines.delay
@@ -395,6 +396,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun showPreparationOverlay() {
         isPreparationVisible = true
         preparationStartedAtMillis = System.currentTimeMillis()
+        AppThemeManager.applyFullBackground(binding.paintPreparationOverlay)
         binding.paintPreparationOverlay.visibility = View.VISIBLE
         binding.paintPreparationOverlay.alpha = 1f
         binding.shimmerPreparationThumbnail.startShimmer()

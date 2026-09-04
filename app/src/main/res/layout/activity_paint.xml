@@ -170,7 +170,6 @@
         android:id="@+id/paintPreparationOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/bg_paint_preparation"
         android:clickable="true"
         android:elevation="24dp"
         android:focusable="true"
@@ -179,51 +178,8 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        tools:background="@drawable/bg_full_main_theme_01"
         tools:visibility="visible">
-
-        <ImageView
-            android:id="@+id/ivPreparationFlowerTopStart"
-            android:layout_width="220dp"
-            android:layout_height="220dp"
-            android:layout_gravity="top|start"
-            android:layout_marginStart="-70dp"
-            android:layout_marginTop="-42dp"
-            android:alpha="0.8"
-            android:rotation="-18"
-            android:src="@drawable/ic_paint_preparation_flower" />
-
-        <ImageView
-            android:id="@+id/ivPreparationFlowerTopEnd"
-            android:layout_width="220dp"
-            android:layout_height="220dp"
-            android:layout_gravity="top|end"
-            android:layout_marginTop="-40dp"
-            android:layout_marginEnd="-72dp"
-            android:alpha="0.7"
-            android:rotation="26"
-            android:src="@drawable/ic_paint_preparation_flower" />
-
-        <ImageView
-            android:id="@+id/ivPreparationFlowerBottomStart"
-            android:layout_width="240dp"
-            android:layout_height="240dp"
-            android:layout_gravity="bottom|start"
-            android:layout_marginStart="-90dp"
-            android:layout_marginBottom="88dp"
-            android:alpha="0.65"
-            android:rotation="36"
-            android:src="@drawable/ic_paint_preparation_flower" />
-
-        <ImageView
-            android:id="@+id/ivPreparationFlowerBottomEnd"
-            android:layout_width="250dp"
-            android:layout_height="250dp"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="-88dp"
-            android:layout_marginBottom="-50dp"
-            android:alpha="0.75"
-            android:rotation="-30"
-            android:src="@drawable/ic_paint_preparation_flower" />
 
         <LinearLayout
             android:id="@+id/layoutPreparationContent"
@@ -236,8 +192,11 @@
 
             <com.facebook.shimmer.ShimmerFrameLayout
                 android:id="@+id/shimmerPreparationThumbnail"
-                android:layout_width="140dp"
-                android:layout_height="140dp"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:padding="12dp"
                 app:shimmer_auto_start="false"
                 app:shimmer_base_alpha="0.7"
                 app:shimmer_highlight_alpha="1.0">
@@ -248,7 +207,9 @@
                     android:layout_height="match_parent"
                     app:cardBackgroundColor="@color/white"
                     app:cardCornerRadius="22dp"
-                    app:cardElevation="6dp">
+                    app:cardElevation="8dp"
+                    app:cardPreventCornerOverlap="true"
+                    app:cardUseCompatPadding="true">
 
                     <ImageView
                         android:id="@+id/ivPreparationThumbnail"
