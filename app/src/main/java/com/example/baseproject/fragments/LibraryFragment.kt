@@ -38,6 +38,16 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
             LibraryViewModel(appContainer.assetLevelRepository)
         }
     }
+    private val levelAdapter by lazy {
+        LevelAdapter(
+            appContainer.paintingProgressRepository,
+            appContainer.thumbnailRepository
+        ) { level ->
+            onLevelClicked(level)
+        }
+    }
+    private var renderedCategories: List<String> = emptyList()
+    private var renderedCategoryNames: Map<String, String> = emptyMap()
     private val completedPictureActions by lazy {
         CompletedPictureActions(
             activity = requireActivity(),
@@ -55,20 +65,20 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     override fun initView() {
         applyAppTheme()
         binding.rvLevels.layoutManager = GridLayoutManager(requireActivity(), 2)
+        binding.rvLevels.adapter = levelAdapter
         collectWithLifecycle {
             viewModel.uiState.collectLatest { state ->
-                binding.progressBar.visibility =
-                    if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
-                renderCategoryTabs(state.categories, state.categoryNames, state.selectedCategory)
-                binding.rvLevels.adapter =
-                    LevelAdapter(
-                        state.visibleLevels,
-                        appContainer.paintingProgressRepository,
-                        appContainer.thumbnailRepository,
-                        lifecycleScope
-                    ) { level ->
-                        onLevelClicked(level)
-                    }
+                showLibraryLoading(state.isLoading && state.visibleLevels.isEmpty())
+                if (state.categories != renderedCategories ||
+                    state.categoryNames != renderedCategoryNames
+                ) {
+                    renderCategoryTabs(state.categories, state.categoryNames, state.selectedCategory)
+                    renderedCategories = state.categories
+                    renderedCategoryNames = state.categoryNames
+                } else {
+                    updateTabSelection(state.selectedCategory)
+                }
+                levelAdapter.submitList(state.visibleLevels)
             }
         }
     }
@@ -129,7 +139,12 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     override fun onResume() {
         super.onResume()
         applyAppTheme()
-        binding.rvLevels.adapter?.notifyDataSetChanged()
+        levelAdapter.notifyDataSetChanged()
+    }
+
+    override fun onDestroyView() {
+        binding.shimmerLevels.stopShimmer()
+        super.onDestroyView()
     }
 
     private fun applyAppTheme() {
@@ -178,6 +193,19 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         intent.putExtra("CATEGORY", level.category)
         intent.putExtra("LEVEL_ID", level.id)
         startActivity(intent)
+    }
+
+    private fun showLibraryLoading(isLoading: Boolean) {
+        binding.progressBar.visibility = View.GONE
+        if (isLoading) {
+            binding.rvLevels.visibility = View.GONE
+            binding.shimmerLevels.visibility = View.VISIBLE
+            binding.shimmerLevels.startShimmer()
+        } else {
+            binding.shimmerLevels.stopShimmer()
+            binding.shimmerLevels.visibility = View.GONE
+            binding.rvLevels.visibility = View.VISIBLE
+        }
     }
 
 }

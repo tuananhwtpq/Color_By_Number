@@ -128,11 +128,11 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
         if (hasData) {
             binding.rvMyWork.visibility = View.VISIBLE
             binding.rvMyWork.adapter = LevelAdapter(
-                levels,
                 appContainer.paintingProgressRepository,
-                appContainer.thumbnailRepository,
-                lifecycleScope
-            ) { level -> onMyWorkItemClicked(level) }
+                appContainer.thumbnailRepository
+            ) { level -> onMyWorkItemClicked(level) }.apply {
+                submitList(levels)
+            }
         } else {
             binding.rvMyWork.visibility = View.GONE
         }

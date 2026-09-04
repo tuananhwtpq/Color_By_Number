@@ -44,6 +44,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val remoteAssetLoader by lazy {
         RemoteAssetLoader(cacheDir = File(appContext.cacheDir, "remote_assets"))
     }
+    private val remoteLevelMetadataCacheFile by lazy {
+        File(appContext.cacheDir, "remote_level_metadata/levels.json")
+    }
     private val localAssetLevelRepository by lazy { AssetLevelRepositoryImpl(appContext) }
     private val localCollectionRepository by lazy { AssetCollectionRepositoryImpl(appContext) }
     private val localRealmRepository by lazy { LocalRealmRepositoryImpl() }
@@ -52,7 +55,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
         RemoteLevelRepositoryImpl(
             api = pixcolorApi,
             assetLoader = remoteAssetLoader,
-            fallback = localAssetLevelRepository
+            fallback = localAssetLevelRepository,
+            metadataCacheFile = remoteLevelMetadataCacheFile
         )
     }
 

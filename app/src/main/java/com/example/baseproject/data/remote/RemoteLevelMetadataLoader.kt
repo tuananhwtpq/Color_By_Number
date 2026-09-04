@@ -2,10 +2,16 @@ package com.example.baseproject.data.remote
 
 import android.util.Log
 import com.example.baseproject.data.LevelConfig
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 class RemoteLevelMetadataLoader(
     private val api: PixcolorApi,
-    private val assetLoader: RemoteAssetLoader
+    private val assetLoader: RemoteAssetLoader,
+    private val detailRequestLimit: Int = DEFAULT_DETAIL_REQUEST_LIMIT
 ) {
 
     suspend fun loadGroupLevelConfigs(
@@ -13,19 +19,26 @@ class RemoteLevelMetadataLoader(
         groupId: String,
         groupName: String? = null
     ): List<LevelConfig> {
-        return loadGroupLevelSummaries(groupType, groupId)
-            .map { summary ->
-                val summaryConfig = RemoteLevelMapper.levelSummaryToConfig(
-                    dto = summary,
-                    assetLoader = assetLoader,
-                    groupName = groupName
-                )
-                runCatching { loadConfig(summaryConfig) }
-                    .getOrElse { error ->
-                        Log.w(TAG, "Failed to enrich level ${summaryConfig.id}; using summary", error)
-                        summaryConfig
+        val summaries = loadGroupLevelSummaries(groupType, groupId)
+        val requestLimiter = Semaphore(detailRequestLimit.coerceAtLeast(1))
+        return coroutineScope {
+            summaries.map { summary ->
+                async {
+                    val summaryConfig = RemoteLevelMapper.levelSummaryToConfig(
+                        dto = summary,
+                        assetLoader = assetLoader,
+                        groupName = groupName
+                    )
+                    requestLimiter.withPermit {
+                        runCatching { loadConfig(summaryConfig) }
+                            .getOrElse { error ->
+                                Log.w(TAG, "Failed to enrich level ${summaryConfig.id}; using summary", error)
+                                summaryConfig
+                            }
                     }
-            }
+                }
+            }.awaitAll()
+        }
     }
 
     suspend fun loadGroupLevelSummaries(
@@ -82,5 +95,6 @@ class RemoteLevelMetadataLoader(
 
     private companion object {
         const val TAG = "RemoteLevelMetadata"
+        const val DEFAULT_DETAIL_REQUEST_LIMIT = 3
     }
 }

@@ -5,6 +5,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.baseproject.R
@@ -16,12 +18,10 @@ import com.example.baseproject.utils.AssetImageResolver
 import kotlin.math.ceil
 
 class LevelAdapter(
-    private val levels: List<LevelConfig>,
     private val paintingProgressRepository: PaintingProgressRepository,
     private val thumbnailRepository: ThumbnailRepository,
-    private val scope: kotlinx.coroutines.CoroutineScope,
     private val onClick: (LevelConfig) -> Unit
-) : RecyclerView.Adapter<LevelAdapter.ViewHolder>() {
+) : ListAdapter<LevelConfig, LevelAdapter.ViewHolder>(DIFF_CALLBACK) {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val ivThumbnail: ImageView = view.findViewById(R.id.ivThumbnail)
@@ -31,7 +31,7 @@ class LevelAdapter(
             view.setOnClickListener {
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
-                    onClick(levels[position])
+                    onClick(getItem(position))
                 }
             }
         }
@@ -43,7 +43,7 @@ class LevelAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val level = levels[position]
+        val level = getItem(position)
         val context = holder.itemView.context
         val completedMaskColors =
             paintingProgressRepository.loadProgress(level.category, level.id)
@@ -102,8 +102,16 @@ class LevelAdapter(
         }
     }
 
-    override fun getItemCount() = levels.size
-
     private fun isRemoteUrl(value: String): Boolean =
         value.startsWith("http://") || value.startsWith("https://")
+
+    private companion object {
+        val DIFF_CALLBACK = object : DiffUtil.ItemCallback<LevelConfig>() {
+            override fun areItemsTheSame(oldItem: LevelConfig, newItem: LevelConfig): Boolean =
+                oldItem.category == newItem.category && oldItem.id == newItem.id
+
+            override fun areContentsTheSame(oldItem: LevelConfig, newItem: LevelConfig): Boolean =
+                oldItem == newItem
+        }
+    }
 }

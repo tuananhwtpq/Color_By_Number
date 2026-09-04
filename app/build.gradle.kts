@@ -24,7 +24,7 @@ android {
         setProperty("archivesBaseName", "Base_project_($versionCode)_$dateTime")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "PIXCOLOR_BASE_URL", "\"http://139.180.215.49/\"")
+        buildConfigField("String", "PIXCOLOR_BASE_URL", "\"https://pixlory.dktechgroup.com/\"")
     }
 
     signingConfigs {
@@ -108,6 +108,7 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
+    implementation(libs.shimmer)
 
     implementation(libs.play.services.ads)
 

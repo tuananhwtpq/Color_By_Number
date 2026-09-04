@@ -10,33 +10,59 @@ import com.example.baseproject.data.remote.RemoteLevelDetailDto
 import com.example.baseproject.data.remote.RemoteLevelMapper
 import com.example.baseproject.data.remote.RemoteLevelMetadataLoader
 import com.example.baseproject.data.remote.requireSuccessfulBody
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class RemoteLevelRepositoryImpl(
     private val api: PixcolorApi,
     private val assetLoader: RemoteAssetLoader,
     private val fallback: AssetLevelRepository? = null,
+    private val metadataCacheFile: File? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val categoryRequestLimit: Int = DEFAULT_CATEGORY_REQUEST_LIMIT,
+    private val gson: Gson = Gson()
 ) : AssetLevelRepository {
 
     private val metadataLoader = RemoteLevelMetadataLoader(api, assetLoader)
     private val levelsMutex = Mutex()
     private var cachedAllLevels: List<LevelConfig>? = null
+    private var lastRemoteLoadedAtMillis: Long = 0L
 
     override suspend fun loadAllLevels(): List<LevelConfig> =
-        cachedAllLevels ?: loadAllLevelsFromRemote()
+        cachedAllLevels ?: withContext(ioDispatcher) {
+            readCachedLevels()?.also { cachedAllLevels = it }
+        } ?: loadAllLevelsFromRemote()
 
-    private suspend fun loadAllLevelsFromRemote(): List<LevelConfig> =
+    override suspend fun refreshAllLevels(): List<LevelConfig> =
+        cachedAllLevels
+            ?.takeIf { System.currentTimeMillis() - lastRemoteLoadedAtMillis < RECENT_REMOTE_LOAD_WINDOW_MILLIS }
+            ?: loadAllLevelsFromRemote(forceRefresh = true)
+
+    private suspend fun loadAllLevelsFromRemote(forceRefresh: Boolean = false): List<LevelConfig> =
         withFallback("loadAllLevels", fallbackAction = { loadAllLevels() }) {
             levelsMutex.withLock {
-                cachedAllLevels?.let { return@withLock it }
+                if (!forceRefresh) {
+                    cachedAllLevels?.let { return@withLock it }
+                } else {
+                    cachedAllLevels
+                        ?.takeIf {
+                            System.currentTimeMillis() - lastRemoteLoadedAtMillis <
+                                RECENT_REMOTE_LOAD_WINDOW_MILLIS
+                        }
+                        ?.let { return@withLock it }
+                }
 
                 val response = api.categories()
                     .requireSuccessfulBody("/api/v1/categories")
@@ -48,13 +74,24 @@ class RemoteLevelRepositoryImpl(
                     throw RemoteApiException("Categories response did not include active categories")
                 }
 
-                categories.flatMap { category ->
-                    metadataLoader.loadGroupLevelConfigs(
-                        RemoteLevelMapper.GROUP_TYPE_CATEGORY,
-                        category.stableId,
-                        category.displayName
-                    )
-                }.also { cachedAllLevels = it }
+                val requestLimiter = Semaphore(categoryRequestLimit.coerceAtLeast(1))
+                coroutineScope {
+                    categories.map { category ->
+                        async {
+                            requestLimiter.withPermit {
+                                metadataLoader.loadGroupLevelConfigs(
+                                    RemoteLevelMapper.GROUP_TYPE_CATEGORY,
+                                    category.stableId,
+                                    category.displayName
+                                )
+                            }
+                        }
+                    }.awaitAll().flatten()
+                }.also { levels ->
+                    cachedAllLevels = levels
+                    lastRemoteLoadedAtMillis = System.currentTimeMillis()
+                    writeCachedLevels(levels)
+                }
             }
         }
 
@@ -155,5 +192,36 @@ class RemoteLevelRepositoryImpl(
 
     private companion object {
         const val TAG = "RemoteLevelRepository"
+        const val DEFAULT_CATEGORY_REQUEST_LIMIT = 2
+        const val RECENT_REMOTE_LOAD_WINDOW_MILLIS = 30_000L
+        val LEVEL_LIST_TYPE = object : TypeToken<List<LevelConfig>>() {}.type
+    }
+
+    private fun readCachedLevels(): List<LevelConfig>? {
+        val file = metadataCacheFile ?: return null
+        if (!file.isFile || file.length() <= 0L) return null
+
+        return runCatching {
+            file.reader().use { reader ->
+                gson.fromJson<List<LevelConfig>>(reader, LEVEL_LIST_TYPE)
+            }.takeIf { it.isNotEmpty() }
+        }.getOrNull()
+    }
+
+    private fun writeCachedLevels(levels: List<LevelConfig>) {
+        val file = metadataCacheFile ?: return
+        runCatching {
+            file.parentFile?.mkdirs()
+            val tmpFile = File(file.parentFile, "${file.name}.tmp")
+            tmpFile.writeText(gson.toJson(levels))
+            if (file.exists() && !file.delete()) {
+                tmpFile.delete()
+                return@runCatching
+            }
+            if (!tmpFile.renameTo(file)) {
+                tmpFile.copyTo(file, overwrite = true)
+                tmpFile.delete()
+            }
+        }
     }
 }

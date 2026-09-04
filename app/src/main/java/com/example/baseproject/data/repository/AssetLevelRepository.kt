@@ -6,6 +6,7 @@ import com.example.baseproject.data.RegionData
 
 interface AssetLevelRepository {
     suspend fun loadAllLevels(): List<LevelConfig>
+    suspend fun refreshAllLevels(): List<LevelConfig> = loadAllLevels()
     suspend fun loadLevelBundle(category: String, levelId: String): LevelBundle
 }
 

@@ -112,11 +112,11 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
         binding.tvNumberCountDone.text = "${state.completedCount}/${state.levels.size}"
 
         binding.rvLevels.adapter = LevelAdapter(
-            state.levels,
             appContainer.paintingProgressRepository,
-            appContainer.thumbnailRepository,
-            lifecycleScope
-        ) { level -> onLevelClicked(level) }
+            appContainer.thumbnailRepository
+        ) { level -> onLevelClicked(level) }.apply {
+            submitList(state.levels)
+        }
     }
 
     private fun onLevelClicked(level: LevelConfig) {

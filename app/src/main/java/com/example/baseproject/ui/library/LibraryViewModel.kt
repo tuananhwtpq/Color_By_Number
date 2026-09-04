@@ -29,25 +29,8 @@ class LibraryViewModel(
             runCatching {
                 assetLevelRepository.loadAllLevels()
             }.onSuccess { levels ->
-                allLevels = levels
-                val categories = levels.map { it.category }.distinct().sorted()
-                val categoryNames = levels
-                    .groupBy { it.category }
-                    .mapValues { (_, categoryLevels) ->
-                        categoryLevels.firstNotNullOfOrNull { it.categoryName }
-                            ?: categoryLevels.first().category
-                    }
-                val selectedCategory = _uiState.value.selectedCategory?.takeIf { it in categories }
-                    ?: categories.firstOrNull()
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        categories = categories,
-                        categoryNames = categoryNames,
-                        selectedCategory = selectedCategory,
-                        visibleLevels = selectedCategory?.let(::filterLevels).orEmpty()
-                    )
-                }
+                showLevels(levels)
+                refreshLevelsInBackground(levels)
             }.onFailure { throwable ->
                 _uiState.update {
                     it.copy(
@@ -74,4 +57,38 @@ class LibraryViewModel(
 
     private fun filterLevels(category: String): List<LevelConfig> =
         allLevels.filter { it.category == category }
+
+    private fun showLevels(levels: List<LevelConfig>) {
+        allLevels = levels
+        val categories = levels.map { it.category }.distinct().sorted()
+        val categoryNames = levels
+            .groupBy { it.category }
+            .mapValues { (_, categoryLevels) ->
+                categoryLevels.firstNotNullOfOrNull { it.categoryName }
+                    ?: categoryLevels.first().category
+            }
+        val selectedCategory = _uiState.value.selectedCategory?.takeIf { it in categories }
+            ?: categories.firstOrNull()
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                categories = categories,
+                categoryNames = categoryNames,
+                selectedCategory = selectedCategory,
+                visibleLevels = selectedCategory?.let(::filterLevels).orEmpty()
+            )
+        }
+    }
+
+    private fun refreshLevelsInBackground(previousLevels: List<LevelConfig>) {
+        viewModelScope.launch {
+            runCatching {
+                assetLevelRepository.refreshAllLevels()
+            }.onSuccess { freshLevels ->
+                if (freshLevels != previousLevels) {
+                    showLevels(freshLevels)
+                }
+            }
+        }
+    }
 }
