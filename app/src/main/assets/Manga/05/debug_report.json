@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "stats": {
-    "total_regions": 185,
-    "raw_region_count": 325,
-    "final_region_count": 185,
-    "region_count_drop_pct": 43.08,
-    "unique_numbers": 60,
+    "total_regions": 172,
+    "raw_region_count": 295,
+    "final_region_count": 172,
+    "region_count_drop_pct": 41.69,
+    "unique_numbers": 56,
     "estimated_difficulty": 10,
     "small_regions_count": 10,
-    "protected_detail_region_count": 12,
+    "protected_detail_region_count": 19,
     "giant_regions_count": 0
   },
   "generation_params": {
@@ -23,13 +23,13 @@
     "small_region_merge_mode": "shared_boundary_adjacency",
     "small_color_absorb_mode": "shared_boundary_adjacency",
     "tiny_region_merge_mode": "shared_boundary_adjacency",
-    "raw_region_count": 325,
-    "final_region_count": 185,
-    "region_count_drop_pct": 43.08,
+    "raw_region_count": 295,
+    "final_region_count": 172,
+    "region_count_drop_pct": 41.69,
     "tiny_merge_color_threshold": 22.5,
     "tiny_merge_policy": "relaxed",
-    "tiny_merge_rejected_non_adjacent": 0,
-    "tiny_merge_rejected_color_distance": 273,
+    "tiny_merge_rejected_non_adjacent": 10,
+    "tiny_merge_rejected_color_distance": 211,
     "tiny_merge_rejected_giant_target": 0,
     "tiny_merge_rejected_fragment_cap": 0,
     "tiny_merge_profile": "medium",
@@ -43,15 +43,15 @@
     "assumed_zoom": 6.0,
     "min_touch_bbox_side": 12,
     "untouchable_merge_color_threshold": 45.0,
-    "merged_untouchable_region_count": 12,
-    "merged_unreadable_region_count": 14,
-    "forced_unreadable_region_merges_count": 14,
-    "absorbed_isolated_unreadable_region_count": 0,
+    "merged_untouchable_region_count": 14,
+    "merged_unreadable_region_count": 2,
+    "forced_unreadable_region_merges_count": 2,
+    "absorbed_isolated_unreadable_region_count": 4,
     "label_gate_canvas_radius_px": 23.704,
     "merged_hidden_label_region_count": 0,
-    "remaining_hidden_label_region_count": 170,
-    "protected_detail_candidate_count": 12,
-    "protected_detail_region_count": 12,
+    "remaining_hidden_label_region_count": 157,
+    "protected_detail_candidate_count": 19,
+    "protected_detail_region_count": 19,
     "protected_detail_merge_policy": "skip_all_region_merge_passes",
     "ink_recovery_enabled": false,
     "ink_core_radius": 1,
@@ -63,21 +63,23 @@
     "segmentation_line_mode": "selected_preprocessing_candidate",
     "segmentation_line_report": {
       "mode": "selected_preprocessing_candidate",
-      "selected_profile": "thin-line",
-      "brightness_threshold": 130,
-      "line_close_radius": 1,
+      "selected_profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0,
       "evaluation_mode": "pre_generation_proxy_post_merge",
       "quality_score": 67,
       "playable_score": 100,
-      "raw_total_regions": 318,
-      "estimated_final_regions": 213,
-      "largest_region_pct": 19.75,
+      "raw_total_regions": 271,
+      "estimated_final_regions": 200,
+      "largest_region_pct": 19.66,
       "candidate_count": 17,
       "candidate_rescored_count": 6,
-      "lost_color_pct": 6.65,
+      "lost_color_pct": 7.6,
       "recovered_ink_pixel_count": 0
     },
     "display_line_mode": "safe_source_fallback",
+    "source_line_format": "svg",
+    "display_line_asset_format": "svg",
     "display_line_uses_segmentation_score": false,
     "display_line_report": {
       "candidate_mae": 0.0,
@@ -85,7 +87,7 @@
       "changed_pct_threshold": 10.0,
       "mae_threshold": 12.0,
       "stroke_lightened_pct_threshold": 10.0,
-      "stroke_pixel_count": 127273,
+      "stroke_pixel_count": 131471,
       "stroke_lightened_count": 0,
       "stroke_lightened_pct": 0.0,
       "stroke_lightened_mae": 0.0,
@@ -97,14 +99,19 @@
       "mode": "source_similarity_guard",
       "candidate_source": "source_line_no_ink_recovery",
       "uses_segmentation_score": false,
+      "svg_canvas_normalized": true,
+      "svg_canvas_size": [
+        1024,
+        1024
+      ],
       "recovered_ink_pixel_pct": 0.0,
       "recovered_ink_overreach_threshold_pct": 12.0
     },
-    "lost_color_pct": 6.65,
+    "lost_color_pct": 7.6,
     "selected_preprocessing": {
-      "profile": "thin-line",
-      "brightness_threshold": 130,
-      "line_close_radius": 1,
+      "profile": "standard",
+      "brightness_threshold": 120,
+      "line_close_radius": 0,
       "score": 67,
       "evaluation_mode": "pre_generation_proxy_post_merge",
       "candidate_proxy_score": 67,
@@ -117,8 +124,8 @@
           "code": "UNTOUCHABLE_REGIONS",
           "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
           "value": {
-            "untouchable_region_pct": 54.9,
-            "min_touch_target_at_default_zoom": 7.38
+            "untouchable_region_pct": 55.0,
+            "min_touch_target_at_default_zoom": 2.98
           },
           "threshold": 18
         }
@@ -128,12 +135,12 @@
           "code": "TINY_REGION_DENSITY_WARNING",
           "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
           "value": {
-            "tiny_lt_100_pct": 10.8,
-            "tiny_lt_200_pct": 31.9,
+            "tiny_lt_100_pct": 11.5,
+            "tiny_lt_200_pct": 31.5,
             "actionable_hidden_label_pct": 100.0,
             "hidden_label_pct": null,
             "protected_detail_hidden_label_pct": 0.0,
-            "median_region_area": 450.0
+            "median_region_area": 478.0
           },
           "threshold": {
             "tiny_lt_100_pct": 45,
@@ -142,26 +149,26 @@
           }
         }
       ],
-      "total_regions": 213,
-      "largest_region_pct": 19.75,
-      "top_3_region_pct": 48.02,
-      "playable_region_count": 145,
+      "total_regions": 200,
+      "largest_region_pct": 19.66,
+      "top_3_region_pct": 41.13,
+      "playable_region_count": 137,
       "giant_region_count": 0,
       "single_tap_completion_risk": "none",
       "playable_score": 100,
-      "tiny_region_count_lt_50": 1,
+      "tiny_region_count_lt_50": 3,
       "preview_mae": null,
       "preview_mae_reason": "not_available_before_full_generation",
-      "raw_total_regions": 318,
+      "raw_total_regions": 271,
       "recovered_ink_pixel_count": 0,
-      "lost_color_pct": 6.65,
+      "lost_color_pct": 7.6,
       "candidate_count": 17,
       "candidate_rescored_count": 6,
       "candidate_top": [
         {
-          "profile": "thin-line",
-          "brightness_threshold": 130,
-          "line_close_radius": 1,
+          "profile": "standard",
+          "brightness_threshold": 120,
+          "line_close_radius": 0,
           "score": 67,
           "evaluation_mode": "pre_generation_proxy_post_merge",
           "candidate_proxy_score": 67,
@@ -174,8 +181,8 @@
               "code": "UNTOUCHABLE_REGIONS",
               "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
               "value": {
-                "untouchable_region_pct": 54.9,
-                "min_touch_target_at_default_zoom": 7.38
+                "untouchable_region_pct": 55.0,
+                "min_touch_target_at_default_zoom": 2.98
               },
               "threshold": 18
             }
@@ -185,12 +192,12 @@
               "code": "TINY_REGION_DENSITY_WARNING",
               "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
               "value": {
-                "tiny_lt_100_pct": 10.8,
-                "tiny_lt_200_pct": 31.9,
+                "tiny_lt_100_pct": 11.5,
+                "tiny_lt_200_pct": 31.5,
                 "actionable_hidden_label_pct": 100.0,
                 "hidden_label_pct": null,
                 "protected_detail_hidden_label_pct": 0.0,
-                "median_region_area": 450.0
+                "median_region_area": 478.0
               },
               "threshold": {
                 "tiny_lt_100_pct": 45,
@@ -199,78 +206,78 @@
               }
             }
           ],
-          "total_regions": 213,
-          "largest_region_pct": 19.75,
-          "top_3_region_pct": 48.02,
-          "playable_region_count": 145,
+          "total_regions": 200,
+          "largest_region_pct": 19.66,
+          "top_3_region_pct": 41.13,
+          "playable_region_count": 137,
           "giant_region_count": 0,
           "single_tap_completion_risk": "none",
           "playable_score": 100,
-          "tiny_region_count_lt_50": 1,
+          "tiny_region_count_lt_50": 3,
           "preview_mae": null,
           "preview_mae_reason": "not_available_before_full_generation",
-          "raw_total_regions": 318,
+          "raw_total_regions": 271,
           "recovered_ink_pixel_count": 0,
-          "lost_color_pct": 6.65
-        },
-        {
-          "profile": "manga",
-          "brightness_threshold": 130,
-          "line_close_radius": 1,
-          "score": 67,
-          "evaluation_mode": "pre_generation_proxy_post_merge",
-          "candidate_proxy_score": 67,
-          "candidate_proxy_grade": "D",
-          "candidate_playable_score": 100,
-          "quality_score": 67,
-          "quality_grade": "D",
-          "fail_reasons": [
-            {
-              "code": "UNTOUCHABLE_REGIONS",
-              "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
-              "value": {
-                "untouchable_region_pct": 54.9,
-                "min_touch_target_at_default_zoom": 7.38
-              },
-              "threshold": 18
-            }
-          ],
-          "warnings": [
-            {
-              "code": "TINY_REGION_DENSITY_WARNING",
-              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
-              "value": {
-                "tiny_lt_100_pct": 10.8,
-                "tiny_lt_200_pct": 31.9,
-                "actionable_hidden_label_pct": 100.0,
-                "hidden_label_pct": null,
-                "protected_detail_hidden_label_pct": 0.0,
-                "median_region_area": 450.0
-              },
-              "threshold": {
-                "tiny_lt_100_pct": 45,
-                "tiny_lt_200_pct": 60,
-                "hidden_label_pct": 80
-              }
-            }
-          ],
-          "total_regions": 213,
-          "largest_region_pct": 19.75,
-          "top_3_region_pct": 48.02,
-          "playable_region_count": 145,
-          "giant_region_count": 0,
-          "single_tap_completion_risk": "none",
-          "playable_score": 100,
-          "tiny_region_count_lt_50": 1,
-          "preview_mae": null,
-          "preview_mae_reason": "not_available_before_full_generation",
-          "raw_total_regions": 318,
-          "recovered_ink_pixel_count": 0,
-          "lost_color_pct": 6.65
+          "lost_color_pct": 7.6
         },
         {
           "profile": "mandala",
-          "brightness_threshold": 130,
+          "brightness_threshold": 100,
+          "line_close_radius": 0,
+          "score": 67,
+          "evaluation_mode": "pre_generation_proxy_post_merge",
+          "candidate_proxy_score": 67,
+          "candidate_proxy_grade": "D",
+          "candidate_playable_score": 100,
+          "quality_score": 67,
+          "quality_grade": "D",
+          "fail_reasons": [
+            {
+              "code": "UNTOUCHABLE_REGIONS",
+              "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
+              "value": {
+                "untouchable_region_pct": 55.0,
+                "min_touch_target_at_default_zoom": 2.98
+              },
+              "threshold": 18
+            }
+          ],
+          "warnings": [
+            {
+              "code": "TINY_REGION_DENSITY_WARNING",
+              "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
+              "value": {
+                "tiny_lt_100_pct": 11.5,
+                "tiny_lt_200_pct": 31.5,
+                "actionable_hidden_label_pct": 100.0,
+                "hidden_label_pct": null,
+                "protected_detail_hidden_label_pct": 0.0,
+                "median_region_area": 478.0
+              },
+              "threshold": {
+                "tiny_lt_100_pct": 45,
+                "tiny_lt_200_pct": 60,
+                "hidden_label_pct": 80
+              }
+            }
+          ],
+          "total_regions": 200,
+          "largest_region_pct": 19.66,
+          "top_3_region_pct": 41.13,
+          "playable_region_count": 137,
+          "giant_region_count": 0,
+          "single_tap_completion_risk": "none",
+          "playable_score": 100,
+          "tiny_region_count_lt_50": 3,
+          "preview_mae": null,
+          "preview_mae_reason": "not_available_before_full_generation",
+          "raw_total_regions": 271,
+          "recovered_ink_pixel_count": 0,
+          "lost_color_pct": 7.6
+        },
+        {
+          "profile": "thin-line",
+          "brightness_threshold": 150,
           "line_close_radius": 1,
           "score": 67,
           "evaluation_mode": "pre_generation_proxy_post_merge",
@@ -284,7 +291,7 @@
               "code": "UNTOUCHABLE_REGIONS",
               "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
               "value": {
-                "untouchable_region_pct": 54.9,
+                "untouchable_region_pct": 54.1,
                 "min_touch_target_at_default_zoom": 7.38
               },
               "threshold": 18
@@ -295,12 +302,12 @@
               "code": "TINY_REGION_DENSITY_WARNING",
               "message": "Tỷ lệ vùng nhỏ/ẩn số cao so với profile medium; level có thể khó tap hoặc khó đọc.",
               "value": {
-                "tiny_lt_100_pct": 10.8,
-                "tiny_lt_200_pct": 31.9,
+                "tiny_lt_100_pct": 12.1,
+                "tiny_lt_200_pct": 30.9,
                 "actionable_hidden_label_pct": 100.0,
                 "hidden_label_pct": null,
                 "protected_detail_hidden_label_pct": 0.0,
-                "median_region_area": 450.0
+                "median_region_area": 472.0
               },
               "threshold": {
                 "tiny_lt_100_pct": 45,
@@ -309,19 +316,19 @@
               }
             }
           ],
-          "total_regions": 213,
-          "largest_region_pct": 19.75,
-          "top_3_region_pct": 48.02,
-          "playable_region_count": 145,
+          "total_regions": 207,
+          "largest_region_pct": 19.65,
+          "top_3_region_pct": 41.12,
+          "playable_region_count": 143,
           "giant_region_count": 0,
           "single_tap_completion_risk": "none",
           "playable_score": 100,
-          "tiny_region_count_lt_50": 1,
+          "tiny_region_count_lt_50": 2,
           "preview_mae": null,
           "preview_mae_reason": "not_available_before_full_generation",
-          "raw_total_regions": 318,
+          "raw_total_regions": 257,
           "recovered_ink_pixel_count": 0,
-          "lost_color_pct": 6.65
+          "lost_color_pct": 7.82
         }
       ]
     },
@@ -334,70 +341,70 @@
       "code": "MANY_TINY_REGIONS",
       "message": "Số vùng quá nhỏ cao; level có thể khó chạm hoặc khó đọc số.",
       "region_ids": [
-        4,
-        5,
-        8,
-        13,
-        18,
-        25,
+        6,
+        7,
+        11,
+        15,
+        21,
         37,
         39,
         40,
         43,
         44,
-        48,
-        50,
-        52,
-        54,
+        45,
+        49,
+        53,
+        55,
         56,
         57,
         58,
-        59,
+        60,
         61,
         62,
-        64,
+        63,
         66,
-        67,
         69,
         70,
         71,
-        72,
         74,
         76,
-        78,
+        81,
         83,
-        85,
-        87,
-        90,
-        95,
+        86,
+        88,
+        89,
+        93,
+        96,
         97,
-        99,
+        100,
         104,
-        105,
-        106,
         108,
-        110,
-        114,
-        115,
-        120,
+        119,
+        123,
+        125,
         128,
-        132,
-        134,
-        138
+        129,
+        130,
+        131,
+        137,
+        138,
+        143,
+        146,
+        149
       ]
     },
     {
       "code": "SMALL_ISLAND_COLOR_DRIFT",
       "message": "Có đảo màu nhỏ khác rõ nằm trong region lớn; chi tiết nhỏ có thể đã bị merge sai.",
-      "value": 169,
+      "value": 150,
       "threshold": 0
     },
     {
       "code": "UNTOUCHABLE_REGIONS_WARNING",
       "message": "Tỷ lệ vùng quá nhỏ để chạm ở mức zoom mặc định vượt ngưỡng profile medium; user phải mò tìm chấm gần như vô hình.",
       "value": {
-        "untouchable_region_pct": 33.0,
-        "min_touch_target_at_default_zoom": 6.33
+        "untouchable_region_pct": 36.0,
+        "min_touch_target_at_default_zoom": 5.27
       },
       "threshold": 18
     }
@@ -406,10 +413,10 @@
   "quality_score": 76,
   "fail_reasons": [],
   "metrics": {
-    "total_regions": 185,
-    "unique_numbers": 60,
-    "tiny_region_count_lt_50": 0,
-    "tiny_region_count_lt_200": 35,
+    "total_regions": 172,
+    "unique_numbers": 56,
+    "tiny_region_count_lt_50": 1,
+    "tiny_region_count_lt_200": 34,
     "mask_config_mismatch_count": 0,
     "mask_missing_config_colors": [],
     "config_missing_mask_colors": [],
@@ -418,65 +425,64 @@
     "duplicate_region_palette_mask_colors": [],
     "region_area_mismatch_count": 0,
     "region_area_mismatches": [],
-    "largest_region_pct": 19.91,
-    "max_region_pct": 19.91,
-    "top_3_region_pct": 48.33,
-    "max_color_pct": 32.38,
-    "top_3_color_pct": 61.43,
-    "tiny_region_count_lt_100": 2,
-    "tiny_region_pct_lt_50": 0.0,
-    "tiny_region_pct_lt_100": 1.1,
-    "tiny_region_pct_lt_200": 18.9,
-    "config_hidden_label_count": 2,
-    "config_hidden_label_pct": 1.1,
-    "estimated_hidden_label_count": 170,
-    "estimated_hidden_label_pct": 91.9,
-    "protected_detail_hidden_label_count": 12,
-    "protected_detail_hidden_label_pct": 6.5,
-    "palette_assisted_hidden_label_count": 64,
-    "palette_assisted_hidden_label_pct": 34.6,
-    "non_actionable_hidden_label_count": 76,
-    "non_actionable_hidden_label_pct": 41.1,
-    "actionable_hidden_label_count": 94,
-    "actionable_hidden_label_pct": 50.8,
-    "hidden_label_count": 170,
-    "hidden_label_pct": 91.9,
+    "largest_region_pct": 19.72,
+    "max_region_pct": 19.72,
+    "top_3_region_pct": 41.28,
+    "max_color_pct": 37.37,
+    "top_3_color_pct": 60.09,
+    "tiny_region_count_lt_100": 1,
+    "tiny_region_pct_lt_50": 0.6,
+    "tiny_region_pct_lt_100": 0.6,
+    "tiny_region_pct_lt_200": 19.8,
+    "config_hidden_label_count": 1,
+    "config_hidden_label_pct": 0.6,
+    "estimated_hidden_label_count": 157,
+    "estimated_hidden_label_pct": 91.3,
+    "protected_detail_hidden_label_count": 19,
+    "protected_detail_hidden_label_pct": 11.0,
+    "palette_assisted_hidden_label_count": 53,
+    "palette_assisted_hidden_label_pct": 30.8,
+    "non_actionable_hidden_label_count": 72,
+    "non_actionable_hidden_label_pct": 41.9,
+    "actionable_hidden_label_count": 85,
+    "actionable_hidden_label_pct": 49.4,
+    "hidden_label_count": 157,
+    "hidden_label_pct": 91.3,
     "label_min_screen_radius_px": 25,
-    "median_region_area": 576.0,
-    "p10_region_area": 141,
-    "p25_region_area": 256,
-    "region_density_by_canvas_size": 176.43,
+    "median_region_area": 555.0,
+    "p10_region_area": 132,
+    "p25_region_area": 247,
+    "region_density_by_canvas_size": 164.03,
     "tiny_region_by_number_lt_100": {
-      "14": 1,
       "2": 1
     },
-    "untouchable_region_count": 61,
-    "untouchable_region_pct": 33.0,
-    "min_touch_target_at_default_zoom": 6.33,
-    "playable_region_count": 150,
+    "untouchable_region_count": 62,
+    "untouchable_region_pct": 36.0,
+    "min_touch_target_at_default_zoom": 5.27,
+    "playable_region_count": 138,
     "giant_region_count": 0,
     "background_region_candidate": false,
     "playability_profile": "medium",
     "single_tap_completion_risk": "none",
     "playable_score": 100,
-    "raw_region_count": 325,
-    "final_region_count": 185,
-    "region_count_drop_pct": 43.08,
-    "merged_tiny_regions_count": 126,
-    "forced_tiny_region_merges_count": 83,
+    "raw_region_count": 295,
+    "final_region_count": 172,
+    "region_count_drop_pct": 41.69,
+    "merged_tiny_regions_count": 96,
+    "forced_tiny_region_merges_count": 78,
     "merged_small_regions_count": 0,
-    "merged_untouchable_region_count": 12,
-    "merged_unreadable_region_count": 14,
-    "absorbed_isolated_unreadable_region_count": 0,
+    "merged_untouchable_region_count": 14,
+    "merged_unreadable_region_count": 2,
+    "absorbed_isolated_unreadable_region_count": 4,
     "merged_hidden_label_region_count": 0,
     "segmentation_line_mode": "selected_preprocessing_candidate",
-    "segmentation_selected_profile": "thin-line",
-    "segmentation_brightness_threshold": 130,
-    "segmentation_line_close_radius": 1,
+    "segmentation_selected_profile": "standard",
+    "segmentation_brightness_threshold": 120,
+    "segmentation_line_close_radius": 0,
     "segmentation_evaluation_mode": "pre_generation_proxy_post_merge",
     "segmentation_quality_score": 67,
     "segmentation_playable_score": 100,
-    "segmentation_lost_color_pct": 6.65,
+    "segmentation_lost_color_pct": 7.6,
     "display_line_mode": "safe_source_fallback",
     "display_line_selected": "source_line",
     "display_line_fallback_to_source": false,
@@ -486,731 +492,731 @@
     "display_line_source_changed_pct": "",
     "display_line_stroke_lightened_pct": 0.0,
     "display_line_stroke_lightened_mae": 0.0,
-    "display_line_stroke_pixel_count": 127273,
+    "display_line_stroke_pixel_count": 131471,
     "display_line_stroke_guard_failed": false,
-    "generation_protected_detail_candidate_count": 12,
-    "generation_protected_detail_region_count": 12,
+    "generation_protected_detail_candidate_count": 19,
+    "generation_protected_detail_region_count": 19,
     "generation_protected_detail_merge_policy": "skip_all_region_merge_passes",
     "recovered_ink_pixel_pct": 0.0,
     "ink_recovery_overreach": false,
-    "line_dark_pct": 9.92,
-    "line_ink_pct": 9.92,
+    "line_dark_pct": 10.86,
+    "line_ink_pct": 10.86,
     "reference_missing": false,
     "reference_required": false,
-    "preview_mae": 7.1,
-    "color_mae": 7.1,
-    "preview_similarity_score": 97.22,
-    "flat_similarity_score": 95.48,
-    "detail_dependency_score": 1.74,
-    "shading_preservation_score": 97.51,
+    "preview_mae": 9.5,
+    "color_mae": 9.5,
+    "preview_similarity_score": 96.27,
+    "flat_similarity_score": 95.34,
+    "detail_dependency_score": 0.93,
+    "shading_preservation_score": 96.5,
     "has_detail": true,
     "giant_region_legitimacy": null,
     "giant_region_reference_color_std": null,
     "protected_detail_audit_available": true,
-    "protected_detail_candidate_count": 169,
-    "small_island_color_drift_count": 169,
+    "protected_detail_candidate_count": 150,
+    "small_island_color_drift_count": 150,
     "merged_protected_detail_count": 0,
-    "small_island_max_color_distance": 364.89,
+    "small_island_max_color_distance": 407.17,
     "small_island_color_drift_examples": [
       {
-        "region_id": 8,
-        "region_area": 220,
-        "component_area": 30,
+        "region_id": 2,
+        "region_area": 12696,
+        "component_area": 22,
         "bbox": {
-          "left": 192,
-          "top": 138,
-          "right": 213,
-          "bottom": 141
+          "left": 155,
+          "top": 43,
+          "right": 176,
+          "bottom": 43
         },
-        "target_color": "#e9b42e",
-        "mean_color_distance": 115.4,
-        "max_color_distance": 214.17
+        "target_color": "#fdffff",
+        "mean_color_distance": 72.12,
+        "max_color_distance": 87.32
       },
       {
         "region_id": 2,
-        "region_area": 182175,
-        "component_area": 35,
+        "region_area": 12696,
+        "component_area": 20,
         "bbox": {
-          "left": 745,
-          "top": 163,
-          "right": 760,
-          "bottom": 176
+          "left": 204,
+          "top": 47,
+          "right": 215,
+          "bottom": 50
         },
-        "target_color": "#17a7e5",
-        "mean_color_distance": 61.82,
-        "max_color_distance": 104.83
+        "target_color": "#fdffff",
+        "mean_color_distance": 78.56,
+        "max_color_distance": 120.95
       },
       {
         "region_id": 2,
-        "region_area": 182175,
-        "component_area": 46,
+        "region_area": 12696,
+        "component_area": 24,
         "bbox": {
-          "left": 723,
-          "top": 177,
-          "right": 744,
-          "bottom": 192
+          "left": 79,
+          "top": 88,
+          "right": 85,
+          "bottom": 105
         },
-        "target_color": "#17a7e5",
-        "mean_color_distance": 65.7,
-        "max_color_distance": 110.25
+        "target_color": "#fdffff",
+        "mean_color_distance": 98.24,
+        "max_color_distance": 178.82
       },
       {
-        "region_id": 2,
-        "region_area": 182175,
-        "component_area": 245,
+        "region_id": 12,
+        "region_area": 6027,
+        "component_area": 25,
+        "bbox": {
+          "left": 331,
+          "top": 175,
+          "right": 347,
+          "bottom": 181
+        },
+        "target_color": "#18a8e5",
+        "mean_color_distance": 93.01,
+        "max_color_distance": 160.49
+      },
+      {
+        "region_id": 3,
+        "region_area": 110770,
+        "component_area": 230,
         "bbox": {
           "left": 520,
           "top": 184,
-          "right": 540,
-          "bottom": 217
+          "right": 537,
+          "bottom": 214
         },
-        "target_color": "#17a7e5",
-        "mean_color_distance": 70.81,
-        "max_color_distance": 133.84
+        "target_color": "#18a8e5",
+        "mean_color_distance": 71.34,
+        "max_color_distance": 162.14
       },
       {
-        "region_id": 10,
-        "region_area": 6165,
-        "component_area": 37,
+        "region_id": 12,
+        "region_area": 6027,
+        "component_area": 29,
         "bbox": {
           "left": 330,
-          "top": 186,
-          "right": 363,
+          "top": 187,
+          "right": 358,
           "bottom": 187
         },
-        "target_color": "#17a7e5",
-        "mean_color_distance": 59.83,
-        "max_color_distance": 98.4
+        "target_color": "#18a8e5",
+        "mean_color_distance": 58.02,
+        "max_color_distance": 63.84
       },
       {
-        "region_id": 13,
-        "region_area": 1010,
-        "component_area": 30,
-        "bbox": {
-          "left": 273,
-          "top": 191,
-          "right": 293,
-          "bottom": 193
-        },
-        "target_color": "#f6fbfd",
-        "mean_color_distance": 91.79,
-        "max_color_distance": 189.9
-      },
-      {
-        "region_id": 13,
-        "region_area": 1010,
-        "component_area": 21,
-        "bbox": {
-          "left": 222,
-          "top": 199,
-          "right": 238,
-          "bottom": 202
-        },
-        "target_color": "#f6fbfd",
-        "mean_color_distance": 129.5,
-        "max_color_distance": 242.89
-      },
-      {
-        "region_id": 16,
-        "region_area": 9202,
-        "component_area": 84,
-        "bbox": {
-          "left": 302,
-          "top": 200,
-          "right": 307,
-          "bottom": 223
-        },
-        "target_color": "#17416b",
-        "mean_color_distance": 207.14,
-        "max_color_distance": 271.74
-      },
-      {
-        "region_id": 24,
-        "region_area": 2547,
+        "region_id": 12,
+        "region_area": 6027,
         "component_area": 22,
         "bbox": {
-          "left": 473,
-          "top": 245,
-          "right": 478,
-          "bottom": 255
+          "left": 281,
+          "top": 189,
+          "right": 296,
+          "bottom": 190
         },
-        "target_color": "#1965a3",
-        "mean_color_distance": 79.98,
-        "max_color_distance": 114.37
+        "target_color": "#18a8e5",
+        "mean_color_distance": 78.82,
+        "max_color_distance": 100.79
       },
       {
-        "region_id": 25,
-        "region_area": 473,
-        "component_area": 20,
+        "region_id": 15,
+        "region_area": 941,
+        "component_area": 45,
         "bbox": {
-          "left": 131,
-          "top": 254,
-          "right": 135,
-          "bottom": 264
+          "left": 221,
+          "top": 196,
+          "right": 256,
+          "bottom": 202
         },
-        "target_color": "#e5f6f8",
-        "mean_color_distance": 220.9,
-        "max_color_distance": 304.61
-      },
-      {
-        "region_id": 27,
-        "region_area": 1658,
-        "component_area": 41,
-        "bbox": {
-          "left": 137,
-          "top": 254,
-          "right": 145,
-          "bottom": 270
-        },
-        "target_color": "#f6fbfd",
-        "mean_color_distance": 93.04,
-        "max_color_distance": 226.57
-      },
-      {
-        "region_id": 31,
-        "region_area": 1178,
-        "component_area": 73,
-        "bbox": {
-          "left": 261,
-          "top": 259,
-          "right": 264,
-          "bottom": 294
-        },
-        "target_color": "#feefe8",
-        "mean_color_distance": 84.75,
-        "max_color_distance": 141.21
+        "target_color": "#fdffff",
+        "mean_color_distance": 137.58,
+        "max_color_distance": 251.87
       },
       {
         "region_id": 18,
-        "region_area": 399,
-        "component_area": 20,
+        "region_area": 8838,
+        "component_area": 57,
         "bbox": {
-          "left": 441,
-          "top": 274,
-          "right": 446,
-          "bottom": 283
+          "left": 303,
+          "top": 204,
+          "right": 307,
+          "bottom": 221
         },
-        "target_color": "#e8c931",
-        "mean_color_distance": 104.58,
-        "max_color_distance": 184.37
+        "target_color": "#17416b",
+        "mean_color_distance": 233.38,
+        "max_color_distance": 271.74
       },
       {
-        "region_id": 36,
-        "region_area": 2359,
-        "component_area": 20,
+        "region_id": 3,
+        "region_area": 110770,
+        "component_area": 68,
         "bbox": {
-          "left": 169,
-          "top": 288,
-          "right": 172,
-          "bottom": 302
+          "left": 671,
+          "top": 208,
+          "right": 693,
+          "bottom": 216
         },
-        "target_color": "#1965a3",
-        "mean_color_distance": 59.86,
-        "max_color_distance": 72.37
+        "target_color": "#18a8e5",
+        "mean_color_distance": 52.4,
+        "max_color_distance": 64.23
       },
       {
-        "region_id": 25,
-        "region_area": 473,
-        "component_area": 24,
+        "region_id": 15,
+        "region_area": 941,
+        "component_area": 49,
         "bbox": {
-          "left": 87,
-          "top": 314,
-          "right": 95,
-          "bottom": 328
+          "left": 135,
+          "top": 226,
+          "right": 160,
+          "bottom": 246
         },
-        "target_color": "#e5f6f8",
-        "mean_color_distance": 157.86,
-        "max_color_distance": 259.9
+        "target_color": "#fdffff",
+        "mean_color_distance": 176.72,
+        "max_color_distance": 392.61
       },
       {
-        "region_id": 24,
-        "region_area": 2547,
-        "component_area": 97,
+        "region_id": 3,
+        "region_area": 110770,
+        "component_area": 25,
         "bbox": {
-          "left": 501,
-          "top": 317,
+          "left": 601,
+          "top": 230,
+          "right": 619,
+          "bottom": 233
+        },
+        "target_color": "#18a8e5",
+        "mean_color_distance": 59.66,
+        "max_color_distance": 85.28
+      },
+      {
+        "region_id": 28,
+        "region_area": 1552,
+        "component_area": 33,
+        "bbox": {
+          "left": 137,
+          "top": 260,
+          "right": 142,
+          "bottom": 272
+        },
+        "target_color": "#fdffff",
+        "mean_color_distance": 100.58,
+        "max_color_distance": 291.62
+      },
+      {
+        "region_id": 32,
+        "region_area": 12946,
+        "component_area": 41,
+        "bbox": {
+          "left": 457,
+          "top": 313,
+          "right": 465,
+          "bottom": 335
+        },
+        "target_color": "#1965a4",
+        "mean_color_distance": 104.42,
+        "max_color_distance": 149.71
+      },
+      {
+        "region_id": 26,
+        "region_area": 2357,
+        "component_area": 76,
+        "bbox": {
+          "left": 505,
+          "top": 331,
           "right": 510,
           "bottom": 353
         },
-        "target_color": "#1965a3",
-        "mean_color_distance": 78.01,
-        "max_color_distance": 109.77
+        "target_color": "#1965a4",
+        "mean_color_distance": 74.6,
+        "max_color_distance": 103.83
       },
       {
-        "region_id": 25,
-        "region_area": 473,
-        "component_area": 30,
+        "region_id": 28,
+        "region_area": 1552,
+        "component_area": 23,
         "bbox": {
-          "left": 78,
-          "top": 331,
-          "right": 85,
-          "bottom": 351
+          "left": 134,
+          "top": 334,
+          "right": 135,
+          "bottom": 355
         },
-        "target_color": "#e5f6f8",
-        "mean_color_distance": 130.59,
-        "max_color_distance": 240.55
+        "target_color": "#fdffff",
+        "mean_color_distance": 133.09,
+        "max_color_distance": 193.47
       },
       {
-        "region_id": 44,
-        "region_area": 250,
-        "component_area": 32,
-        "bbox": {
-          "left": 962,
-          "top": 331,
-          "right": 964,
-          "bottom": 350
-        },
-        "target_color": "#d7bc3e",
-        "mean_color_distance": 76.09,
-        "max_color_distance": 129.34
-      },
-      {
-        "region_id": 38,
-        "region_area": 723,
-        "component_area": 54,
-        "bbox": {
-          "left": 473,
-          "top": 346,
-          "right": 487,
-          "bottom": 375
-        },
-        "target_color": "#1965a3",
-        "mean_color_distance": 150.95,
-        "max_color_distance": 171.85
-      },
-      {
-        "region_id": 31,
-        "region_area": 1178,
-        "component_area": 31,
-        "bbox": {
-          "left": 271,
-          "top": 356,
-          "right": 286,
-          "bottom": 367
-        },
-        "target_color": "#feefe8",
-        "mean_color_distance": 218.13,
-        "max_color_distance": 266.68
-      },
-      {
-        "region_id": 31,
-        "region_area": 1178,
+        "region_id": 28,
+        "region_area": 1552,
         "component_area": 35,
         "bbox": {
-          "left": 276,
-          "top": 357,
-          "right": 294,
-          "bottom": 369
+          "left": 123,
+          "top": 336,
+          "right": 125,
+          "bottom": 360
         },
-        "target_color": "#feefe8",
-        "mean_color_distance": 241.86,
-        "max_color_distance": 302.15
+        "target_color": "#fdffff",
+        "mean_color_distance": 150.68,
+        "max_color_distance": 242.28
       },
       {
-        "region_id": 31,
-        "region_area": 1178,
-        "component_area": 28,
+        "region_id": 32,
+        "region_area": 12946,
+        "component_area": 65,
         "bbox": {
-          "left": 272,
-          "top": 358,
-          "right": 288,
-          "bottom": 369
+          "left": 482,
+          "top": 375,
+          "right": 488,
+          "bottom": 393
         },
-        "target_color": "#feefe8",
-        "mean_color_distance": 244.8,
-        "max_color_distance": 289.06
+        "target_color": "#1965a4",
+        "mean_color_distance": 215.58,
+        "max_color_distance": 236.24
       },
       {
-        "region_id": 47,
-        "region_area": 5178,
-        "component_area": 105,
+        "region_id": 48,
+        "region_area": 606,
+        "component_area": 44,
         "bbox": {
-          "left": 326,
-          "top": 361,
-          "right": 356,
-          "bottom": 367
-        },
-        "target_color": "#feefe8",
-        "mean_color_distance": 237.96,
-        "max_color_distance": 291.22
-      },
-      {
-        "region_id": 49,
-        "region_area": 607,
-        "component_area": 66,
-        "bbox": {
-          "left": 727,
-          "top": 369,
+          "left": 732,
+          "top": 375,
           "right": 743,
           "bottom": 391
         },
-        "target_color": "#ee9a17",
-        "mean_color_distance": 94.07,
-        "max_color_distance": 161.18
+        "target_color": "#ee9916",
+        "mean_color_distance": 79.87,
+        "max_color_distance": 110.44
       },
       {
-        "region_id": 50,
-        "region_area": 663,
-        "component_area": 30,
+        "region_id": 5,
+        "region_area": 115340,
+        "component_area": 36,
         "bbox": {
-          "left": 928,
-          "top": 374,
-          "right": 933,
-          "bottom": 387
+          "left": 947,
+          "top": 380,
+          "right": 960,
+          "bottom": 401
         },
-        "target_color": "#e8c931",
-        "mean_color_distance": 87.0,
-        "max_color_distance": 153.09
+        "target_color": "#1266c1",
+        "mean_color_distance": 71.08,
+        "max_color_distance": 135.44
       },
       {
-        "region_id": 24,
-        "region_area": 2547,
-        "component_area": 21,
+        "region_id": 26,
+        "region_area": 2357,
+        "component_area": 24,
         "bbox": {
           "left": 506,
           "top": 381,
           "right": 506,
-          "bottom": 401
+          "bottom": 404
         },
-        "target_color": "#1965a3",
-        "mean_color_distance": 67.2,
-        "max_color_distance": 75.48
+        "target_color": "#1965a4",
+        "mean_color_distance": 68.87,
+        "max_color_distance": 76.3
       },
       {
-        "region_id": 19,
-        "region_area": 13348,
-        "component_area": 46,
+        "region_id": 49,
+        "region_area": 552,
+        "component_area": 22,
         "bbox": {
-          "left": 888,
+          "left": 927,
           "top": 381,
-          "right": 899,
-          "bottom": 401
+          "right": 931,
+          "bottom": 390
         },
-        "target_color": "#0b151d",
-        "mean_color_distance": 56.85,
-        "max_color_distance": 72.56
-      },
-      {
-        "region_id": 55,
-        "region_area": 8665,
-        "component_area": 75,
-        "bbox": {
-          "left": 636,
-          "top": 383,
-          "right": 652,
-          "bottom": 393
-        },
-        "target_color": "#feefe8",
-        "mean_color_distance": 85.56,
-        "max_color_distance": 175.16
-      },
-      {
-        "region_id": 51,
-        "region_area": 15625,
-        "component_area": 27,
-        "bbox": {
-          "left": 268,
-          "top": 385,
-          "right": 288,
-          "bottom": 388
-        },
-        "target_color": "#fcc11a",
-        "mean_color_distance": 183.91,
-        "max_color_distance": 200.11
-      },
-      {
-        "region_id": 42,
-        "region_area": 1752,
-        "component_area": 46,
-        "bbox": {
-          "left": 547,
-          "top": 385,
-          "right": 574,
-          "bottom": 392
-        },
-        "target_color": "#1965a3",
-        "mean_color_distance": 67.26,
-        "max_color_distance": 116.67
-      },
-      {
-        "region_id": 53,
-        "region_area": 559,
-        "component_area": 41,
-        "bbox": {
-          "left": 884,
-          "top": 385,
-          "right": 893,
-          "bottom": 401
-        },
-        "target_color": "#fcc11a",
-        "mean_color_distance": 112.18,
-        "max_color_distance": 241.93
-      },
-      {
-        "region_id": 47,
-        "region_area": 5178,
-        "component_area": 67,
-        "bbox": {
-          "left": 403,
-          "top": 387,
-          "right": 420,
-          "bottom": 400
-        },
-        "target_color": "#feefe8",
-        "mean_color_distance": 101.69,
-        "max_color_distance": 175.23
-      },
-      {
-        "region_id": 42,
-        "region_area": 1752,
-        "component_area": 29,
-        "bbox": {
-          "left": 571,
-          "top": 387,
-          "right": 589,
-          "bottom": 389
-        },
-        "target_color": "#1965a3",
-        "mean_color_distance": 89.53,
-        "max_color_distance": 161.91
-      },
-      {
-        "region_id": 52,
-        "region_area": 356,
-        "component_area": 84,
-        "bbox": {
-          "left": 653,
-          "top": 388,
-          "right": 667,
-          "bottom": 394
-        },
-        "target_color": "#3b76a0",
-        "mean_color_distance": 67.03,
-        "max_color_distance": 99.42
-      },
-      {
-        "region_id": 33,
-        "region_area": 16648,
-        "component_area": 26,
-        "bbox": {
-          "left": 574,
-          "top": 391,
-          "right": 590,
-          "bottom": 393
-        },
-        "target_color": "#0b151d",
-        "mean_color_distance": 78.56,
-        "max_color_distance": 108.21
-      },
-      {
-        "region_id": 51,
-        "region_area": 15625,
-        "component_area": 31,
-        "bbox": {
-          "left": 299,
-          "top": 395,
-          "right": 314,
-          "bottom": 410
-        },
-        "target_color": "#fcc11a",
-        "mean_color_distance": 220.03,
-        "max_color_distance": 312.19
+        "target_color": "#eccb2c",
+        "mean_color_distance": 81.97,
+        "max_color_distance": 157.06
       },
       {
         "region_id": 54,
-        "region_area": 228,
-        "component_area": 29,
+        "region_area": 8659,
+        "component_area": 69,
         "bbox": {
-          "left": 640,
-          "top": 395,
-          "right": 649,
-          "bottom": 403
+          "left": 636,
+          "top": 383,
+          "right": 650,
+          "bottom": 392
         },
-        "target_color": "#c9746d",
-        "mean_color_distance": 67.1,
-        "max_color_distance": 113.36
+        "target_color": "#feefe8",
+        "mean_color_distance": 84.05,
+        "max_color_distance": 175.16
       },
       {
-        "region_id": 33,
-        "region_area": 16648,
-        "component_area": 41,
+        "region_id": 48,
+        "region_area": 606,
+        "component_area": 38,
         "bbox": {
-          "left": 659,
-          "top": 397,
-          "right": 666,
-          "bottom": 406
-        },
-        "target_color": "#0b151d",
-        "mean_color_distance": 58.68,
-        "max_color_distance": 104.71
-      },
-      {
-        "region_id": 50,
-        "region_area": 663,
-        "component_area": 29,
-        "bbox": {
-          "left": 918,
-          "top": 397,
-          "right": 923,
-          "bottom": 406
-        },
-        "target_color": "#e8c931",
-        "mean_color_distance": 48.4,
-        "max_color_distance": 52.8
-      },
-      {
-        "region_id": 60,
-        "region_area": 1379,
-        "component_area": 70,
-        "bbox": {
-          "left": 212,
-          "top": 398,
-          "right": 240,
+          "left": 746,
+          "top": 388,
+          "right": 764,
           "bottom": 407
         },
-        "target_color": "#feefe8",
-        "mean_color_distance": 113.17,
-        "max_color_distance": 222.42
-      },
-      {
-        "region_id": 28,
-        "region_area": 9539,
-        "component_area": 21,
-        "bbox": {
-          "left": 234,
-          "top": 398,
-          "right": 245,
-          "bottom": 401
-        },
-        "target_color": "#1965a3",
-        "mean_color_distance": 81.09,
-        "max_color_distance": 132.92
-      },
-      {
-        "region_id": 55,
-        "region_area": 8665,
-        "component_area": 39,
-        "bbox": {
-          "left": 606,
-          "top": 398,
-          "right": 618,
-          "bottom": 412
-        },
-        "target_color": "#feefe8",
-        "mean_color_distance": 93.22,
-        "max_color_distance": 145.79
+        "target_color": "#ee9916",
+        "mean_color_distance": 90.43,
+        "max_color_distance": 153.94
       },
       {
         "region_id": 51,
-        "region_area": 15625,
-        "component_area": 27,
+        "region_area": 529,
+        "component_area": 25,
         "bbox": {
-          "left": 245,
-          "top": 399,
-          "right": 254,
-          "bottom": 415
+          "left": 885,
+          "top": 389,
+          "right": 890,
+          "bottom": 399
         },
-        "target_color": "#fcc11a",
-        "mean_color_distance": 59.93,
-        "max_color_distance": 81.93
+        "target_color": "#fcc219",
+        "mean_color_distance": 92.72,
+        "max_color_distance": 187.17
       },
       {
-        "region_id": 56,
-        "region_area": 193,
-        "component_area": 63,
+        "region_id": 47,
+        "region_area": 5072,
+        "component_area": 58,
         "bbox": {
-          "left": 669,
-          "top": 400,
-          "right": 682,
-          "bottom": 412
+          "left": 407,
+          "top": 390,
+          "right": 420,
+          "bottom": 401
         },
-        "target_color": "#1965a3",
-        "mean_color_distance": 70.61,
-        "max_color_distance": 175.26
+        "target_color": "#feefe8",
+        "mean_color_distance": 102.67,
+        "max_color_distance": 175.23
+      },
+      {
+        "region_id": 50,
+        "region_area": 458,
+        "component_area": 29,
+        "bbox": {
+          "left": 653,
+          "top": 390,
+          "right": 666,
+          "bottom": 395
+        },
+        "target_color": "#1965a4",
+        "mean_color_distance": 59.87,
+        "max_color_distance": 97.54
       },
       {
         "region_id": 52,
-        "region_area": 356,
-        "component_area": 104,
+        "region_area": 14774,
+        "component_area": 50,
         "bbox": {
-          "left": 651,
-          "top": 401,
-          "right": 662,
-          "bottom": 425
+          "left": 287,
+          "top": 392,
+          "right": 308,
+          "bottom": 412
         },
-        "target_color": "#3b76a0",
-        "mean_color_distance": 181.24,
-        "max_color_distance": 253.03
+        "target_color": "#fcc219",
+        "mean_color_distance": 63.48,
+        "max_color_distance": 100.16
       },
       {
-        "region_id": 28,
-        "region_area": 9539,
-        "component_area": 35,
+        "region_id": 50,
+        "region_area": 458,
+        "component_area": 131,
         "bbox": {
-          "left": 194,
-          "top": 402,
-          "right": 208,
-          "bottom": 407
-        },
-        "target_color": "#1965a3",
-        "mean_color_distance": 80.95,
-        "max_color_distance": 157.9
-      },
-      {
-        "region_id": 28,
-        "region_area": 9539,
-        "component_area": 21,
-        "bbox": {
-          "left": 213,
-          "top": 402,
-          "right": 226,
-          "bottom": 404
-        },
-        "target_color": "#1965a3",
-        "mean_color_distance": 70.44,
-        "max_color_distance": 124.82
-      },
-      {
-        "region_id": 24,
-        "region_area": 2547,
-        "component_area": 30,
-        "bbox": {
-          "left": 502,
-          "top": 402,
-          "right": 505,
-          "bottom": 415
-        },
-        "target_color": "#1965a3",
-        "mean_color_distance": 149.65,
-        "max_color_distance": 159.78
-      },
-      {
-        "region_id": 53,
-        "region_area": 559,
-        "component_area": 54,
-        "bbox": {
-          "left": 856,
-          "top": 402,
-          "right": 883,
+          "left": 649,
+          "top": 392,
+          "right": 665,
           "bottom": 422
         },
-        "target_color": "#fcc11a",
-        "mean_color_distance": 89.74,
-        "max_color_distance": 194.03
+        "target_color": "#1965a4",
+        "mean_color_distance": 165.35,
+        "max_color_distance": 287.45
       },
       {
-        "region_id": 60,
-        "region_area": 1379,
+        "region_id": 29,
+        "region_area": 9270,
         "component_area": 22,
         "bbox": {
+          "left": 237,
+          "top": 394,
+          "right": 248,
+          "bottom": 401
+        },
+        "target_color": "#1965a4",
+        "mean_color_distance": 75.42,
+        "max_color_distance": 128.24
+      },
+      {
+        "region_id": 54,
+        "region_area": 8659,
+        "component_area": 29,
+        "bbox": {
+          "left": 637,
+          "top": 394,
+          "right": 646,
+          "bottom": 399
+        },
+        "target_color": "#feefe8",
+        "mean_color_distance": 230.07,
+        "max_color_distance": 286.45
+      },
+      {
+        "region_id": 54,
+        "region_area": 8659,
+        "component_area": 29,
+        "bbox": {
+          "left": 608,
+          "top": 398,
+          "right": 618,
+          "bottom": 408
+        },
+        "target_color": "#feefe8",
+        "mean_color_distance": 93.9,
+        "max_color_distance": 147.25
+      },
+      {
+        "region_id": 52,
+        "region_area": 14774,
+        "component_area": 29,
+        "bbox": {
+          "left": 244,
+          "top": 399,
+          "right": 254,
+          "bottom": 417
+        },
+        "target_color": "#fcc219",
+        "mean_color_distance": 60.01,
+        "max_color_distance": 80.98
+      },
+      {
+        "region_id": 50,
+        "region_area": 458,
+        "component_area": 61,
+        "bbox": {
+          "left": 670,
+          "top": 400,
+          "right": 681,
+          "bottom": 412
+        },
+        "target_color": "#1965a4",
+        "mean_color_distance": 65.66,
+        "max_color_distance": 174.84
+      },
+      {
+        "region_id": 59,
+        "region_area": 1310,
+        "component_area": 42,
+        "bbox": {
+          "left": 225,
+          "top": 402,
+          "right": 239,
+          "bottom": 407
+        },
+        "target_color": "#feefe8",
+        "mean_color_distance": 124.44,
+        "max_color_distance": 237.11
+      },
+      {
+        "region_id": 29,
+        "region_area": 9270,
+        "component_area": 22,
+        "bbox": {
+          "left": 199,
+          "top": 404,
+          "right": 207,
+          "bottom": 408
+        },
+        "target_color": "#1965a4",
+        "mean_color_distance": 93.15,
+        "max_color_distance": 156.17
+      },
+      {
+        "region_id": 47,
+        "region_area": 5072,
+        "component_area": 33,
+        "bbox": {
+          "left": 317,
+          "top": 405,
+          "right": 346,
+          "bottom": 407
+        },
+        "target_color": "#feefe8",
+        "mean_color_distance": 133.91,
+        "max_color_distance": 257.44
+      },
+      {
+        "region_id": 59,
+        "region_area": 1310,
+        "component_area": 21,
+        "bbox": {
           "left": 194,
-          "top": 408,
+          "top": 409,
           "right": 200,
           "bottom": 414
         },
         "target_color": "#feefe8",
-        "mean_color_distance": 74.77,
-        "max_color_distance": 159.58
+        "mean_color_distance": 67.69,
+        "max_color_distance": 147.47
+      },
+      {
+        "region_id": 36,
+        "region_area": 2368,
+        "component_area": 42,
+        "bbox": {
+          "left": 161,
+          "top": 413,
+          "right": 177,
+          "bottom": 426
+        },
+        "target_color": "#1965a4",
+        "mean_color_distance": 133.43,
+        "max_color_distance": 181.04
+      },
+      {
+        "region_id": 56,
+        "region_area": 237,
+        "component_area": 69,
+        "bbox": {
+          "left": 508,
+          "top": 414,
+          "right": 525,
+          "bottom": 419
+        },
+        "target_color": "#e48672",
+        "mean_color_distance": 104.47,
+        "max_color_distance": 142.33
+      },
+      {
+        "region_id": 60,
+        "region_area": 313,
+        "component_area": 37,
+        "bbox": {
+          "left": 323,
+          "top": 415,
+          "right": 350,
+          "bottom": 417
+        },
+        "target_color": "#f17b63",
+        "mean_color_distance": 65.79,
+        "max_color_distance": 148.22
+      },
+      {
+        "region_id": 66,
+        "region_area": 109,
+        "component_area": 23,
+        "bbox": {
+          "left": 375,
+          "top": 418,
+          "right": 388,
+          "bottom": 422
+        },
+        "target_color": "#e94c46",
+        "mean_color_distance": 82.68,
+        "max_color_distance": 178.42
+      },
+      {
+        "region_id": 47,
+        "region_area": 5072,
+        "component_area": 23,
+        "bbox": {
+          "left": 400,
+          "top": 418,
+          "right": 410,
+          "bottom": 421
+        },
+        "target_color": "#feefe8",
+        "mean_color_distance": 122.42,
+        "max_color_distance": 228.74
+      },
+      {
+        "region_id": 54,
+        "region_area": 8659,
+        "component_area": 35,
+        "bbox": {
+          "left": 661,
+          "top": 418,
+          "right": 667,
+          "bottom": 433
+        },
+        "target_color": "#feefe8",
+        "mean_color_distance": 131.38,
+        "max_color_distance": 193.02
+      },
+      {
+        "region_id": 70,
+        "region_area": 207,
+        "component_area": 42,
+        "bbox": {
+          "left": 665,
+          "top": 418,
+          "right": 670,
+          "bottom": 438
+        },
+        "target_color": "#ab5b50",
+        "mean_color_distance": 83.94,
+        "max_color_distance": 172.98
+      },
+      {
+        "region_id": 52,
+        "region_area": 14774,
+        "component_area": 23,
+        "bbox": {
+          "left": 284,
+          "top": 420,
+          "right": 295,
+          "bottom": 424
+        },
+        "target_color": "#fcc219",
+        "mean_color_distance": 58.98,
+        "max_color_distance": 97.54
+      },
+      {
+        "region_id": 20,
+        "region_area": 13294,
+        "component_area": 21,
+        "bbox": {
+          "left": 805,
+          "top": 422,
+          "right": 813,
+          "bottom": 425
+        },
+        "target_color": "#0b151d",
+        "mean_color_distance": 48.31,
+        "max_color_distance": 53.53
+      },
+      {
+        "region_id": 62,
+        "region_area": 152,
+        "component_area": 25,
+        "bbox": {
+          "left": 296,
+          "top": 423,
+          "right": 302,
+          "bottom": 427
+        },
+        "target_color": "#ee906a",
+        "mean_color_distance": 70.08,
+        "max_color_distance": 106.48
+      },
+      {
+        "region_id": 68,
+        "region_area": 296,
+        "component_area": 29,
+        "bbox": {
+          "left": 600,
+          "top": 424,
+          "right": 610,
+          "bottom": 439
+        },
+        "target_color": "#1292dc",
+        "mean_color_distance": 112.74,
+        "max_color_distance": 199.22
+      },
+      {
+        "region_id": 20,
+        "region_area": 13294,
+        "component_area": 55,
+        "bbox": {
+          "left": 818,
+          "top": 426,
+          "right": 846,
+          "bottom": 428
+        },
+        "target_color": "#0b151d",
+        "mean_color_distance": 50.94,
+        "max_color_distance": 65.61
       }
     ],
     "merged_protected_detail_examples": [],

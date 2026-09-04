@@ -72,6 +72,7 @@ MIME_BY_EXTENSION = {
     ".webp": "image/webp",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
+    ".svg": "image/svg+xml",
     ".json": "application/json",
 }
 
@@ -206,7 +207,8 @@ class FileWriter:
 
     def copy_image(self, source_path, relative_path, allow_lossy):
         """Copy ảnh, chuyển sang WebP khi được phép và người dùng bật --webp."""
-        if not (self.use_webp and allow_lossy and Image is not None):
+        extension = os.path.splitext(source_path)[1].lower()
+        if extension == ".svg" or not (self.use_webp and allow_lossy and Image is not None):
             return self.copy(source_path, relative_path)
 
         relative_path = os.path.splitext(relative_path)[0] + ".webp"

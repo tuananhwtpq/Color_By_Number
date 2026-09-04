@@ -6,6 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_ROOT="$PROJECT_ROOT/Data"
 GENERATOR="$PROJECT_ROOT/tools/generate_level.py"
+CODEX_PYTHON="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+if [[ -x "$CODEX_PYTHON" ]]; then
+  PYTHON_BIN="$CODEX_PYTHON"
+else
+  PYTHON_BIN="python3"
+fi
 
 if [[ $# -lt 2 ]]; then
   echo "COMMAND LIST:"
@@ -27,6 +33,7 @@ if [[ $# -lt 2 ]]; then
   echo "Ví dụ:"
   echo "  bash tools/import_from_data.sh Cartoons Sonic"
   echo "  bash tools/import_from_data.sh Cartoons Sonic \"Sonic Vietnam\" --line-close-radius 1 --small-region-attach-distance 12"
+  echo "  bash tools/import_from_data.sh Manga 01 --source-line-format svg --allow-low-quality"
   echo "  bash tools/import_category_from_data.sh Data/Animals"
   echo "  bash tools/import_category_from_data.sh Data/Animals --target-category AnimalsNew"
   echo "  bash tools/import_all_data.sh --output-root app/src/main/assets"
@@ -91,6 +98,15 @@ if [[ ! -d "$LEVEL_DIR" ]]; then
   exit 1
 fi
 
+SOURCE_LINE_FORMAT="raster"
+for arg in "$@"; do
+  if [[ "$arg" == "--source-line-format" ]]; then
+    SOURCE_LINE_FORMAT="pending"
+  elif [[ "$SOURCE_LINE_FORMAT" == "pending" ]]; then
+    SOURCE_LINE_FORMAT="$arg"
+  fi
+done
+
 LINE_FILE=""
 COLOR_FILE=""
 
@@ -99,8 +115,15 @@ for candidate in "$LEVEL_DIR"/*; do
   lower_name="$(echo "$file_name" | tr '[:upper:]' '[:lower:]')"
   if [[ -f "$candidate" ]]; then
     case "$lower_name" in
+      *line*.svg)
+        if [[ "$SOURCE_LINE_FORMAT" == "svg" ]]; then
+          LINE_FILE="$candidate"
+        fi
+        ;;
       *line*.png|*line*.jpg|*line*.jpeg|*line*.webp)
-        LINE_FILE="$candidate"
+        if [[ "$SOURCE_LINE_FORMAT" != "svg" ]]; then
+          LINE_FILE="$candidate"
+        fi
         ;;
       *color*.png|*color*.jpg|*color*.jpeg|*color*.webp|*ref*.png|*ref*.jpg|*ref*.jpeg|*ref*.webp|*paint*.png|*paint*.jpg|*paint*.jpeg|*paint*.webp)
         COLOR_FILE="$candidate"
@@ -116,4 +139,4 @@ if [[ -z "$LINE_FILE" || -z "$COLOR_FILE" ]]; then
 fi
 
 cd "$PROJECT_ROOT"
-python3 "$GENERATOR" "$@" single "$LINE_FILE" "$COLOR_FILE" --category "$CATEGORY" --name "$DISPLAY_NAME"
+"$PYTHON_BIN" "$GENERATOR" "$@" single "$LINE_FILE" "$COLOR_FILE" --category "$CATEGORY" --name "$DISPLAY_NAME"

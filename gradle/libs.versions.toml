@@ -21,6 +21,7 @@ playServicesAds = "25.4.0"
 lifecycle = "2.9.4"
 fragmentKtx = "1.8.9"
 activityKtx = "1.13.0"
+androidsvg = "1.4"
 
 
 
@@ -48,6 +49,7 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+androidsvg = { module = "com.caverock:androidsvg-aar", version.ref = "androidsvg" }
 
 
 [plugins]

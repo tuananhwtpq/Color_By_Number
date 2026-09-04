@@ -151,6 +151,7 @@ class RemoteLevelRepositoryImpl(
                 config = config,
                 lineBitmap = bitmaps.line,
                 displayLineBitmap = bitmaps.displayLine,
+                displayLineSvg = null,
                 maskBitmap = bitmaps.mask,
                 detailBitmap = bitmaps.detail,
                 regions = regions

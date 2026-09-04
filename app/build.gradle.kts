@@ -25,6 +25,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PIXCOLOR_BASE_URL", "\"https://pixlory.dktechgroup.com/\"")
+        buildConfigField("Boolean", "USE_REMOTE_CONTENT", "false")
     }
 
     signingConfigs {
@@ -48,8 +49,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("Boolean", "USE_REMOTE_CONTENT", "false")
+        }
+
         release {
             isMinifyEnabled = false
+            buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -109,6 +115,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.shimmer)
+    implementation(libs.androidsvg)
 
     implementation(libs.play.services.ads)
 

@@ -3,6 +3,7 @@ package com.example.baseproject.data.repository
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.BitmapFactory
+import com.caverock.androidsvg.SVG
 import com.example.baseproject.data.CentroidCalculator
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.utils.AssetImageResolver
@@ -53,6 +54,24 @@ class AssetLevelRepositoryImpl(
             }
         }
         return decodeFallback()
+    }
+
+    private fun loadOptionalConfiguredSvg(
+        assetManager: AssetManager,
+        levelPath: String,
+        configuredFileName: String?
+    ): SVG? {
+        if (configuredFileName.isNullOrBlank() || !configuredFileName.endsWith(".svg", ignoreCase = true)) {
+            return null
+        }
+
+        return try {
+            assetManager.open("$levelPath/$configuredFileName").use { input ->
+                SVG.getFromInputStream(input)
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     override suspend fun loadAllLevels(): List<LevelConfig> = withContext(ioDispatcher) {
@@ -134,6 +153,12 @@ class AssetLevelRepositoryImpl(
                 fallbackBasePath = "$levelPath/line"
             ) ?: lineBitmap
 
+            val displayLineSvg = loadOptionalConfiguredSvg(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.displayLine
+            )
+
             val maskBitmap = AssetImageResolver.openResolvedAsset(
                 assetManager,
                 "$category/$levelId/mask"
@@ -166,6 +191,7 @@ class AssetLevelRepositoryImpl(
                 config = config,
                 lineBitmap = lineBitmap,
                 displayLineBitmap = displayLineBitmap,
+                displayLineSvg = displayLineSvg,
                 maskBitmap = maskBitmap,
                 detailBitmap = detailBitmap,
                 regions = regions

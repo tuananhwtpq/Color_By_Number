@@ -6,6 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_ROOT="$PROJECT_ROOT/Data"
 GENERATOR="$PROJECT_ROOT/tools/generate_level.py"
+CODEX_PYTHON="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+if [[ -x "$CODEX_PYTHON" ]]; then
+  PYTHON_BIN="$CODEX_PYTHON"
+else
+  PYTHON_BIN="python3"
+fi
 
 if [[ ! -d "$DATA_ROOT" ]]; then
   echo "Không tìm thấy thư mục Data: $DATA_ROOT"
@@ -28,4 +34,4 @@ if [[ $# -lt 1 ]]; then
 fi
 
 cd "$PROJECT_ROOT"
-python3 "$GENERATOR" "$@" batch "$DATA_ROOT"
+"$PYTHON_BIN" "$GENERATOR" "$@" batch "$DATA_ROOT"

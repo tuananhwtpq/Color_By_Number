@@ -2,6 +2,7 @@ package com.example.baseproject.ui.paint
 
 import android.graphics.Bitmap
 import androidx.annotation.StringRes
+import com.caverock.androidsvg.SVG
 import com.example.baseproject.data.PaletteItem
 import com.example.baseproject.data.RegionData
 
@@ -26,6 +27,7 @@ data class PaintRenderData(
     val levelId: String,
     val lineBitmap: Bitmap,
     val displayLineBitmap: Bitmap,
+    val displayLineSvg: SVG?,
     val maskBitmap: Bitmap,
     val detailBitmap: Bitmap?,
     val regions: List<RegionData>,

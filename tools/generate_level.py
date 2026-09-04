@@ -2,7 +2,9 @@ import argparse
 import json
 import math
 import os
+import re
 import shutil
+import subprocess
 import tempfile
 from collections import Counter, defaultdict, deque
 
@@ -37,6 +39,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_ASSETS_ROOT = os.path.abspath(
     os.path.join(SCRIPT_DIR, "..", "app", "src", "main", "assets")
 )
+SOURCE_LINE_FORMATS = ("raster", "svg")
+DEFAULT_SOURCE_LINE_FORMAT = "raster"
 GENERATION_PROFILE_DEFAULTS = {
     "casual": {
         "target_unique_colors": 48,
@@ -231,6 +235,184 @@ DEFAULT_INK_RECOVERY_RADIUS = 1
 DEFAULT_INK_MIN_CHROMA_VALUE = 60
 DEFAULT_INK_MIN_CHROMA_SPREAD = 18
 SOURCE_STROKE_WALL_THRESHOLD = 180
+
+
+def is_svg_path(path):
+    return os.path.splitext(path)[1].lower() == ".svg"
+
+
+SVG_OPEN_TAG_RE = re.compile(r"<svg\b[^>]*>", re.IGNORECASE | re.DOTALL)
+SVG_CLOSE_TAG_RE = re.compile(r"</svg\s*>", re.IGNORECASE)
+SVG_ATTR_RE_TEMPLATE = r'\s{attr}\s*=\s*(["\'])(.*?)\1'
+
+
+def _svg_attr_pattern(attr):
+    return re.compile(SVG_ATTR_RE_TEMPLATE.format(attr=re.escape(attr)), re.IGNORECASE | re.DOTALL)
+
+
+def _read_svg_attr(tag, attr):
+    match = _svg_attr_pattern(attr).search(tag)
+    return match.group(2) if match else None
+
+
+def _set_svg_attr(tag, attr, value):
+    pattern = _svg_attr_pattern(attr)
+    replacement = f' {attr}="{value}"'
+    if pattern.search(tag):
+        return pattern.sub(replacement, tag, count=1)
+    return tag[:-1] + replacement + ">"
+
+
+def _parse_svg_length(value):
+    if value is None:
+        return None
+    match = re.match(r"\s*([-+]?\d*\.?\d+)", value)
+    return float(match.group(1)) if match else None
+
+
+def _parse_svg_viewbox(value):
+    if not value:
+        return None
+    parts = re.split(r"[\s,]+", value.strip())
+    if len(parts) != 4:
+        return None
+    try:
+        min_x, min_y, width, height = (float(part) for part in parts)
+    except ValueError:
+        return None
+    if width <= 0 or height <= 0:
+        return None
+    return min_x, min_y, width, height
+
+
+def _format_svg_number(value):
+    if abs(value - round(value)) < 0.0001:
+        return str(int(round(value)))
+    return f"{value:.6f}".rstrip("0").rstrip(".")
+
+
+def normalize_svg_to_canvas(svg_path, output_path, width, height):
+    """Write a display SVG whose coordinate system matches the generated level canvas."""
+    with open(svg_path, "r", encoding="utf-8") as input_file:
+        svg_text = input_file.read()
+
+    open_match = SVG_OPEN_TAG_RE.search(svg_text)
+    close_matches = list(SVG_CLOSE_TAG_RE.finditer(svg_text))
+    if not open_match or not close_matches:
+        raise RuntimeError(f"Không thể normalize SVG không hợp lệ: {svg_path}")
+
+    close_match = close_matches[-1]
+    open_tag = open_match.group(0)
+    inner_svg = svg_text[open_match.end():close_match.start()]
+
+    old_viewbox = _parse_svg_viewbox(_read_svg_attr(open_tag, "viewBox"))
+    if old_viewbox:
+        source_min_x, source_min_y, source_width, source_height = old_viewbox
+    else:
+        source_min_x = 0.0
+        source_min_y = 0.0
+        source_width = _parse_svg_length(_read_svg_attr(open_tag, "width")) or float(width)
+        source_height = _parse_svg_length(_read_svg_attr(open_tag, "height")) or float(height)
+
+    scale_x = width / source_width
+    scale_y = height / source_height
+    translate_x = -source_min_x
+    translate_y = -source_min_y
+
+    normalized_tag = open_tag
+    normalized_tag = _set_svg_attr(normalized_tag, "width", str(width))
+    normalized_tag = _set_svg_attr(normalized_tag, "height", str(height))
+    normalized_tag = _set_svg_attr(normalized_tag, "viewBox", f"0 0 {width} {height}")
+    normalized_tag = _set_svg_attr(normalized_tag, "preserveAspectRatio", "none")
+
+    matrix_values = (
+        scale_x,
+        0.0,
+        0.0,
+        scale_y,
+        translate_x * scale_x,
+        translate_y * scale_y,
+    )
+    transform_attr = ""
+    if any(
+        abs(actual - expected) > 0.0001
+        for actual, expected in zip(matrix_values, (1.0, 0.0, 0.0, 1.0, 0.0, 0.0))
+    ):
+        transform_attr = (
+            ' transform="matrix('
+            + " ".join(_format_svg_number(value) for value in matrix_values)
+            + ')"'
+        )
+
+    prefix = svg_text[:open_match.start()]
+    normalized_svg = (
+        f"{prefix}{normalized_tag}\n"
+        f'<rect width="{width}" height="{height}" fill="white"/>\n'
+        f"<g{transform_attr}>"
+        f"{inner_svg}"
+        f"</g>\n"
+        f"</svg>\n"
+    )
+    with open(output_path, "w", encoding="utf-8") as output_file:
+        output_file.write(normalized_svg)
+
+    return {
+        "source_view_box": [
+            source_min_x,
+            source_min_y,
+            source_width,
+            source_height,
+        ],
+        "target_view_box": [0, 0, width, height],
+        "scale_x": scale_x,
+        "scale_y": scale_y,
+    }
+
+
+def rasterize_svg_to_png(svg_path, output_path, width, height):
+    try:
+        import cairosvg
+
+        cairosvg.svg2png(
+            url=svg_path,
+            write_to=output_path,
+            output_width=width,
+            output_height=height,
+        )
+        return
+    except ImportError:
+        pass
+
+    rsvg_convert = shutil.which("rsvg-convert")
+    if rsvg_convert:
+        with open(output_path, "wb") as output_file:
+            subprocess.run(
+                [rsvg_convert, "-w", str(width), "-h", str(height), svg_path],
+                check=True,
+                stdout=output_file,
+            )
+        return
+
+    inkscape = shutil.which("inkscape")
+    if inkscape:
+        subprocess.run(
+            [
+                inkscape,
+                svg_path,
+                "--export-type=png",
+                f"--export-filename={output_path}",
+                f"--export-width={width}",
+                f"--export-height={height}",
+            ],
+            check=True,
+        )
+        return
+
+    raise RuntimeError(
+        "Không thể rasterize SVG line để sinh mask/regions. "
+        "Hãy cài một trong các tool sau rồi chạy lại: "
+        "python3 -m pip install cairosvg, hoặc brew install librsvg, hoặc cài Inkscape."
+    )
 
 
 def preserve_source_strokes_as_walls(binary_img, source_gray, stroke_threshold=SOURCE_STROKE_WALL_THRESHOLD):
@@ -2909,7 +3091,44 @@ def generate_level_assets(
     assumed_zoom=DEFAULT_ASSUMED_ZOOM,
     untouchable_merge_color_threshold=None,
     ink_gap_attach_px=DEFAULT_INK_GAP_ATTACH_PX,
+    source_line_format=DEFAULT_SOURCE_LINE_FORMAT,
 ):
+    if source_line_format not in SOURCE_LINE_FORMATS:
+        raise ValueError(
+            f"source_line_format phải là một trong: {', '.join(SOURCE_LINE_FORMATS)}."
+        )
+
+    original_line_art_path = line_art_path
+    display_line_svg_source_path = None
+    svg_raster_temp_dir = None
+
+    if source_line_format == "svg":
+        if not is_svg_path(line_art_path):
+            raise ValueError(
+                "source_line_format=svg yêu cầu file line đầu vào là .svg "
+                f"(đang nhận: {line_art_path})."
+            )
+        with Image.open(reference_path) as reference_probe_img:
+            raster_width, raster_height = reference_probe_img.size
+        svg_raster_temp_dir = tempfile.mkdtemp(prefix=".svg-line-raster-")
+        line_art_path = os.path.join(svg_raster_temp_dir, "line.png")
+        print(
+            f"Đang rasterize SVG line để sinh mask/regions: {original_line_art_path} "
+            f"-> {line_art_path} ({raster_width}x{raster_height})"
+        )
+        rasterize_svg_to_png(
+            original_line_art_path,
+            line_art_path,
+            width=raster_width,
+            height=raster_height,
+        )
+        display_line_svg_source_path = original_line_art_path
+    elif is_svg_path(line_art_path):
+        raise ValueError(
+            "File line đầu vào là SVG nhưng generator đang ở mode raster. "
+            "Hãy truyền --source-line-format svg."
+        )
+
     print(f"Đang tải ảnh nét vẽ: {line_art_path}")
     resolved_profile, resolved_target_unique_colors = resolve_target_unique_colors(
         category_name=category_name,
@@ -3535,6 +3754,8 @@ def generate_level_assets(
         "mode": "source_similarity_guard",
         "candidate_source": "source_line_no_ink_recovery",
         "uses_segmentation_score": False,
+        "svg_canvas_normalized": bool(display_line_svg_source_path),
+        "svg_canvas_size": [width, height] if display_line_svg_source_path else None,
         "recovered_ink_pixel_pct": recovered_ink_pixel_pct,
         "recovered_ink_overreach_threshold_pct": INK_RECOVERY_OVERREACH_RECOVERED_PCT_THRESHOLD,
         "ink_recovery_overreach": ink_recovery_overreach,
@@ -3588,6 +3809,8 @@ def generate_level_assets(
         "segmentation_line_mode": "selected_preprocessing_candidate",
         "segmentation_line_report": segmentation_line_report,
         "display_line_mode": "safe_source_fallback",
+        "source_line_format": source_line_format,
+        "display_line_asset_format": "svg" if display_line_svg_source_path else "raster",
         "display_line_uses_segmentation_score": False,
         "display_line_report": display_line_report,
         "lost_color_pct": selected_preprocessing.get("lost_color_pct"),
@@ -3625,15 +3848,37 @@ def generate_level_assets(
     legacy_display_line_img.save(legacy_display_line_out_path)
     print(f"Đã lưu ảnh Line hiển thị legacy cho app: {legacy_display_line_out_path}")
 
-    display_line_out_path = os.path.join(output_dir, "display_line.png")
-    display_line_img.save(display_line_out_path)
-    print(
-        "Đã lưu ảnh Line hiển thị an toàn: "
-        f"{display_line_out_path} "
-        f"(selected={display_line_report['selected']}, "
-        f"changed={display_line_report['candidate_changed_pct']}%, "
-        f"mae={display_line_report['candidate_mae']})"
-    )
+    display_line_asset_name = "display_line.png"
+    if display_line_svg_source_path:
+        display_line_asset_name = "display_line.svg"
+        display_line_out_path = os.path.join(output_dir, display_line_asset_name)
+        display_line_svg_normalization = normalize_svg_to_canvas(
+            display_line_svg_source_path,
+            display_line_out_path,
+            width,
+            height,
+        )
+        display_line_raster_out_path = os.path.join(output_dir, "debug_display_line_raster.png")
+        display_line_img.save(display_line_raster_out_path)
+        print(
+            "Đã lưu SVG Line hiển thị đã normalize cho app: "
+            f"{display_line_out_path} "
+            f"(source_viewBox={display_line_svg_normalization['source_view_box']}, "
+            f"target_viewBox={display_line_svg_normalization['target_view_box']}, "
+            f"scale={display_line_svg_normalization['scale_x']:.3f}x"
+            f"{display_line_svg_normalization['scale_y']:.3f})"
+        )
+        print(f"Đã lưu bản raster debug của SVG Line: {display_line_raster_out_path}")
+    else:
+        display_line_out_path = os.path.join(output_dir, display_line_asset_name)
+        display_line_img.save(display_line_out_path)
+        print(
+            "Đã lưu ảnh Line hiển thị an toàn: "
+            f"{display_line_out_path} "
+            f"(selected={display_line_report['selected']}, "
+            f"changed={display_line_report['candidate_changed_pct']}%, "
+            f"mae={display_line_report['candidate_mae']})"
+        )
 
     source_line_out_path = os.path.join(output_dir, "debug_source_line.png")
     source_line_img.save(source_line_out_path)
@@ -3704,7 +3949,7 @@ def generate_level_assets(
             # display_line is the line art users see in the app.
             "source_line": "debug_source_line.png",
             "segmentation_line": "line.png",
-            "display_line": "display_line.png",
+            "display_line": display_line_asset_name,
             "legacy_line_render": "line_render.png",
             # Legacy names kept for current Android/backend compatibility.
             "line_render": "line_render.png",
@@ -3716,6 +3961,7 @@ def generate_level_assets(
             "debug_report": "debug_report.json",
             "debug_source_line": "debug_source_line.png",
             "debug_preview_flat": "debug_preview_flat.png",
+            **({"debug_display_line_raster": "debug_display_line_raster.png"} if display_line_svg_source_path else {}),
         },
         "palette": palette_config,
         "region_palette": region_palette_config,
@@ -3731,7 +3977,11 @@ def generate_level_assets(
         "forced_tiny_region_merges_count": forced_tiny_region_merges_count,
         "remaining_tiny_regions_count": remaining_tiny_regions_count,
         "generation": {
-            "source_mode": "line_plus_reference",
+            "source_mode": (
+                "svg_line_plus_reference"
+                if display_line_svg_source_path
+                else "line_plus_reference"
+            ),
             **runtime_generation_params,
         },
         "generation_params": runtime_generation_params,
@@ -3771,6 +4021,8 @@ def generate_level_assets(
     gate_failures = evaluate_quality_gate(quality_report)
     if gate_failures and not allow_low_quality:
         shutil.rmtree(staging_dir, ignore_errors=True)
+        if svg_raster_temp_dir:
+            shutil.rmtree(svg_raster_temp_dir, ignore_errors=True)
         raise LevelQualityGateError(
             "Level '{level_id}' không đạt chất lượng tối thiểu ({reasons}). "
             "Asset KHÔNG được ghi vào '{final_dir}' (thư mục cũ nếu có vẫn giữ nguyên). "
@@ -3784,6 +4036,8 @@ def generate_level_assets(
     if os.path.isdir(final_output_dir):
         shutil.rmtree(final_output_dir)
     shutil.move(staging_dir, final_output_dir)
+    if svg_raster_temp_dir:
+        shutil.rmtree(svg_raster_temp_dir, ignore_errors=True)
 
     if gate_failures:
         print(
@@ -3977,6 +4231,16 @@ def create_parser():
             "Mặc định generation sẽ raise lỗi và không ghi asset. Chỉ dùng để debug."
         ),
     )
+    parser.add_argument(
+        "--source-line-format",
+        choices=SOURCE_LINE_FORMATS,
+        default=DEFAULT_SOURCE_LINE_FORMAT,
+        help=(
+            "Định dạng file line trong Data. raster = mode cũ dùng ảnh line.png/jpg/webp; "
+            "svg = mode mới dùng line.svg làm display_line đã normalize theo canvas output, "
+            "đồng thời rasterize tạm để sinh mask."
+        ),
+    )
 
     subparsers = parser.add_subparsers(dest="mode", required=True)
 
@@ -4055,7 +4319,7 @@ def create_parser():
     return parser
 
 
-def collect_levels_from_data(input_root):
+def collect_levels_from_data(input_root, source_line_format=DEFAULT_SOURCE_LINE_FORMAT):
     if not os.path.exists(input_root):
         raise FileNotFoundError(f"Thư mục đầu vào '{input_root}' không tồn tại.")
 
@@ -4075,7 +4339,16 @@ def collect_levels_from_data(input_root):
             ref_file = None
             for file_name in os.listdir(data_path):
                 lower_name = file_name.lower()
-                if "line" in lower_name and lower_name.endswith((".png", ".webp", ".jpg", ".jpeg")):
+                if (
+                    "line" in lower_name
+                    and (
+                        (source_line_format == "svg" and lower_name.endswith(".svg"))
+                        or (
+                            source_line_format == "raster"
+                            and lower_name.endswith((".png", ".webp", ".jpg", ".jpeg"))
+                        )
+                    )
+                ):
                     line_file = file_name
                 elif (
                     ("ref" in lower_name or "color" in lower_name or "paint" in lower_name)
@@ -4098,7 +4371,10 @@ def collect_levels_from_data(input_root):
     return levels_to_process
 
 
-def collect_levels_from_single_category(input_category_directory):
+def collect_levels_from_single_category(
+    input_category_directory,
+    source_line_format=DEFAULT_SOURCE_LINE_FORMAT,
+):
     if not os.path.exists(input_category_directory):
         raise FileNotFoundError(
             f"Thư mục category đầu vào '{input_category_directory}' không tồn tại."
@@ -4120,7 +4396,16 @@ def collect_levels_from_single_category(input_category_directory):
         ref_file = None
         for file_name in os.listdir(data_path):
             lower_name = file_name.lower()
-            if "line" in lower_name and lower_name.endswith((".png", ".webp", ".jpg", ".jpeg")):
+            if (
+                "line" in lower_name
+                and (
+                    (source_line_format == "svg" and lower_name.endswith(".svg"))
+                    or (
+                        source_line_format == "raster"
+                        and lower_name.endswith((".png", ".webp", ".jpg", ".jpeg"))
+                    )
+                )
+            ):
                 line_file = file_name
             elif (
                 ("ref" in lower_name or "color" in lower_name or "paint" in lower_name)
@@ -4148,7 +4433,10 @@ def run_batch(args):
     output_root = args.output_root
 
     print(f"=== BẮT ĐẦU XỬ LÝ HÀNG LOẠT TỪ THƯ MỤC: {input_root} ===")
-    levels_to_process = collect_levels_from_data(input_root)
+    levels_to_process = collect_levels_from_data(
+        input_root,
+        source_line_format=args.source_line_format,
+    )
     print(f"Tìm thấy tổng cộng {len(levels_to_process)} tác phẩm hợp lệ.")
     processed_count = 0
     next_id = args.start_id
@@ -4194,9 +4482,10 @@ def run_batch(args):
             ink_core_radius=args.ink_core_radius,
             ink_min_chroma_value=args.ink_min_chroma_value,
             ink_min_chroma_spread=args.ink_min_chroma_spread,
-        min_touch_dp=args.min_touch_dp,
-        assumed_zoom=args.assumed_zoom,
-        untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
+            min_touch_dp=args.min_touch_dp,
+            assumed_zoom=args.assumed_zoom,
+            untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
+            source_line_format=args.source_line_format,
         )
         processed_count += 1
 
@@ -4212,7 +4501,10 @@ def run_batch_single_category(args):
         f"=== BẮT ĐẦU GOM TOÀN BỘ LEVEL TỪ THƯ MỤC: {input_root} "
         f"VÀO CATEGORY: {target_category} ==="
     )
-    levels_to_process = collect_levels_from_data(input_root)
+    levels_to_process = collect_levels_from_data(
+        input_root,
+        source_line_format=args.source_line_format,
+    )
     print(f"Tìm thấy tổng cộng {len(levels_to_process)} tác phẩm hợp lệ.")
     processed_count = 0
     next_id = args.start_id
@@ -4258,9 +4550,10 @@ def run_batch_single_category(args):
             ink_core_radius=args.ink_core_radius,
             ink_min_chroma_value=args.ink_min_chroma_value,
             ink_min_chroma_spread=args.ink_min_chroma_spread,
-        min_touch_dp=args.min_touch_dp,
-        assumed_zoom=args.assumed_zoom,
-        untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
+            min_touch_dp=args.min_touch_dp,
+            assumed_zoom=args.assumed_zoom,
+            untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
+            source_line_format=args.source_line_format,
         )
         processed_count += 1
 
@@ -4273,7 +4566,10 @@ def run_batch_single_category(args):
 def run_batch_source_category(args):
     input_category_directory = args.input_category_directory
     output_root = args.output_root
-    levels_to_process = collect_levels_from_single_category(input_category_directory)
+    levels_to_process = collect_levels_from_single_category(
+        input_category_directory,
+        source_line_format=args.source_line_format,
+    )
     source_category = os.path.basename(os.path.normpath(input_category_directory))
     target_category = args.target_category or source_category
 
@@ -4345,9 +4641,10 @@ def run_batch_source_category(args):
                 ink_core_radius=args.ink_core_radius,
                 ink_min_chroma_value=args.ink_min_chroma_value,
                 ink_min_chroma_spread=args.ink_min_chroma_spread,
-        min_touch_dp=args.min_touch_dp,
-        assumed_zoom=args.assumed_zoom,
-        untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
+                min_touch_dp=args.min_touch_dp,
+                assumed_zoom=args.assumed_zoom,
+                untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
+                source_line_format=args.source_line_format,
             )
             processed_count += 1
         except Exception as error:
@@ -4409,6 +4706,7 @@ def run_single(args):
         min_touch_dp=args.min_touch_dp,
         assumed_zoom=args.assumed_zoom,
         untouchable_merge_color_threshold=args.untouchable_merge_color_threshold,
+        source_line_format=args.source_line_format,
     )
 
 

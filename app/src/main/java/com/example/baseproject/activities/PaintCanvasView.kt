@@ -18,6 +18,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import com.caverock.androidsvg.SVG
 import com.example.baseproject.data.AnimatedFiller
 import com.example.baseproject.data.DetailRevealEngine
 import com.example.baseproject.data.RegionData
@@ -61,6 +62,8 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     private var displayLineBitmap: Bitmap? = null
+    private var displayLineSvg: SVG? = null
+    private var useVectorDisplayLine: Boolean = true
     private var maskWidth: Int = 0
     private var maskHeight: Int = 0
     private var coloredBitmap: Bitmap? = null
@@ -176,6 +179,7 @@ class PaintCanvasView @JvmOverloads constructor(
     suspend fun setBitmapsSuspend(
         logicLine: Bitmap,
         displayLine: Bitmap,
+        displayLineSvg: SVG?,
         mask: Bitmap,
         detail: Bitmap?,
         regionsData: List<RegionData>
@@ -212,6 +216,8 @@ class PaintCanvasView @JvmOverloads constructor(
 
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 displayLineBitmap = displayLine
+                this@PaintCanvasView.displayLineSvg = displayLineSvg
+                useVectorDisplayLine = displayLineSvg != null
                 maskWidth = w
                 maskHeight = h
                 regions = regionsData
@@ -508,7 +514,7 @@ class PaintCanvasView @JvmOverloads constructor(
             canvas.drawColor(THUMBNAIL_BACKGROUND_COLOR)
             canvas.drawBitmap(colored, 0f, 0f, null)
             revealedDetailBitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
-            drawBitmapInMaskBounds(canvas, line, multiplyPaint)
+            drawDisplayLineInMaskBounds(canvas, line)
 
             val scaled = Bitmap.createScaledBitmap(result, thumbSize, thumbSize, true)
             if (scaled != result) {
@@ -996,12 +1002,30 @@ class PaintCanvasView @JvmOverloads constructor(
 
         canvas.save()
         canvas.concat(drawMatrix)
-        drawBitmapInMaskBounds(canvas, line, multiplyPaint)
+        drawDisplayLineInMaskBounds(canvas, line)
         canvas.restore()
     }
 
     private fun drawBitmapInMaskBounds(canvas: Canvas, bitmap: Bitmap, paint: Paint?) {
         bitmapBounds.set(0f, 0f, maskWidth.toFloat(), maskHeight.toFloat())
         canvas.drawBitmap(bitmap, null, bitmapBounds, paint)
+    }
+
+    private fun drawDisplayLineInMaskBounds(canvas: Canvas, fallbackBitmap: Bitmap) {
+        val svg = displayLineSvg
+        if (!useVectorDisplayLine || svg == null) {
+            drawBitmapInMaskBounds(canvas, fallbackBitmap, multiplyPaint)
+            return
+        }
+
+        bitmapBounds.set(0f, 0f, maskWidth.toFloat(), maskHeight.toFloat())
+        val layer = canvas.saveLayer(bitmapBounds, multiplyPaint)
+        try {
+            svg.renderToCanvas(canvas, bitmapBounds)
+        } catch (_: Exception) {
+            canvas.drawBitmap(fallbackBitmap, null, bitmapBounds, null)
+        } finally {
+            canvas.restoreToCount(layer)
+        }
     }
 }

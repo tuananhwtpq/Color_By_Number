@@ -1,6 +1,7 @@
 package com.example.baseproject.app
 
 import android.content.Context
+import com.example.baseproject.BuildConfig
 import com.example.baseproject.data.TimelapseVideoCache
 import com.example.baseproject.data.remote.PixcolorApiClient
 import com.example.baseproject.data.remote.RemoteAssetLoader
@@ -52,20 +53,28 @@ class DefaultAppContainer(context: Context) : AppContainer {
     private val localRealmRepository by lazy { LocalRealmRepositoryImpl() }
 
     override val assetLevelRepository: AssetLevelRepository by lazy {
-        RemoteLevelRepositoryImpl(
-            api = pixcolorApi,
-            assetLoader = remoteAssetLoader,
-            fallback = localAssetLevelRepository,
-            metadataCacheFile = remoteLevelMetadataCacheFile
-        )
+        if (BuildConfig.USE_REMOTE_CONTENT) {
+            RemoteLevelRepositoryImpl(
+                api = pixcolorApi,
+                assetLoader = remoteAssetLoader,
+                fallback = localAssetLevelRepository,
+                metadataCacheFile = remoteLevelMetadataCacheFile
+            )
+        } else {
+            localAssetLevelRepository
+        }
     }
 
     override val collectionRepository: CollectionRepository by lazy {
-        RemoteCollectionRepositoryImpl(
-            api = pixcolorApi,
-            assetLoader = remoteAssetLoader,
-            fallback = localCollectionRepository
-        )
+        if (BuildConfig.USE_REMOTE_CONTENT) {
+            RemoteCollectionRepositoryImpl(
+                api = pixcolorApi,
+                assetLoader = remoteAssetLoader,
+                fallback = localCollectionRepository
+            )
+        } else {
+            localCollectionRepository
+        }
     }
 
     override val paintingProgressRepository: PaintingProgressRepository by lazy {

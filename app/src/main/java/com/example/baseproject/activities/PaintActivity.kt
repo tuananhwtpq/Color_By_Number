@@ -207,6 +207,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     binding.paintCanvas.setBitmapsSuspend(
                         renderData.lineBitmap,
                         renderData.displayLineBitmap,
+                        renderData.displayLineSvg,
                         renderData.maskBitmap,
                         renderData.detailBitmap,
                         renderData.regions

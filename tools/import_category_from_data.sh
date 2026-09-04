@@ -5,6 +5,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GENERATOR="$PROJECT_ROOT/tools/generate_level.py"
+CODEX_PYTHON="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+if [[ -x "$CODEX_PYTHON" ]]; then
+  PYTHON_BIN="$CODEX_PYTHON"
+else
+  PYTHON_BIN="python3"
+fi
 
 if [[ $# -lt 1 ]]; then
   echo "COMMAND LIST:"
@@ -16,6 +22,8 @@ if [[ $# -lt 1 ]]; then
   echo "     bash tools/import_category_from_data.sh Data/Animals --overwrite --continue-on-error"
   echo "  4) Ghi ca level khong dat quality gate de debug:"
   echo "     bash tools/import_category_from_data.sh Data/Animals --overwrite --allow-low-quality"
+  echo "  5) Import category dung color.png + line.svg:"
+  echo "     bash tools/import_category_from_data.sh Data/Manga --source-line-format svg --overwrite --continue-on-error"
   echo
   echo "Cách dùng:"
   echo "  bash tools/import_category_from_data.sh <SourceCategoryFolder> [--target-category <TargetCategory>] [generator options...]"
@@ -64,7 +72,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 cd "$PROJECT_ROOT"
-COMMAND=(python3 "$GENERATOR")
+COMMAND=("$PYTHON_BIN" "$GENERATOR")
 if [[ ${#GLOBAL_ARGS[@]} -gt 0 ]]; then
   COMMAND+=("${GLOBAL_ARGS[@]}")
 fi
