@@ -57,6 +57,8 @@ if [[ $# -lt 2 ]]; then
   echo "python3 tools/audit_line_degradation.py app/src/main/assets --data-root Data --output outputs/line_degradation_audit.csv --html-output outputs/line_degradation_audit.html"
   # export runtime package cho backend import
   echo "python3 tools/export_backend_content.py app/src/main/assets --output-dir outputs/backend_content --zip"
+  #ẽport folder .zip for backend
+  echo "python3 tools/export_backend_content.py app/src/main/assets --output-dir outputs/backend_content --webp --zip --level-zips"
   exit 1
 
 fi

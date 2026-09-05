@@ -17,7 +17,7 @@ Nguồn dữ liệu được gom từ ba nơi trong repo:
 
 Cách chạy (dùng bản python có Pillow):
 
-    /usr/bin/python3 tools/export_backend_content.py --webp --zip
+    /usr/bin/python3 tools/export_backend_content.py --webp --zip --level-zips
 
 Các file KHÔNG được xuất vì runtime không đọc tới: debug_*.png, debug_report.json,
 preview_colored.png, line_render.png.
@@ -635,8 +635,33 @@ def zip_directory(source_dir, zip_path):
                 archive.write(full_path, os.path.relpath(full_path, source_dir))
 
 
+def write_level_zips(output_dir, levels):
+    """Tạo zip riêng cho từng folder files/levels/<level-id>."""
+    files_dir = os.path.join(output_dir, "files")
+    levels_dir = os.path.join(files_dir, "levels")
+    level_zips_dir = os.path.join(files_dir, "level_zips")
+    os.makedirs(level_zips_dir, exist_ok=True)
+
+    created = 0
+    for level in levels:
+        level_id = level["id"]
+        level_dir = os.path.join(levels_dir, level_id)
+        if not os.path.isdir(level_dir):
+            warn("Không tìm thấy folder level để zip: %s" % level_id)
+            continue
+
+        relative_zip_path = os.path.join("level_zips", "%s.zip" % level_id)
+        absolute_zip_path = os.path.join(files_dir, relative_zip_path)
+        zip_directory(level_dir, absolute_zip_path)
+        level["bundleZipPath"] = relative_zip_path.replace(os.sep, "/")
+        created += 1
+
+    return created
+
+
 def build_package(assets_path, res_path, src_path, output_dir, use_webp, webp_quality,
-                  thumbnail_size, min_app_version, min_supported_app_version):
+                  thumbnail_size, min_app_version, min_supported_app_version,
+                  create_level_zips=False):
     writer = FileWriter(output_dir, use_webp, webp_quality)
 
     print("Đang xuất category và level...")
@@ -688,11 +713,17 @@ def build_package(assets_path, res_path, src_path, output_dir, use_webp, webp_qu
         },
         "notes": [
             "Mọi *Path là đường dẫn tương đối trong thư mục files/, ghép với cdnBaseUrl để ra URL.",
+            "bundleZipPath, nếu có, là zip riêng của một level trong thư mục files/level_zips/.",
             "createdAt và updatedAt do backend tự sinh lúc import.",
             "Chuỗi hiển thị trả về dạng map ngôn ngữ, hiện mới có bản 'en'.",
             "Tiến độ người dùng nằm trên máy, backend không cần bảng nào cho phần đó.",
         ],
     }
+
+    level_zip_count = 0
+    if create_level_zips:
+        level_zip_count = write_level_zips(output_dir, levels)
+        manifest["counts"]["levelZips"] = level_zip_count
 
     content_dir = os.path.join(output_dir, "content")
     write_json(os.path.join(content_dir, "manifest.json"), manifest)
@@ -730,6 +761,8 @@ def main():
     parser.add_argument("--zip", dest="zip_path", nargs="?",
                         const=os.path.join("outputs", "backend_content.zip"),
                         help="Đóng gói thêm thành file zip.")
+    parser.add_argument("--level-zips", action="store_true",
+                        help="Tạo thêm zip riêng cho từng folder files/levels/<level-id>.")
     args = parser.parse_args()
 
     if args.webp and Image is None:
@@ -749,6 +782,7 @@ def main():
         thumbnail_size=args.thumbnail_size,
         min_app_version=args.min_app_version,
         min_supported_app_version=args.min_supported_app_version,
+        create_level_zips=args.level_zips,
     )
 
     total_bytes = 0

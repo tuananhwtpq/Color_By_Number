@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 from PIL import Image
@@ -225,6 +226,44 @@ class ExportBackendContentTest(unittest.TestCase):
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "mask.png").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line.webp").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "detail.webp").exists())
+
+    def test_can_create_zip_per_level_outside_level_folder(self):
+        self.make_level()
+
+        _, levels = build_package(
+            assets_path=str(self.assets),
+            res_path=str(self.res),
+            src_path=str(self.src),
+            output_dir=str(self.out),
+            use_webp=False,
+            webp_quality=85,
+            thumbnail_size=512,
+            min_app_version=None,
+            min_supported_app_version=None,
+            create_level_zips=True,
+        )
+
+        level = levels[0]
+        self.assertEqual(level["bundleZipPath"], "level_zips/travel-06.zip")
+        self.assertFalse((self.out / "files" / "levels" / "travel-06" / "travel-06.zip").exists())
+
+        zip_path = self.out / "files" / "level_zips" / "travel-06.zip"
+        self.assertTrue(zip_path.exists())
+        with zipfile.ZipFile(zip_path) as archive:
+            self.assertEqual(
+                sorted(archive.namelist()),
+                [
+                    "config.json",
+                    "detail.png",
+                    "display_line.png",
+                    "line.png",
+                    "mask.png",
+                    "thumbnail.png",
+                ],
+            )
+
+        levels_json = json.loads((self.out / "content" / "levels.json").read_text())
+        self.assertEqual(levels_json[0]["bundleZipPath"], "level_zips/travel-06.zip")
 
 
 if __name__ == "__main__":
