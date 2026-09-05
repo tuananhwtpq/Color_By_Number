@@ -6,8 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_complete_theme_01"
-    tools:context=".activities.PictureCompletedActivity"
-    android:layoutDirection="ltr">
+    android:layoutDirection="ltr"
+    tools:context=".activities.PictureCompletedActivity">
 
     <TextView
         android:id="@+id/tvTitle"
@@ -23,8 +23,8 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/ivCardView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
         android:layout_marginTop="18dp"
         app:cardBackgroundColor="@color/white"
         app:cardCornerRadius="24dp"
@@ -38,8 +38,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle">
 
-        <!-- Card lồng trong để góc PHÍA TRONG cũng được bo: ImageView trần chỉ bị cắt theo
-             bán kính của card ngoài, mà nó lại thụt vào 8dp nên góc trong sẽ gần như vuông. -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/innerCardView"
             android:layout_width="match_parent"

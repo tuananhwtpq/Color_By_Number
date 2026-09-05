@@ -32,10 +32,12 @@ import com.example.baseproject.ui.paint.PaintViewModel
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.SharedPrefManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::inflate) {
@@ -637,7 +639,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         lifecycleScope.launch {
             kotlinx.coroutines.delay(COMPLETED_NAVIGATION_DELAY_MS)
 
-            viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
+            binding.paintCanvas.animateToFitScreen()
+            val completedThumbnail = binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE)
+            withContext(Dispatchers.IO) {
+                viewModel.saveThumbnail(completedThumbnail)
+            }
             playCompletionAnimation()
 
             startActivity(

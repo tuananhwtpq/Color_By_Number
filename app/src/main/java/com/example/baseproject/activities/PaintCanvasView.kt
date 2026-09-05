@@ -28,6 +28,8 @@ import com.example.baseproject.highlight.HighlightThemes
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 class PaintCanvasView @JvmOverloads constructor(
     context: Context,
@@ -55,6 +57,7 @@ class PaintCanvasView @JvmOverloads constructor(
         // co giãn theo zoom như trước.
         private const val LABEL_TEXT_SIZE_PX = 30f
         private const val FILL_ANIMATION_DURATION_MS = 200f
+        private const val COMPLETION_FIT_ANIMATION_DURATION_MS = 420L
         private const val FRAME_DURATION_MS = 16.67f
 
         // Vùng nhỏ hơn mức "thoải mái" vẫn phải hiện số (nếu đã qua ngưỡng ẩn/hiện ở trên),
@@ -122,6 +125,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     private var hideAllLabels: Boolean = false
     private var isInteractionLocked: Boolean = false
+    private var isViewportAnimationLocked: Boolean = false
     private var fillInAnimationEnabled: Boolean = true
 
     private var currentValidMaskColors: Map<Int, Int> = emptyMap()
@@ -136,6 +140,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     private val activeEffects = mutableListOf<TapEffect>()
     private val activeFillers = mutableListOf<AnimatedFiller>()
+    private var viewportAnimator: ValueAnimator? = null
 
     init {
         setupGestureDetectors()
@@ -617,6 +622,74 @@ class PaintCanvasView @JvmOverloads constructor(
         )
     }
 
+    suspend fun animateToFitScreen() {
+        val viewWidth = width.toFloat()
+        val viewHeight = height.toFloat()
+        if (viewWidth == 0f || viewHeight == 0f || maskWidth == 0 || maskHeight == 0) return
+
+        val targetScale = Math.min(viewWidth / maskWidth, viewHeight / maskHeight)
+        val targetTranslateX = (viewWidth - maskWidth * targetScale) / 2f
+        val targetTranslateY = (viewHeight - maskHeight * targetScale) / 2f
+
+        val scaleDelta = Math.abs(scaleFactor - targetScale)
+        val translateDelta = Math.max(
+            Math.abs(translateX - targetTranslateX),
+            Math.abs(translateY - targetTranslateY)
+        )
+        if (scaleDelta < 0.001f && translateDelta < 0.5f) {
+            scaleFactor = targetScale
+            translateX = targetTranslateX
+            translateY = targetTranslateY
+            updateMatrix()
+            return
+        }
+
+        suspendCancellableCoroutine { continuation ->
+            viewportAnimator?.cancel()
+            val startScale = scaleFactor
+            val startTranslateX = translateX
+            val startTranslateY = translateY
+            isViewportAnimationLocked = true
+
+            val animator = ValueAnimator.ofFloat(0f, 1f)
+            viewportAnimator = animator
+            val listener = object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    finish()
+                }
+
+                override fun onAnimationCancel(animation: Animator) {
+                    finish()
+                }
+
+                private fun finish() {
+                    if (viewportAnimator === animator) viewportAnimator = null
+                    isViewportAnimationLocked = false
+                    if (continuation.isActive) continuation.resume(Unit)
+                }
+            }
+
+            continuation.invokeOnCancellation {
+                animator.removeAllListeners()
+                animator.cancel()
+                if (viewportAnimator === animator) viewportAnimator = null
+                isViewportAnimationLocked = false
+            }
+
+            animator.duration = COMPLETION_FIT_ANIMATION_DURATION_MS
+            animator.interpolator = android.view.animation.DecelerateInterpolator()
+            animator.addUpdateListener { anim ->
+                val p = anim.animatedValue as Float
+                scaleFactor = startScale + (targetScale - startScale) * p
+                translateX = startTranslateX + (targetTranslateX - startTranslateX) * p
+                translateY = startTranslateY + (targetTranslateY - startTranslateY) * p
+                updateMatrix()
+            }
+            animator.addListener(listener)
+            animator.start()
+        }
+    }
+
     fun focusOnRegion(cx: Float, cy: Float) {
         val viewWidth = width.toFloat()
         val viewHeight = height.toFloat()
@@ -672,6 +745,7 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (isViewportAnimationLocked) return true
         var handled = scaleDetector.onTouchEvent(event)
         handled = gestureDetector.onTouchEvent(event) || handled
         return handled || super.onTouchEvent(event)
@@ -686,12 +760,15 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     override fun onDetachedFromWindow() {
+        viewportAnimator?.cancel()
+        viewportAnimator = null
         removeCallbacks(animationRunnable)
         activeFillers.forEach { it.recycle() }
         activeFillers.clear()
         activeEffects.clear()
         preparingFillColors.clear()
         isAnimatingLoop = false
+        isViewportAnimationLocked = false
         scope.cancel()
         super.onDetachedFromWindow()
     }
