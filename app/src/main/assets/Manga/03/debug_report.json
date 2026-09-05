@@ -510,12 +510,12 @@
     "line_ink_pct": 9.17,
     "reference_missing": false,
     "reference_required": false,
-    "preview_mae": 8.74,
-    "color_mae": 8.74,
-    "preview_similarity_score": 96.57,
-    "flat_similarity_score": 94.44,
-    "detail_dependency_score": 2.13,
-    "shading_preservation_score": 97.1,
+    "preview_mae": 8.93,
+    "color_mae": 8.93,
+    "preview_similarity_score": 96.5,
+    "flat_similarity_score": 94.36,
+    "detail_dependency_score": 2.14,
+    "shading_preservation_score": 97.0,
     "has_detail": true,
     "giant_region_legitimacy": null,
     "giant_region_reference_color_std": null,
@@ -1227,7 +1227,13 @@
       }
     ],
     "merged_protected_detail_examples": [],
-    "overmerge_risk": "low"
+    "overmerge_risk": "low",
+    "fill_coverage_candidate_pixels": 70630,
+    "fill_coverage_extra_pixels": 70630,
+    "fill_coverage_extra_pct": 6.736,
+    "fill_coverage_expansion_radius": 2,
+    "fill_coverage_line_halo_radius": 2,
+    "fill_coverage_line_threshold": 250
   },
   "recommendation": {
     "action": "REGENERATE_AUTO",
@@ -1237,5 +1243,13 @@
     "design_focus": [
       "line"
     ]
+  },
+  "fill_coverage": {
+    "fill_coverage_candidate_pixels": 70630,
+    "fill_coverage_extra_pixels": 70630,
+    "fill_coverage_extra_pct": 6.736,
+    "fill_coverage_expansion_radius": 2,
+    "fill_coverage_line_halo_radius": 2,
+    "fill_coverage_line_threshold": 250
   }
 }

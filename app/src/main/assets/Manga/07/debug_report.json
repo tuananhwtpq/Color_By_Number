@@ -512,10 +512,10 @@
     "line_ink_pct": 18.76,
     "reference_missing": false,
     "reference_required": false,
-    "preview_mae": 18.28,
-    "color_mae": 18.28,
-    "preview_similarity_score": 92.83,
-    "flat_similarity_score": 90.22,
+    "preview_mae": 18.17,
+    "color_mae": 18.17,
+    "preview_similarity_score": 92.87,
+    "flat_similarity_score": 90.26,
     "detail_dependency_score": 2.61,
     "shading_preservation_score": 93.76,
     "has_detail": true,
@@ -1229,7 +1229,13 @@
       }
     ],
     "merged_protected_detail_examples": [],
-    "overmerge_risk": "low"
+    "overmerge_risk": "low",
+    "fill_coverage_candidate_pixels": 156307,
+    "fill_coverage_extra_pixels": 156307,
+    "fill_coverage_extra_pct": 14.907,
+    "fill_coverage_expansion_radius": 2,
+    "fill_coverage_line_halo_radius": 2,
+    "fill_coverage_line_threshold": 250
   },
   "recommendation": {
     "action": "REGENERATE_AUTO",
@@ -1239,5 +1245,13 @@
     "design_focus": [
       "line"
     ]
+  },
+  "fill_coverage": {
+    "fill_coverage_candidate_pixels": 156307,
+    "fill_coverage_extra_pixels": 156307,
+    "fill_coverage_extra_pct": 14.907,
+    "fill_coverage_expansion_radius": 2,
+    "fill_coverage_line_halo_radius": 2,
+    "fill_coverage_line_threshold": 250
   }
 }

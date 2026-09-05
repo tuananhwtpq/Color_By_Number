@@ -18,5 +18,6 @@ data class LevelBundle(
     val displayLineSvg: SVG? = null,
     val maskBitmap: Bitmap,
     val detailBitmap: Bitmap?,
+    val fillCoverageBitmap: Bitmap? = null,
     val regions: List<RegionData>
 )

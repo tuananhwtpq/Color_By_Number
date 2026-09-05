@@ -122,6 +122,7 @@ data class LevelAssets(
     // bản đồ nhị phân dùng cho logic tô/loang màu.
     @SerializedName("line_render") val lineRender: String? = null,
     @SerializedName("mask") val mask: String? = null,
+    @SerializedName("fill_coverage") val fillCoverage: String? = null,
     @SerializedName("preview") val preview: String? = null,
     @SerializedName("detail") val detail: String? = null,
     @SerializedName("debug_regions") val debugRegions: String? = null,

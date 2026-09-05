@@ -76,6 +76,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     // Arrays for fast processing
     private var maskPixelsArray: IntArray? = null
+    private var fillCoveragePixelsArray: IntArray? = null
     private var coloredPixelsArray: IntArray? = null
     private var hlPixelsArray: IntArray? = null
     private var detailSourcePixelsArray: IntArray? = null
@@ -185,6 +186,7 @@ class PaintCanvasView @JvmOverloads constructor(
         displayLineSvg: SVG?,
         mask: Bitmap,
         detail: Bitmap?,
+        fillCoverage: Bitmap?,
         regionsData: List<RegionData>
     ) =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
@@ -197,6 +199,14 @@ class PaintCanvasView @JvmOverloads constructor(
 
             val maskPx = IntArray(w * h)
             mask.getPixels(maskPx, 0, w, 0, 0, w, h)
+
+            val coveragePx = if (fillCoverage != null && fillCoverage.width == w && fillCoverage.height == h) {
+                IntArray(w * h).also {
+                    fillCoverage.getPixels(it, 0, w, 0, 0, w, h)
+                }
+            } else {
+                null
+            }
 
             val detailPx = if (detail != null && detail.width == w && detail.height == h) {
                 IntArray(w * h).also {
@@ -222,6 +232,7 @@ class PaintCanvasView @JvmOverloads constructor(
                 revealedDetailBitmap = detailRevealBmp
 
                 maskPixelsArray = maskPx
+                fillCoveragePixelsArray = coveragePx
                 coloredPixelsArray = IntArray(w * h)
                 hlPixelsArray = IntArray(w * h)
                 detailSourcePixelsArray = detailPx
@@ -277,6 +288,7 @@ class PaintCanvasView @JvmOverloads constructor(
             if (detailOutPx != null) {
                 java.util.Arrays.fill(detailOutPx, 0)
             }
+            val coveragePx = fillCoveragePixelsArray
 
             // Tối ưu hóa cực đại: Linear Probing Hash Map thuần mảng nguyên thủy (O(1) lookup)
             // Sức chứa phải luôn lớn hơn 2x số phần tử: linear probing lặp vô hạn nếu bảng đầy,
@@ -295,29 +307,32 @@ class PaintCanvasView @JvmOverloads constructor(
                 vals[idx] = v
             }
 
+            fun targetColorForMask(maskColor: Int): Int {
+                if (maskColor == 0) return 0
+                var idxM = maskColor.hashCode() and mask
+                while (true) {
+                    val k = keys[idxM]
+                    if (k == maskColor) return vals[idxM]
+                    if (k == 0) return 0
+                    idxM = (idxM + 1) and mask
+                }
+            }
+
             // Quét đổ màu trực tiếp với 1.1 triệu pixel
             for (i in maskPx.indices) {
                 val maskC = maskPx[i]
 
-                // Tìm trong HashMap
-                var targetC = 0
-                if (maskC != 0) {
-                    var idxM = maskC.hashCode() and mask
-                    while (true) {
-                        val k = keys[idxM]
-                        if (k == maskC) {
-                            targetC = vals[idxM]; break
-                        }
-                        if (k == 0) {
-                            break
-                        }
-                        idxM = (idxM + 1) and mask
-                    }
+                val targetFromMask = targetColorForMask(maskC)
+                val isMaskPixel = targetFromMask != 0
+                val targetC = if (isMaskPixel) {
+                    targetFromMask
+                } else {
+                    targetColorForMask(coveragePx?.getOrNull(i) ?: 0)
                 }
 
                 if (targetC != 0) {
                     colPx[i] = targetC
-                    if (detailSrcPx != null && detailOutPx != null) {
+                    if (isMaskPixel && detailSrcPx != null && detailOutPx != null) {
                         detailOutPx[i] = detailSrcPx[i]
                     }
                 }
@@ -430,6 +445,7 @@ class PaintCanvasView @JvmOverloads constructor(
             revealedDetailPixels = detailOutPx,
             maskColor = maskColor,
             targetColor = targetColor,
+            fillCoveragePixels = fillCoveragePixelsArray,
         )
         colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
         if (detailBmp != null && detailOutPx != null) {

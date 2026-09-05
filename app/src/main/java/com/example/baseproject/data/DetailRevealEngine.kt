@@ -15,12 +15,15 @@ object DetailRevealEngine {
         detailSourcePixels: IntArray?,
         revealedDetailPixels: IntArray?,
         maskColor: Int,
-        targetColor: Int
+        targetColor: Int,
+        fillCoveragePixels: IntArray? = null
     ) {
         for (idx in maskPixels.indices) {
-            if (maskPixels[idx] != maskColor) continue
+            val isMaskPixel = maskPixels[idx] == maskColor
+            val isCoveragePixel = !isMaskPixel && fillCoveragePixels?.getOrNull(idx) == maskColor
+            if (!isMaskPixel && !isCoveragePixel) continue
             coloredPixels[idx] = targetColor
-            if (detailSourcePixels != null && revealedDetailPixels != null) {
+            if (isMaskPixel && detailSourcePixels != null && revealedDetailPixels != null) {
                 revealedDetailPixels[idx] = detailSourcePixels[idx]
             }
         }

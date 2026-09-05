@@ -183,6 +183,8 @@ def compose_variant(
     detail: Image.Image | None,
     target_color: tuple[int, int, int],
     mode: str,
+    fill_coverage: Image.Image | None = None,
+    mask_color: int | None = None,
 ) -> Image.Image:
     if mode == "mask_only":
         fill_alpha = region_alpha
@@ -196,6 +198,14 @@ def compose_variant(
         line_guard = dark_line_alpha(line, 225).filter(ImageFilter.GaussianBlur(0.65))
         soft_edge = ImageChops.multiply(edge_band, line_guard)
         fill_alpha = ImageChops.lighter(region_alpha, soft_edge)
+    elif mode == "generated_fill_coverage":
+        if fill_coverage is None or mask_color is None:
+            fill_alpha = region_alpha
+        else:
+            fill_rgb = fill_coverage.convert("RGB")
+            data = [255 if rgb_to_mask_int(px) == mask_color else 0 for px in fill_rgb.getdata()]
+            fill_alpha = Image.new("L", region_alpha.size)
+            fill_alpha.putdata(data)
     else:
         raise ValueError(mode)
 
@@ -219,6 +229,7 @@ def render_level(level_dir: Path, output_dir: Path, number: int | None, mask_col
 
     mask = load_asset(level_dir, config, "mask", "mask.png")
     detail = load_asset(level_dir, config, "detail", "detail.png")
+    fill_coverage = load_asset(level_dir, config, "fill_coverage", "fill_coverage.png")
     line = load_asset(level_dir, config, "debug_display_line_raster", "display_line.png")
     if line is None:
         line = load_asset(level_dir, config, "display_line", "display_line.png")
@@ -234,10 +245,20 @@ def render_level(level_dir: Path, output_dir: Path, number: int | None, mask_col
         ("block underpaint <160", "block_underpaint_160"),
         ("soft line guard", "soft_line_guard"),
     ]
+    if fill_coverage is not None:
+        variants.append(("generated fill_coverage", "generated_fill_coverage"))
 
     panels = []
     for label, mode in variants:
-        rendered = compose_variant(region_alpha, line, detail, target_color, mode).crop(crop)
+        rendered = compose_variant(
+            region_alpha,
+            line,
+            detail,
+            target_color,
+            mode,
+            fill_coverage=fill_coverage,
+            mask_color=selected_mask,
+        ).crop(crop)
         rendered = rendered.resize((rendered.width * zoom, rendered.height * zoom), Image.Resampling.NEAREST)
         panels.append(label_panel(rendered, label))
 

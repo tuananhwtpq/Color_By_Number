@@ -210,6 +210,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                         renderData.displayLineSvg,
                         renderData.maskBitmap,
                         renderData.detailBitmap,
+                        renderData.fillCoverageBitmap,
                         renderData.regions
                     )
                     if (state.completedColorMap.isNotEmpty()) {

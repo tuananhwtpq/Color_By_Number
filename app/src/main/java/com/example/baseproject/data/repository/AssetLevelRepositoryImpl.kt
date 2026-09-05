@@ -172,6 +172,13 @@ class AssetLevelRepositoryImpl(
                 )
             } ?: error("Failed to decode mask bitmap for $category/$levelId")
 
+            val fillCoverageBitmap = decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.fillCoverage,
+                fallbackBasePath = "$levelPath/fill_coverage"
+            )
+
             val detailBitmap = decodeOptionalConfiguredBitmap(
                 assetManager = assetManager,
                 levelPath = levelPath,
@@ -194,6 +201,7 @@ class AssetLevelRepositoryImpl(
                 displayLineSvg = displayLineSvg,
                 maskBitmap = maskBitmap,
                 detailBitmap = detailBitmap,
+                fillCoverageBitmap = fillCoverageBitmap,
                 regions = regions
             )
         }

@@ -1694,6 +1694,88 @@ def make_flat_colored_image(width, height, mask_img, mask_to_target_rgb):
     return preview
 
 
+def build_fill_coverage_image(
+    width,
+    height,
+    mask_img,
+    display_line_img,
+    expansion_radius=2,
+    line_halo_radius=2,
+    line_threshold=250,
+):
+    """Build a display-only mask that lets color tuck under/near strokes.
+
+    `mask.png` remains the gameplay source of truth. This extra map copies each mask color
+    into a tiny candidate band around that mask only when the pixel is close to visible line
+    art. Android can then color those pixels after a region is completed, hiding white pinholes
+    near strokes without making touch regions larger.
+    """
+    mask_rgb = mask_img.convert("RGB")
+    mask_gray = mask_img.convert("L").point(lambda value: 255 if value > 0 else 0, "L")
+    dilated_mask = mask_gray.filter(ImageFilter.MaxFilter(expansion_radius * 2 + 1))
+    edge_band = ImageChops.subtract(dilated_mask, mask_gray)
+
+    line_mask = display_line_img.convert("L").point(
+        lambda value: 255 if value < line_threshold else 0,
+        "L",
+    )
+    line_halo = line_mask.filter(ImageFilter.MaxFilter(line_halo_radius * 2 + 1))
+    candidate_band = ImageChops.multiply(edge_band, line_halo)
+
+    mask_pixels = mask_rgb.load()
+    candidate_pixels = candidate_band.load()
+    coverage = Image.new("RGB", (width, height), (0, 0, 0))
+    coverage_pixels = coverage.load()
+    queue = deque()
+    assigned_count = 0
+    candidate_count = 0
+
+    for y in range(height):
+        for x in range(width):
+            color = mask_pixels[x, y]
+            if color != (0, 0, 0):
+                coverage_pixels[x, y] = color
+                queue.append((x, y))
+            elif candidate_pixels[x, y] > 0:
+                candidate_count += 1
+
+    directions = (
+        (-1, 0),
+        (1, 0),
+        (0, -1),
+        (0, 1),
+        (-1, -1),
+        (1, -1),
+        (-1, 1),
+        (1, 1),
+    )
+    while queue:
+        x, y = queue.popleft()
+        color = coverage_pixels[x, y]
+        for dx, dy in directions:
+            nx = x + dx
+            ny = y + dy
+            if nx < 0 or ny < 0 or nx >= width or ny >= height:
+                continue
+            if candidate_pixels[nx, ny] == 0:
+                continue
+            if coverage_pixels[nx, ny] != (0, 0, 0):
+                continue
+            coverage_pixels[nx, ny] = color
+            assigned_count += 1
+            queue.append((nx, ny))
+
+    report = {
+        "fill_coverage_candidate_pixels": candidate_count,
+        "fill_coverage_extra_pixels": assigned_count,
+        "fill_coverage_extra_pct": round(assigned_count * 100.0 / max(1, width * height), 3),
+        "fill_coverage_expansion_radius": expansion_radius,
+        "fill_coverage_line_halo_radius": line_halo_radius,
+        "fill_coverage_line_threshold": line_threshold,
+    }
+    return coverage, report
+
+
 def apply_line_overlay(preview, line_img):
     line_gray = line_img.convert("L")
     line_pixels = line_gray.load()
@@ -1758,8 +1840,21 @@ def composite_detail_over_flat(flat_preview_img, detail_img):
     return Image.alpha_composite(flat_preview_img.convert("RGBA"), detail_img).convert("RGB")
 
 
-def make_preview_colored_image(width, height, mask_img, line_img, mask_to_target_rgb, detail_img=None):
-    flat_preview = make_flat_colored_image(width, height, mask_img, mask_to_target_rgb)
+def make_preview_colored_image(
+    width,
+    height,
+    mask_img,
+    line_img,
+    mask_to_target_rgb,
+    detail_img=None,
+    fill_coverage_img=None,
+):
+    flat_preview = make_flat_colored_image(
+        width,
+        height,
+        fill_coverage_img if fill_coverage_img is not None else mask_img,
+        mask_to_target_rgb,
+    )
     detailed_preview = composite_detail_over_flat(flat_preview, detail_img)
     return apply_line_overlay(detailed_preview, line_img)
 
@@ -3976,10 +4071,23 @@ def generate_level_assets(
     source_line_img.save(source_line_out_path)
     print(f"Đã lưu ảnh Line gốc để debug: {source_line_out_path}")
 
-    flat_preview_img = make_flat_colored_image(
+    fill_coverage_img, fill_coverage_report = build_fill_coverage_image(
         width=width,
         height=height,
         mask_img=mask_img,
+        display_line_img=display_line_img,
+    )
+    fill_coverage_out_path = os.path.join(output_dir, "fill_coverage.png")
+    fill_coverage_img.save(fill_coverage_out_path)
+    print(
+        f"Đã lưu mask coverage chống hở viền: {fill_coverage_out_path} "
+        f"(extra_pixels={fill_coverage_report['fill_coverage_extra_pixels']})"
+    )
+
+    flat_preview_img = make_flat_colored_image(
+        width=width,
+        height=height,
+        mask_img=fill_coverage_img,
         mask_to_target_rgb=mask_to_target_rgb,
     )
     flat_preview_out_path = os.path.join(output_dir, "debug_preview_flat.png")
@@ -4005,6 +4113,7 @@ def generate_level_assets(
         line_img=display_line_img,
         mask_to_target_rgb=mask_to_target_rgb,
         detail_img=detail_img,
+        fill_coverage_img=fill_coverage_img,
     )
     preview_out_path = os.path.join(output_dir, "preview_colored.png")
     preview_img.save(preview_out_path)
@@ -4047,6 +4156,7 @@ def generate_level_assets(
             "line_render": "line_render.png",
             "line": "line.png",
             "mask": "mask.png",
+            "fill_coverage": "fill_coverage.png",
             "preview": "preview_colored.png",
             "detail": "detail.png",
             "debug_regions": "debug_regions.png",
@@ -4086,6 +4196,7 @@ def generate_level_assets(
         "final_merge_threshold": palette_result["final_merge_threshold"],
         "palette_reduction_passes": palette_result["palette_reduction_passes"],
         "palette_reduction_reason": palette_result["palette_reduction_reason"],
+        "fill_coverage": fill_coverage_report,
         "absorbed_small_color_count": absorbed_small_color_count,
         "compat": {
             "region_palette_entries": True,
@@ -4102,6 +4213,8 @@ def generate_level_assets(
         legacy_quality_report,
         evaluate_level_dir(output_dir, reference_path=reference_path),
     )
+    quality_report.setdefault("metrics", {}).update(fill_coverage_report)
+    quality_report["fill_coverage"] = fill_coverage_report
     debug_report_out_path = os.path.join(output_dir, "debug_report.json")
     with open(debug_report_out_path, "w", encoding="utf-8") as output_file:
         json.dump(quality_report, output_file, indent=2, ensure_ascii=False)

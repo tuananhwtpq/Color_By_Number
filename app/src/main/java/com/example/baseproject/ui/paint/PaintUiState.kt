@@ -30,6 +30,7 @@ data class PaintRenderData(
     val displayLineSvg: SVG?,
     val maskBitmap: Bitmap,
     val detailBitmap: Bitmap?,
+    val fillCoverageBitmap: Bitmap?,
     val regions: List<RegionData>,
     val allMaskColorsToTargetColors: Map<Int, Int>
 )

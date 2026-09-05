@@ -60,7 +60,7 @@ if [[ $# -lt 2 ]]; then
   #ẽport folder .zip for backend
   echo "python3 tools/export_backend_content.py app/src/main/assets --output-dir outputs/backend_content --webp --zip --level-zips"
   #echo lệnh mớii cho file svg
-  echo "bash tools/import_category_from_data.sh Data/Summer --source-line-format svg --overwrite --allow-low-quality --continue-on-error"
+  echo "bash tools/import_category_from_data.sh "Data/Fairy Tail" --source-line-format svg --overwrite --allow-low-quality --continue-on-error"
   exit 1
 
 fi

@@ -89,6 +89,7 @@ class PaintViewModel(
                             displayLineSvg = bundle.displayLineSvg,
                             maskBitmap = bundle.maskBitmap,
                             detailBitmap = bundle.detailBitmap,
+                            fillCoverageBitmap = bundle.fillCoverageBitmap,
                             regions = bundle.regions,
                             allMaskColorsToTargetColors = allRegions.associate {
                                 it.getMaskColorInt() to it.getTargetColorInt()

@@ -13,6 +13,7 @@
     "line_render": "line_render.png",
     "line": "line.png",
     "mask": "mask.png",
+    "fill_coverage": "fill_coverage.png",
     "preview": "preview_colored.png",
     "detail": "detail.png",
     "debug_regions": "debug_regions.png",
@@ -12423,6 +12424,14 @@
   "final_merge_threshold": 48.0,
   "palette_reduction_passes": 6,
   "palette_reduction_reason": "within_limit",
+  "fill_coverage": {
+    "fill_coverage_candidate_pixels": 156307,
+    "fill_coverage_extra_pixels": 156307,
+    "fill_coverage_extra_pct": 14.907,
+    "fill_coverage_expansion_radius": 2,
+    "fill_coverage_line_halo_radius": 2,
+    "fill_coverage_line_threshold": 250
+  },
   "absorbed_small_color_count": 2,
   "compat": {
     "region_palette_entries": true,
