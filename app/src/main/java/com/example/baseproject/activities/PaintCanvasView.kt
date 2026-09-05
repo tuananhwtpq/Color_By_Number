@@ -76,7 +76,6 @@ class PaintCanvasView @JvmOverloads constructor(
 
     // Arrays for fast processing
     private var maskPixelsArray: IntArray? = null
-    private var linePixelsArray: IntArray? = null
     private var coloredPixelsArray: IntArray? = null
     private var hlPixelsArray: IntArray? = null
     private var detailSourcePixelsArray: IntArray? = null
@@ -207,14 +206,6 @@ class PaintCanvasView @JvmOverloads constructor(
                 null
             }
 
-            val lp = if (logicLine.width == w && logicLine.height == h) {
-                IntArray(w * h).also {
-                    logicLine.getPixels(it, 0, w, 0, 0, w, h)
-                }
-            } else {
-                IntArray(w * h)
-            }
-
             // Giải phóng maskBitmap để tiết kiệm 4.6MB RAM
             mask.recycle()
 
@@ -232,7 +223,6 @@ class PaintCanvasView @JvmOverloads constructor(
 
                 maskPixelsArray = maskPx
                 coloredPixelsArray = IntArray(w * h)
-                linePixelsArray = lp
                 hlPixelsArray = IntArray(w * h)
                 detailSourcePixelsArray = detailPx
                 revealedDetailPixelsArray = if (detailPx != null) IntArray(w * h) else null
@@ -279,7 +269,6 @@ class PaintCanvasView @JvmOverloads constructor(
             if (completedMap.isEmpty()) return@withContext
 
             val maskPx = maskPixelsArray ?: return@withContext
-            val linePx = linePixelsArray ?: return@withContext
             val colPx = coloredPixelsArray ?: return@withContext
             val detailSrcPx = detailSourcePixelsArray
             val detailOutPx = revealedDetailPixelsArray
@@ -330,41 +319,6 @@ class PaintCanvasView @JvmOverloads constructor(
                     colPx[i] = targetC
                     if (detailSrcPx != null && detailOutPx != null) {
                         detailOutPx[i] = detailSrcPx[i]
-                    }
-                } else if (maskC != -1) { // maskC != White
-                    // Color Bleeding cho những pixel viền đen
-                    val lineC = linePx[i]
-                    if (lineC != 0) {
-                        val r = (lineC shr 16) and 0xFF
-                        val g = (lineC shr 8) and 0xFF
-                        val b = lineC and 0xFF
-                        if ((r + g + b) / 3 < 240) {
-                            val x = i % w
-                            val y = i / w
-                            var bleedColor = 0
-
-                            // Hàm helper để check bleed
-                            fun checkBleed(nIdx: Int): Int {
-                                val nMaskC = maskPx[nIdx]
-                                if (nMaskC == 0) return 0
-                                var idxM = nMaskC.hashCode() and mask
-                                while (true) {
-                                    val k = keys[idxM]
-                                    if (k == nMaskC) return vals[idxM]
-                                    if (k == 0) return 0
-                                    idxM = (idxM + 1) and mask
-                                }
-                            }
-
-                            if (x > 0) bleedColor = checkBleed(i - 1)
-                            if (bleedColor == 0 && x < w - 1) bleedColor = checkBleed(i + 1)
-                            if (bleedColor == 0 && y > 0) bleedColor = checkBleed(i - w)
-                            if (bleedColor == 0 && y < h - 1) bleedColor = checkBleed(i + w)
-
-                            if (bleedColor != 0) {
-                                colPx[i] = bleedColor
-                            }
-                        }
                     }
                 }
             }
@@ -712,7 +666,6 @@ class PaintCanvasView @JvmOverloads constructor(
         val clickedColor = maskPixelsArray!![startY * maskWidth + startX]
 
         val maskPx = maskPixelsArray ?: return
-        val linePx = linePixelsArray ?: return
         val colPx = coloredPixelsArray ?: return
 
         val targetColor = currentValidMaskColors[clickedColor] ?: return
@@ -730,7 +683,6 @@ class PaintCanvasView @JvmOverloads constructor(
 
         val filler = AnimatedFiller(
             maskPixels = maskPx,
-            linePixels = linePx,
             coloredPixels = colPx,
             width = maskWidth,
             height = maskHeight,
@@ -745,22 +697,6 @@ class PaintCanvasView @JvmOverloads constructor(
             detailPixels = detailSourcePixelsArray
         )
 
-        // DEBUG: kiểm tra xem vùng vừa tap có chia sẻ pixel viền (bleed) với filler nào
-        // đang chạy không — nếu có, pixel đó sẽ bị filler xong SAU ghi đè lên (last-write-wins).
-        if (activeFillers.isNotEmpty()) {
-            val newIndicesSet = filler.indices.toHashSet()
-            for (other in activeFillers) {
-                val overlap = other.indices.count { it in newIndicesSet }
-                if (overlap > 0) {
-                    Log.w(
-                        DBG_TAG,
-                        "BLEED_OVERLAP newMask=$clickedColor(${Integer.toHexString(clickedColor)}) " +
-                            "vsActiveMask=${other.maskColor}(${Integer.toHexString(other.maskColor)}) " +
-                            "overlapPixels=$overlap t=${System.currentTimeMillis()}"
-                    )
-                }
-            }
-        }
         Log.d(
             DBG_TAG,
             "TAP_START region=${region?.number} mask=$clickedColor(${Integer.toHexString(clickedColor)}) " +
@@ -957,7 +893,7 @@ class PaintCanvasView @JvmOverloads constructor(
             canvas.clipPath(clipPath)
 
             // Vẽ bitmap nhỏ chứa sẵn mảng màu tĩnh
-            canvas.drawBitmap(filler.localBitmap, filler.left.toFloat(), filler.top.toFloat(), null)
+            canvas.drawBitmap(filler.localBitmap, filler.left.toFloat(), filler.top.toFloat(), normalPaint)
             canvas.restore()
         }
         revealedDetailBitmap?.let { canvas.drawBitmap(it, drawMatrix, normalPaint) }

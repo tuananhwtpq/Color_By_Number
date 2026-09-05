@@ -56,7 +56,6 @@ internal data class FillRegionPixels(
 internal object FillRegionCollector {
     fun collect(
         maskPixels: IntArray,
-        linePixels: IntArray,
         width: Int,
         height: Int,
         maskColor: Int,
@@ -87,9 +86,8 @@ internal object FillRegionCollector {
         var maxY = startY
 
         // Nối 8 hướng (kể cả 4 đường chéo): hình dạng mảnh/cong (mắt, chi tiết nhỏ) có thể có
-        // các pixel cùng mã màu chỉ dính nhau qua đường chéo — nối 4 hướng bỏ sót các pixel đó,
-        // khiến vùng bị tô loang không phủ hết dù revealDetailForMaskColor (quét theo mã màu,
-        // không quan tâm hướng nối) vẫn phủ chi tiết lên, gây lệch giữa 2 lớp.
+        // các pixel cùng mã màu chỉ dính nhau qua đường chéo. Vùng animation chỉ gồm pixel mask
+        // thật để tránh tô lan sang line/nền khi line hiển thị không trùng line logic.
         val dx = intArrayOf(-1, 1, 0, 0, -1, -1, 1, 1)
         val dy = intArrayOf(0, 0, -1, 1, -1, 1, -1, 1)
 
@@ -111,14 +109,11 @@ internal object FillRegionCollector {
                 val nIdx = ny * width + nx
                 if (visited[nIdx]) continue
 
-                if (maskPixels[nIdx] == maskColor) {
-                    visited[nIdx] = true
-                    indices.add(nIdx)
-                    queue.add(nIdx)
-                } else if (isBleedPixel(linePixels[nIdx])) {
-                    visited[nIdx] = true
-                    indices.add(nIdx)
-                }
+                if (maskPixels[nIdx] != maskColor) continue
+
+                visited[nIdx] = true
+                indices.add(nIdx)
+                queue.add(nIdx)
             }
         }
 
@@ -129,13 +124,6 @@ internal object FillRegionCollector {
             minY = minY,
             maxY = maxY
         )
-    }
-
-    private fun isBleedPixel(linePixel: Int): Boolean {
-        val r = (linePixel shr 16) and 0xFF
-        val g = (linePixel shr 8) and 0xFF
-        val b = linePixel and 0xFF
-        return (r + g + b) / 3 < 240
     }
 }
 
@@ -158,7 +146,6 @@ private class GrowingIntArray(initialCapacity: Int) {
 
 class AnimatedFiller(
     private val maskPixels: IntArray,
-    private val linePixels: IntArray,
     private val coloredPixels: IntArray,
     private val width: Int,
     private val height: Int,
@@ -178,14 +165,12 @@ class AnimatedFiller(
     val top: Int
     var currentRadius = 0f
     val maxRadius: Float
-    // internal (thay vì private) tạm thời để PaintCanvasView có thể log kiểm tra
-    // chồng lấn pixel viền (bleed) giữa các filler đang chạy song song — phục vụ debug.
+    // internal để PaintCanvasView có thể clear highlight theo đúng vùng animation.
     internal val indices: IntArray
 
     init {
         val region = FillRegionCollector.collect(
             maskPixels = maskPixels,
-            linePixels = linePixels,
             width = width,
             height = height,
             maskColor = maskColor,
@@ -195,12 +180,10 @@ class AnimatedFiller(
         )
         indices = region.indices
 
-        // Bounding box cần được mở rộng thêm 1 pixel mỗi chiều
-        // để chứa các điểm ảnh viền đen (Color Bleeding) nằm ngoài vùng mask
-        left = Math.max(0, region.minX - 1)
-        top = Math.max(0, region.minY - 1)
-        val right = Math.min(width - 1, region.maxX + 1)
-        val bottom = Math.min(height - 1, region.maxY + 1)
+        left = region.minX
+        top = region.minY
+        val right = region.maxX
+        val bottom = region.maxY
 
         val bw = right - left + 1
         val bh = bottom - top + 1
@@ -231,8 +214,7 @@ class AnimatedFiller(
     /**
      * Màu hiển thị khi đang loang.
      *
-     * Pixel thuộc mask thật dùng cùng công thức alpha-over với revealedDetailBitmap. Pixel
-     * bleed ngoài mask giữ màu phẳng, vì đường finish/restore cũng không reveal detail ở đó.
+     * Pixel thuộc mask thật dùng cùng công thức alpha-over với revealedDetailBitmap.
      */
     private fun colorWithDetail(index: Int): Int {
         return FillColorComposer.colorWithOptionalDetail(

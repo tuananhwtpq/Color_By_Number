@@ -16,16 +16,25 @@ class DetailRevealEngineTest {
         )
         val detailOut = IntArray(4)
 
-        DetailRevealEngine.revealDetailForMaskColor(
+        val coloredPixels = IntArray(4)
+        val targetColor = 0xFFAA5500.toInt()
+
+        DetailRevealEngine.completeRegionForMaskColor(
             maskPixels = maskPixels,
+            coloredPixels = coloredPixels,
             detailSourcePixels = detailSource,
             revealedDetailPixels = detailOut,
             maskColor = 0x000001,
+            targetColor = targetColor,
         )
 
         assertArrayEquals(
             intArrayOf(0x11223344, 0, 0x99aabbcc.toInt(), 0),
             detailOut
+        )
+        assertArrayEquals(
+            intArrayOf(targetColor, 0, targetColor, 0),
+            coloredPixels
         )
     }
 }
