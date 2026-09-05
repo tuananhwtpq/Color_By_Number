@@ -25,6 +25,9 @@ import com.example.baseproject.data.RegionData
 import com.example.baseproject.highlight.HighlightRenderer
 import com.example.baseproject.highlight.HighlightTheme
 import com.example.baseproject.highlight.HighlightThemes
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class PaintCanvasView @JvmOverloads constructor(
     context: Context,
@@ -71,7 +74,7 @@ class PaintCanvasView @JvmOverloads constructor(
     private var revealedDetailBitmap: Bitmap? = null
 
     // Coroutine Scope cho PaintCanvasView
-    private val scope =
+    private var scope =
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
 
     // Arrays for fast processing
@@ -125,6 +128,7 @@ class PaintCanvasView @JvmOverloads constructor(
     private var highlightTheme: HighlightTheme = HighlightThemes.defaultChecker()
     private var highlightEnabled: Boolean = true
     private var currentHighlightTargets: IntArray = IntArray(0)
+    private val preparingFillColors = mutableSetOf<Int>()
 
     data class TapEffect(val x: Float, val y: Float, val color: Int) {
         var progress: Float = 0f
@@ -226,6 +230,9 @@ class PaintCanvasView @JvmOverloads constructor(
                 maskWidth = w
                 maskHeight = h
                 regions = regionsData
+                activeFillers.forEach { it.recycle() }
+                activeFillers.clear()
+                preparingFillColors.clear()
 
                 coloredBitmap = coloredBmp
                 highlightBitmap = highlightBmp
@@ -391,7 +398,9 @@ class PaintCanvasView @JvmOverloads constructor(
             Exception("stack trace")
         )
         completedMaskColors = emptySet()
+        activeFillers.forEach { it.recycle() }
         activeFillers.clear()
+        preparingFillColors.clear()
         val colArr = coloredPixelsArray ?: return
         for (i in colArr.indices) {
             colArr[i] = 0 // Transparent
@@ -668,6 +677,25 @@ class PaintCanvasView @JvmOverloads constructor(
         return handled || super.onTouchEvent(event)
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!scope.isActive) {
+            scope =
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(animationRunnable)
+        activeFillers.forEach { it.recycle() }
+        activeFillers.clear()
+        activeEffects.clear()
+        preparingFillColors.clear()
+        isAnimatingLoop = false
+        scope.cancel()
+        super.onDetachedFromWindow()
+    }
+
     private fun handleTap(x: Float, y: Float) {
         if (isInteractionLocked) return
         if (maskWidth == 0 || maskHeight == 0) return
@@ -688,6 +716,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
         // Tránh trùng lặp fill
         if (activeFillers.any { it.maskColor == clickedColor }) return
+        if (preparingFillColors.contains(clickedColor)) return
 
         if (!fillInAnimationEnabled) {
             completeInstantFill(clickedColor, targetColor)
@@ -696,57 +725,86 @@ class PaintCanvasView @JvmOverloads constructor(
 
         val region = regions.find { it.maskColorInt == clickedColor }
         val maxQueueSize = (region?.area ?: (maskWidth * maskHeight / 10)) + 1000
+        val widthSnapshot = maskWidth
+        val heightSnapshot = maskHeight
+        val detailPx = detailSourcePixelsArray
+        val coveragePx = fillCoveragePixelsArray
 
-        val filler = AnimatedFiller(
-            maskPixels = maskPx,
-            coloredPixels = colPx,
-            width = maskWidth,
-            height = maskHeight,
-            maskColor = clickedColor,
-            targetColor = targetColor,
-            startX = startX,
-            startY = startY,
-            maxQueueSize = maxQueueSize,
-            onFinished = {
-                onRegionFilledListener?.invoke(it)
-            },
-            detailPixels = detailSourcePixelsArray
-        )
-
-        Log.d(
-            DBG_TAG,
-            "TAP_START region=${region?.number} mask=$clickedColor(${Integer.toHexString(clickedColor)}) " +
-                "indices=${filler.indices.size} activeFillersBefore=${activeFillers.map { it.maskColor }} " +
-                "hasDetailData=${detailSourcePixelsArray != null} t=${System.currentTimeMillis()}"
-        )
-        activeFillers.add(filler)
-
-        // Cập nhật ngay lập tức: Xóa highlight của mảng màu này để animation hiện rõ
-        val hl = highlightBitmap
-        val hlPx = hlPixelsArray
-        if (hl != null && hlPx != null) {
-            filler.clearHighlight(hlPx)
-            hl.setPixels(hlPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
-            currentHighlightTargets =
-                currentHighlightTargets.filter { it != clickedColor }.toIntArray()
-        }
-
-        if (region != null) {
-            val effect = TapEffect(region.centerX, region.centerY, targetColor)
-            activeEffects.add(effect)
-            val animator = ValueAnimator.ofFloat(0f, 1f)
-            animator.duration = 600
-            animator.addUpdateListener { anim ->
-                effect.progress = anim.animatedValue as Float
-            }
-            animator.addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    activeEffects.remove(effect)
+        preparingFillColors.add(clickedColor)
+        scope.launch {
+            var filler: AnimatedFiller? = null
+            try {
+                filler = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    AnimatedFiller(
+                        maskPixels = maskPx,
+                        coloredPixels = colPx,
+                        width = widthSnapshot,
+                        height = heightSnapshot,
+                        maskColor = clickedColor,
+                        targetColor = targetColor,
+                        startX = startX,
+                        startY = startY,
+                        maxQueueSize = maxQueueSize,
+                        onFinished = {
+                            onRegionFilledListener?.invoke(it)
+                        },
+                        detailPixels = detailPx,
+                        fillCoveragePixels = coveragePx
+                    )
                 }
-            })
-            animator.start()
+
+                if (
+                    maskPixelsArray !== maskPx ||
+                    coloredPixelsArray !== colPx ||
+                    maskWidth != widthSnapshot ||
+                    maskHeight != heightSnapshot ||
+                    completedMaskColors.contains(clickedColor) ||
+                    currentValidMaskColors[clickedColor] != targetColor ||
+                    activeFillers.any { it.maskColor == clickedColor }
+                ) {
+                    filler.recycle()
+                    return@launch
+                }
+
+                Log.d(
+                    DBG_TAG,
+                    "TAP_START region=${region?.number} mask=$clickedColor(${Integer.toHexString(clickedColor)}) " +
+                        "indices=${filler.indices.size} activeFillersBefore=${activeFillers.map { it.maskColor }} " +
+                        "hasDetailData=${detailPx != null} hasFillCoverage=${coveragePx != null} " +
+                        "t=${System.currentTimeMillis()}"
+                )
+                activeFillers.add(filler)
+
+                // Cập nhật ngay lập tức: Xóa highlight của mảng màu này để animation hiện rõ
+                val hl = highlightBitmap
+                val hlPx = hlPixelsArray
+                if (hl != null && hlPx != null) {
+                    filler.clearHighlight(hlPx)
+                    hl.setPixels(hlPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+                    currentHighlightTargets =
+                        currentHighlightTargets.filter { it != clickedColor }.toIntArray()
+                }
+
+                if (region != null) {
+                    val effect = TapEffect(region.centerX, region.centerY, targetColor)
+                    activeEffects.add(effect)
+                    val animator = ValueAnimator.ofFloat(0f, 1f)
+                    animator.duration = 600
+                    animator.addUpdateListener { anim ->
+                        effect.progress = anim.animatedValue as Float
+                    }
+                    animator.addListener(object : AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: Animator) {
+                            activeEffects.remove(effect)
+                        }
+                    })
+                    animator.start()
+                }
+                startAnimationLoop()
+            } finally {
+                preparingFillColors.remove(clickedColor)
+            }
         }
-        startAnimationLoop()
     }
 
     private fun getForgivingPos(tapX: Int, tapY: Int): Pair<Int, Int>? {
@@ -811,10 +869,9 @@ class PaintCanvasView @JvmOverloads constructor(
                 val isRunning = filler.tick(speed)
                 if (!isRunning) {
                     iterator.remove()
-                    // Khi filler kết thúc: tick() đã tô màu phẳng cho cụm liên thông cục bộ
-                    // (để có hiệu ứng loang), completeRegionForMaskColor() quét nốt toàn ảnh để
-                    // tô/phủ chi tiết cho MỌI pixel còn lại cùng mã màu — kể cả ở cụm tách rời
-                    // khác — rồi đẩy cả 2 lớp bitmap lên canvas trong 1 lần.
+                    // Khi filler kết thúc: tick() đã ghi đúng màu cuối của cụm liên thông cục bộ.
+                    // completeRegionForMaskColor() chỉ quét nốt toàn ảnh để phủ các cụm tách rời
+                    // cùng mã màu và đồng bộ lớp detail/coverage với buffer chính.
                     completeRegionForMaskColor(filler.maskColor, filler.targetColor)
                     completedMaskColors = completedMaskColors + filler.maskColor
                     val regionNumber = regions.find { it.maskColorInt == filler.maskColor }?.number
@@ -840,6 +897,7 @@ class PaintCanvasView @JvmOverloads constructor(
                         logPixelWatch("T3000", regionNumber, filler.maskColor, watchX, watchY)
                     }, 3000)
                     filler.dispatchFinished()
+                    filler.recycle()
                 }
             }
             invalidate()

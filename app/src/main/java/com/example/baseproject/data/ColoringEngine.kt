@@ -127,6 +127,73 @@ internal object FillRegionCollector {
     }
 }
 
+internal object FillCoverageCollector {
+    fun includeConnectedCoverage(
+        region: FillRegionPixels,
+        maskPixels: IntArray,
+        fillCoveragePixels: IntArray?,
+        width: Int,
+        height: Int,
+        maskColor: Int
+    ): FillRegionPixels {
+        if (region.indices.isEmpty() || fillCoveragePixels == null) return region
+
+        val visited = BooleanArray(maskPixels.size)
+        val indices = GrowingIntArray(region.indices.size + 256)
+        val queue = GrowingIntArray(region.indices.size + 256)
+
+        var minX = region.minX
+        var maxX = region.maxX
+        var minY = region.minY
+        var maxY = region.maxY
+
+        for (idx in region.indices) {
+            if (idx !in maskPixels.indices || visited[idx]) continue
+            visited[idx] = true
+            indices.add(idx)
+            queue.add(idx)
+        }
+
+        val dx = intArrayOf(-1, 1, 0, 0, -1, -1, 1, 1)
+        val dy = intArrayOf(0, 0, -1, 1, -1, 1, -1, 1)
+        var qHead = 0
+
+        while (qHead < queue.size) {
+            val idx = queue[qHead++]
+            val x = idx % width
+            val y = idx / width
+
+            for (i in dx.indices) {
+                val nx = x + dx[i]
+                val ny = y + dy[i]
+                if (nx !in 0 until width || ny !in 0 until height) continue
+
+                val nIdx = ny * width + nx
+                if (visited[nIdx]) continue
+                if (fillCoveragePixels.getOrNull(nIdx) != maskColor) continue
+                if (maskPixels[nIdx] == maskColor) continue
+
+                visited[nIdx] = true
+                indices.add(nIdx)
+                queue.add(nIdx)
+
+                if (nx < minX) minX = nx
+                if (nx > maxX) maxX = nx
+                if (ny < minY) minY = ny
+                if (ny > maxY) maxY = ny
+            }
+        }
+
+        return FillRegionPixels(
+            indices = indices.toIntArray(),
+            minX = minX,
+            maxX = maxX,
+            minY = minY,
+            maxY = maxY
+        )
+    }
+}
+
 private class GrowingIntArray(initialCapacity: Int) {
     private var values = IntArray(initialCapacity.coerceAtLeast(1))
     var size = 0
@@ -158,7 +225,8 @@ class AnimatedFiller(
     // Lớp detail (RGBA) kéo màu phẳng của bảng màu về gần màu ảnh gốc. Không truyền vào thì
     // lúc loang chỉ thấy màu phẳng rồi mới "nhảy" sang màu đúng khi animation kết thúc — đo
     // trên data: lệch so với màu gốc 24.1 lúc đang loang so với 4.9 sau khi xong (Art/09).
-    private val detailPixels: IntArray? = null
+    private val detailPixels: IntArray? = null,
+    private val fillCoveragePixels: IntArray? = null
 ) {
     val localBitmap: Bitmap
     val left: Int
@@ -169,7 +237,7 @@ class AnimatedFiller(
     internal val indices: IntArray
 
     init {
-        val region = FillRegionCollector.collect(
+        val maskRegion = FillRegionCollector.collect(
             maskPixels = maskPixels,
             width = width,
             height = height,
@@ -177,6 +245,14 @@ class AnimatedFiller(
             startX = startX,
             startY = startY,
             expectedRegionArea = maxQueueSize
+        )
+        val region = FillCoverageCollector.includeConnectedCoverage(
+            region = maskRegion,
+            maskPixels = maskPixels,
+            fillCoveragePixels = fillCoveragePixels,
+            width = width,
+            height = height,
+            maskColor = maskColor
         )
         indices = region.indices
 
@@ -231,9 +307,10 @@ class AnimatedFiller(
         currentRadius += speed
         val isFinished = currentRadius >= maxRadius
         if (isFinished) {
-            // Khi kết thúc, gán toàn bộ pixel vào mảng chính
+            // Giữ frame cuối giống hệt màu đang animation: pixel mask thật có detail,
+            // pixel coverage quanh line chỉ lấy màu nền để không tạo "flash" màu phẳng.
             for (idx in indices) {
-                coloredPixels[idx] = targetColor
+                coloredPixels[idx] = colorWithDetail(idx)
             }
         }
         return !isFinished
@@ -247,5 +324,9 @@ class AnimatedFiller(
         for (idx in indices) {
             hlPx[idx] = 0
         }
+    }
+
+    fun recycle() {
+        localBitmap.recycle()
     }
 }
