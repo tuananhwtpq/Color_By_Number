@@ -52,6 +52,7 @@ from tools.generate_level import (
     score_preprocessing_candidate,
     select_preprocessing_candidate,
     split_remaining_giant_regions,
+    strip_visible_white_fills_from_svg,
     run_batch_source_category,
 )
 
@@ -85,6 +86,30 @@ class GenerateLevelCliTest(unittest.TestCase):
             "hide_number": hide_number,
             "merged_region_count": 1,
         }
+
+    def test_svg_normalization_strips_near_white_background_fills(self):
+        svg = """
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+            <defs>
+                <rect id="clip-shape" width="512" height="512" fill="#FEFFFF" />
+            </defs>
+            <rect width="512" height="512" fill="#FEFFFF" />
+            <path d="M 0 0 L 10 10" style="fill: rgb(254, 254, 254); stroke: none" />
+            <path d="M 1 1 L 11 11" fill="#FEFEFE" stroke="#000000" />
+            <path d="M 2 2 L 12 12" fill="#F0FFFF" stroke="none" />
+            <path d="M 3 3 L 13 13" fill="#000000" />
+        </svg>
+        """
+
+        cleaned, removed_count = strip_visible_white_fills_from_svg(svg)
+
+        self.assertEqual(2, removed_count)
+        self.assertIn('id="clip-shape"', cleaned)
+        self.assertEqual(1, cleaned.count('fill="#FEFFFF"'))
+        self.assertNotIn("rgb(254, 254, 254)", cleaned)
+        self.assertIn('stroke="#000000"', cleaned)
+        self.assertIn('fill="#F0FFFF"', cleaned)
+        self.assertIn('fill="#000000"', cleaned)
 
     def test_generation_profile_settings_keep_old_profiles_and_add_difficulty_defaults(self):
         medium = resolve_generation_profile_settings("medium")

@@ -6,6 +6,7 @@ import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.data.remote.PixcolorApi
 import com.example.baseproject.data.remote.RemoteApiException
 import com.example.baseproject.data.remote.RemoteAssetLoader
+import com.example.baseproject.data.remote.RemoteLevelAssetDto
 import com.example.baseproject.data.remote.RemoteLevelDetailDto
 import com.example.baseproject.data.remote.RemoteLevelMapper
 import com.example.baseproject.data.remote.RemoteLevelMetadataLoader
@@ -116,17 +117,24 @@ class RemoteLevelRepositoryImpl(
 
             val lineUrl = requireAsset(detail, "LINE")
             val maskUrl = requireAsset(detail, "MASK")
-            val displayLineUrl = assetPath(detail, "DISPLAY_LINE") ?: lineUrl
+            val displayLineAsset = asset(detail, "DISPLAY_LINE")
+            val displayLineUrl = displayLineAsset?.path ?: lineUrl
+            val displayLineIsSvg = RemoteDisplayLineAssetPolicy.isSvg(displayLineAsset)
             val detailUrl = assetPath(detail, "DETAIL")
 
             val bitmaps = coroutineScope {
                 val lineDeferred = async { assetLoader.downloadBitmap(lineUrl, "LINE") }
                 val displayLineDeferred = async {
-                    if (displayLineUrl == lineUrl) {
+                    if (displayLineUrl == lineUrl || displayLineIsSvg) {
                         lineDeferred.await()
                     } else {
                         assetLoader.downloadBitmap(displayLineUrl, "DISPLAY_LINE")
                     }
+                }
+                val displayLineSvgDeferred = if (displayLineIsSvg) {
+                    async { assetLoader.downloadSvg(displayLineUrl, "DISPLAY_LINE") }
+                } else {
+                    null
                 }
                 val maskDeferred = async { assetLoader.downloadBitmap(maskUrl, "MASK") }
                 val detailDeferred = detailUrl?.let { async { assetLoader.downloadBitmap(it, "DETAIL") } }
@@ -134,6 +142,7 @@ class RemoteLevelRepositoryImpl(
                 LevelBitmaps(
                     line = lineDeferred.await(),
                     displayLine = displayLineDeferred.await(),
+                    displayLineSvg = displayLineSvgDeferred?.await(),
                     mask = maskDeferred.await(),
                     detail = detailDeferred?.await()
                 )
@@ -151,7 +160,7 @@ class RemoteLevelRepositoryImpl(
                 config = config,
                 lineBitmap = bitmaps.line,
                 displayLineBitmap = bitmaps.displayLine,
-                displayLineSvg = null,
+                displayLineSvg = bitmaps.displayLineSvg,
                 maskBitmap = bitmaps.mask,
                 detailBitmap = bitmaps.detail,
                 regions = regions
@@ -161,6 +170,7 @@ class RemoteLevelRepositoryImpl(
     private data class LevelBitmaps(
         val line: android.graphics.Bitmap,
         val displayLine: android.graphics.Bitmap,
+        val displayLineSvg: com.caverock.androidsvg.SVG?,
         val mask: android.graphics.Bitmap,
         val detail: android.graphics.Bitmap?
     )
@@ -168,11 +178,17 @@ class RemoteLevelRepositoryImpl(
     private fun requireAsset(detail: RemoteLevelDetailDto, role: String): String =
         assetPath(detail, role) ?: throw RemoteApiException("Level ${detail.id} is missing $role asset")
 
+    private fun asset(
+        detail: RemoteLevelDetailDto,
+        role: String
+    ): RemoteLevelAssetDto? =
+        detail.assets.firstOrNull { it.role.equals(role, ignoreCase = true) }
+
     private fun assetPath(
         detail: RemoteLevelDetailDto,
         role: String
     ): String? =
-        detail.assets.firstOrNull { it.role.equals(role, ignoreCase = true) }?.path
+        asset(detail, role)?.path
 
     private suspend fun <T> withFallback(
         operation: String,
@@ -225,4 +241,10 @@ class RemoteLevelRepositoryImpl(
             }
         }
     }
+}
+
+internal object RemoteDisplayLineAssetPolicy {
+    fun isSvg(asset: RemoteLevelAssetDto?): Boolean =
+        asset?.mimeType?.contains("svg", ignoreCase = true) == true ||
+            asset?.path?.substringBefore('?')?.endsWith(".svg", ignoreCase = true) == true
 }

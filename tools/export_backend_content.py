@@ -206,7 +206,7 @@ class FileWriter:
         return self.describe(relative_path)
 
     def copy_image(self, source_path, relative_path, allow_lossy):
-        """Copy ảnh, chuyển sang WebP khi được phép và người dùng bật --webp."""
+        """Copy ảnh, chuyển sang WebP khi được phép; SVG luôn giữ vector gốc."""
         extension = os.path.splitext(source_path)[1].lower()
         if extension == ".svg" or not (self.use_webp and allow_lossy and Image is not None):
             return self.copy(source_path, relative_path)

@@ -317,6 +317,7 @@ WHITE_FILL_VALUES = {
     "rgb(255, 255, 255)",
     "white",
 }
+NEAR_WHITE_SVG_FILL_MIN_CHANNEL = 245
 
 
 def _svg_local_name(tag):
@@ -339,10 +340,62 @@ def _svg_attr_or_style(element, attr):
     return element.attrib.get(attr) or _svg_style_value(element.attrib.get("style"), attr)
 
 
+def _parse_svg_fill_rgb(value):
+    if not value:
+        return None
+    raw = value.strip().lower()
+    normalized = raw.replace(" ", "")
+    if normalized in {color.replace(" ", "") for color in WHITE_FILL_VALUES}:
+        return (255, 255, 255)
+    if normalized.startswith("#"):
+        hex_value = normalized[1:]
+        if len(hex_value) == 3:
+            try:
+                return tuple(int(ch * 2, 16) for ch in hex_value)
+            except ValueError:
+                return None
+        if len(hex_value) in (6, 8):
+            try:
+                return (
+                    int(hex_value[0:2], 16),
+                    int(hex_value[2:4], 16),
+                    int(hex_value[4:6], 16),
+                )
+            except ValueError:
+                return None
+    if normalized.startswith("rgb(") and normalized.endswith(")"):
+        parts = normalized[4:-1].split(",")
+    elif normalized.startswith("rgba(") and normalized.endswith(")"):
+        parts = normalized[5:-1].split(",")[:3]
+    else:
+        return None
+    if len(parts) != 3:
+        return None
+    channels = []
+    for part in parts:
+        try:
+            if part.endswith("%"):
+                channels.append(round(float(part[:-1]) * 255 / 100))
+            else:
+                channels.append(round(float(part)))
+        except ValueError:
+            return None
+    return tuple(max(0, min(255, channel)) for channel in channels)
+
+
 def _is_white_svg_fill(value):
-    return bool(value) and value.strip().lower().replace(" ", "") in {
-        color.replace(" ", "") for color in WHITE_FILL_VALUES
-    }
+    rgb = _parse_svg_fill_rgb(value)
+    return bool(rgb) and min(rgb) >= NEAR_WHITE_SVG_FILL_MIN_CHANNEL
+
+
+def _svg_opacity_value(element, attr):
+    value = _svg_attr_or_style(element, attr)
+    if value is None:
+        return 1.0
+    try:
+        return float(value.strip().rstrip("%")) / (100.0 if value.strip().endswith("%") else 1.0)
+    except ValueError:
+        return 1.0
 
 
 def _is_visible_white_fill_element(element):
@@ -350,6 +403,8 @@ def _is_visible_white_fill_element(element):
         return False
     fill = _svg_attr_or_style(element, "fill")
     if not _is_white_svg_fill(fill):
+        return False
+    if _svg_opacity_value(element, "opacity") <= 0 or _svg_opacity_value(element, "fill-opacity") <= 0:
         return False
     stroke = _svg_attr_or_style(element, "stroke")
     return not stroke or stroke.strip().lower() == "none"

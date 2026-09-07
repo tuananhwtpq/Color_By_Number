@@ -14,6 +14,16 @@ def write_png(path, color):
     Image.new("RGB", (8, 8), color).save(path)
 
 
+def write_svg(path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        '<svg width="8" height="8" viewBox="0 0 8 8" xmlns="http://www.w3.org/2000/svg">'
+        '<path d="M1 1L7 7" stroke="#111" fill="none"/>'
+        "</svg>\n",
+        encoding="utf-8",
+    )
+
+
 class ExportBackendContentTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -226,6 +236,44 @@ class ExportBackendContentTest(unittest.TestCase):
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "mask.png").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line.webp").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "detail.webp").exists())
+
+    def test_webp_export_keeps_svg_display_line_in_level_zip(self):
+        level_dir = self.make_level()
+        config_path = level_dir / "config.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["assets"]["display_line"] = "display_line.svg"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        (level_dir / "display_line.png").unlink()
+        write_svg(level_dir / "display_line.svg")
+
+        _, levels = build_package(
+            assets_path=str(self.assets),
+            res_path=str(self.res),
+            src_path=str(self.src),
+            output_dir=str(self.out),
+            use_webp=True,
+            webp_quality=90,
+            thumbnail_size=512,
+            min_app_version=None,
+            min_supported_app_version=None,
+            create_level_zips=True,
+        )
+
+        level = levels[0]
+        self.assertEqual(level["bundleZipPath"], "level_zips/travel-06.zip")
+        exported_level_dir = self.out / "files" / "levels" / "travel-06"
+        exported_config = json.loads(
+            (exported_level_dir / "config.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual("display_line.svg", exported_config["assets"]["display_line"])
+        self.assertTrue((exported_level_dir / "display_line.svg").exists())
+        self.assertFalse((exported_level_dir / "display_line.webp").exists())
+
+        zip_path = self.out / "files" / "level_zips" / "travel-06.zip"
+        with zipfile.ZipFile(zip_path) as archive:
+            names = sorted(archive.namelist())
+        self.assertIn("display_line.svg", names)
+        self.assertNotIn("display_line.webp", names)
 
     def test_can_create_zip_per_level_outside_level_folder(self):
         self.make_level()

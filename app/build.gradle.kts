@@ -25,7 +25,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PIXCOLOR_BASE_URL", "\"https://pixlory.dktechgroup.com/\"")
-        buildConfigField("Boolean", "USE_REMOTE_CONTENT", "false")
+        buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
     }
 
     signingConfigs {
@@ -50,7 +50,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("Boolean", "USE_REMOTE_CONTENT", "false")
+            buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
         }
 
         release {

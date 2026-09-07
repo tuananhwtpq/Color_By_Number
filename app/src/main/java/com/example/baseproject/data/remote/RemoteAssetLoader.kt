@@ -2,6 +2,7 @@ package com.example.baseproject.data.remote
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import com.caverock.androidsvg.SVG
 import com.example.baseproject.BuildConfig
 import com.example.baseproject.data.LevelConfig
 import com.google.gson.Gson
@@ -52,6 +53,17 @@ class RemoteAssetLoader(
                     }
                 )
             } ?: throw RemoteApiException("Failed to decode $label bitmap")
+
+    fun downloadSvg(path: String, label: String): SVG =
+        readCachedBytes(resolveUrl(path) ?: throw RemoteApiException("Missing $label path"), "svg")
+            .inputStream()
+            .use { input ->
+                runCatching {
+                    SVG.getFromInputStream(input)
+                }.getOrElse { error ->
+                    throw RemoteApiException("Failed to decode $label SVG", error)
+                }
+            }
 
     private fun readCachedBytes(url: String, extension: String): ByteArray {
         val cacheFile = cacheFile(url, extension) ?: return downloadBytes(url)

@@ -83,8 +83,6 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         val levelId = levelId
         if (category == null || levelId == null) return
 
-        // Ảnh hoàn thiện được PaintActivity ghi ra file trước khi chuyển màn (không truyền
-        // bitmap qua Intent), nên ở đây chỉ cần đọc lại đúng file đó.
         val completedFile = appContainer.thumbnailRepository.getThumbnailFile(category, levelId)
         Glide.with(this)
             .load(completedFile)
