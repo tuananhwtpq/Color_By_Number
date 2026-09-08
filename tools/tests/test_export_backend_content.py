@@ -37,6 +37,7 @@ class ExportBackendContentTest(unittest.TestCase):
         (self.res / "values" / "strings.xml").write_text("<resources/>", encoding="utf-8")
         (self.src / "data").mkdir(parents=True, exist_ok=True)
         (self.src / "data" / "AchievementCatalog.kt").write_text("", encoding="utf-8")
+        (self.src / "data" / "Realm.kt").write_text("", encoding="utf-8")
 
     def make_level(self, category="Travel", level="06", with_detail=True):
         level_dir = self.assets / category / level
@@ -202,6 +203,82 @@ class ExportBackendContentTest(unittest.TestCase):
         self.assertNotIn("assets", level)
         self.assertFalse((self.out / "files" / "levels" / "travel-06" / "display_line_2x.png").exists())
         self.assertFalse((self.out / "files" / "levels" / "travel-06" / "display_line_4x.png").exists())
+
+    def test_exports_realms_from_named_kotlin_catalog(self):
+        self.make_level()
+        (self.res / "raw").mkdir(parents=True, exist_ok=True)
+        (self.res / "raw" / "sakura_heaven.json").write_text('{"assets":[]}', encoding="utf-8")
+        (self.res / "raw" / "crystal_creek.json").write_text('{"assets":[]}', encoding="utf-8")
+        (self.src / "data" / "Realm.kt").write_text(
+            """
+            object RealmCatalog {
+                val realms: List<Realm> = listOf(
+                    Realm(
+                        id = "crystal_creek",
+                        name = "Crystal Creek",
+                        animationRes = R.raw.crystal_creek,
+                        thumbnailRes = R.drawable.crystal_creek_thumbnail,
+                        unlockCost = 10,
+                        sortOrder = 2,
+                    ),
+                    Realm(
+                        id = "sakura_haven",
+                        name = "Sakura Haven",
+                        animationRes = R.raw.sakura_heaven,
+                        thumbnailRes = R.drawable.sakura_haven_thumbnail,
+                        unlockCost = 0,
+                        sortOrder = 1,
+                    ),
+                ).sortedBy { it.sortOrder }
+            }
+            """,
+            encoding="utf-8",
+        )
+
+        manifest, _ = build_package(
+            assets_path=str(self.assets),
+            res_path=str(self.res),
+            src_path=str(self.src),
+            output_dir=str(self.out),
+            use_webp=False,
+            webp_quality=85,
+            thumbnail_size=512,
+            min_app_version=None,
+            min_supported_app_version=None,
+        )
+
+        realms = json.loads((self.out / "content" / "realms.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["counts"]["realms"], 2)
+        self.assertEqual(
+            realms,
+            [
+                {
+                    "id": "sakura_haven",
+                    "name": {"en": "Sakura Haven"},
+                    "animationPath": "realms/sakura_haven/animation.json",
+                    "animationMimeType": "application/json",
+                    "previewImagePath": None,
+                    "unlockCost": 0,
+                    "unlockType": "FREE",
+                    "unlockValue": None,
+                    "sortOrder": 1,
+                    "isActive": True,
+                },
+                {
+                    "id": "crystal_creek",
+                    "name": {"en": "Crystal Creek"},
+                    "animationPath": "realms/crystal_creek/animation.json",
+                    "animationMimeType": "application/json",
+                    "previewImagePath": None,
+                    "unlockCost": 10,
+                    "unlockType": "COMPLETED_LEVELS",
+                    "unlockValue": 10,
+                    "sortOrder": 2,
+                    "isActive": True,
+                },
+            ],
+        )
+        self.assertTrue((self.out / "files" / "realms" / "sakura_haven" / "animation.json").exists())
 
     def test_webp_export_rewrites_config_asset_names(self):
         self.make_level()

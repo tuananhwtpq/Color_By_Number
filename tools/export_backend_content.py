@@ -492,11 +492,36 @@ def parse_realm_catalog(src_path):
     with open(catalog_path, encoding="utf-8") as input_file:
         source = input_file.read()
 
-    pattern = re.compile(r'Realm\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*R\.raw\.(\w+)\s*\)')
-    return [
-        {"id": slugify(match.group(1)), "name": match.group(2), "rawName": match.group(3)}
-        for match in pattern.finditer(source)
-    ]
+    realms = []
+    block_pattern = re.compile(r'Realm\(\s*(.*?)\s*\)\s*,', re.S)
+    legacy_pattern = re.compile(r'"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*R\.raw\.(\w+)')
+    for block in block_pattern.findall(source):
+        id_match = re.search(r'\bid\s*=\s*"([^"]+)"', block)
+        name_match = re.search(r'\bname\s*=\s*"([^"]+)"', block)
+        raw_match = re.search(r'\banimationRes\s*=\s*R\.raw\.(\w+)', block)
+        unlock_match = re.search(r'\bunlockCost\s*=\s*(\d+)', block)
+        sort_match = re.search(r'\bsortOrder\s*=\s*(\d+)', block)
+
+        if id_match and name_match and raw_match:
+            realms.append({
+                "id": id_match.group(1),
+                "name": name_match.group(1),
+                "rawName": raw_match.group(1),
+                "unlockCost": int(unlock_match.group(1)) if unlock_match else 0,
+                "sortOrder": int(sort_match.group(1)) if sort_match else len(realms) + 1,
+            })
+            continue
+
+        legacy_match = legacy_pattern.search(block)
+        if legacy_match:
+            realms.append({
+                "id": slugify(legacy_match.group(1)),
+                "name": legacy_match.group(2),
+                "rawName": legacy_match.group(3),
+                "unlockCost": 0 if not realms else len(realms) * 10,
+                "sortOrder": len(realms) + 1,
+            })
+    return sorted(realms, key=lambda realm: realm["sortOrder"])
 
 
 def export_realms(src_path, res_path, writer):
@@ -527,9 +552,10 @@ def export_realms(src_path, res_path, writer):
             "animationPath": animation["path"],
             "animationMimeType": animation["mimeType"],
             "previewImagePath": preview["path"] if preview else None,
+            "unlockCost": realm["unlockCost"],
             "unlockType": "FREE" if index == 1 else "COMPLETED_LEVELS",
             "unlockValue": None if index == 1 else (index - 1) * 10,
-            "sortOrder": index,
+            "sortOrder": realm["sortOrder"],
             "isActive": True,
         })
     return realms
