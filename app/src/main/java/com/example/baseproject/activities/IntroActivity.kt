@@ -1,8 +1,10 @@
 package com.example.baseproject.activities
 
 import android.content.Intent
+import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.example.baseproject.MyApplication
 import com.example.baseproject.adapters.IntroViewPagerAdapter
@@ -10,12 +12,24 @@ import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.databinding.ActivityIntroBinding
 import com.example.baseproject.ui.intro.IntroViewModel
+import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.gone
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::inflate) {
+    companion object {
+        private const val PREPARING_MIN_DURATION_MS = 900L
+        private const val PREPARING_MAX_DURATION_MS = 5_500L
+    }
+
+    private val appContainer by lazy {
+        (application as MyApplication).appContainer
+    }
 
     private val viewModel: IntroViewModel by viewModels {
-        val appContainer = (application as MyApplication).appContainer
         SimpleViewModelFactory {
             IntroViewModel(appContainer.settingsRepository)
         }
@@ -40,8 +54,10 @@ class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::i
 //                AdsHelper.isNetworkConnected(this)
 //    }
     private var isNext = false
+    private var isPreparingHome = false
     private val onBackPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
+            if (isPreparingHome) return
             isNext = false
             if (binding.vpIntro.currentItem in 1..mAdapter.itemCount) {
                 binding.vpIntro.currentItem -= 1
@@ -84,8 +100,36 @@ class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::i
     private fun goToHome() {
         val intent = Intent(this, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.putExtra(MainActivity.EXTRA_SKIP_PREPARING_OVERLAY, true)
         startActivity(intent)
+        overridePendingTransition(0, 0)
         finish()
+    }
+
+    private fun prepareThenGoToHome() {
+        if (isPreparingHome) return
+        if (SharedPrefManager.hasSeenLibraryPreparing) {
+            goToHome()
+            return
+        }
+
+        isPreparingHome = true
+        binding.contentPreparingOverlay.apply {
+            alpha = 1f
+            visibility = View.VISIBLE
+            bringToFront()
+        }
+        lifecycleScope.launch {
+            val preload = async {
+                runCatching { appContainer.assetLevelRepository.loadAllLevels() }
+            }
+            delay(PREPARING_MIN_DURATION_MS)
+            withTimeoutOrNull(PREPARING_MAX_DURATION_MS - PREPARING_MIN_DURATION_MS) {
+                preload.await()
+            }
+            SharedPrefManager.hasSeenLibraryPreparing = true
+            goToHome()
+        }
     }
 
     fun nextPage() {
@@ -94,7 +138,7 @@ class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::i
         } else {
             viewModel.onIntroCompleted()
 //            showInterIntro {
-            goToHome()
+            prepareThenGoToHome()
 //            }
         }
     }

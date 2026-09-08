@@ -1,6 +1,9 @@
 package com.example.baseproject.activities
 
 import android.content.Intent
+import android.os.SystemClock
+import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.viewModels
@@ -14,12 +17,15 @@ import com.example.baseproject.databinding.ActivityMainBinding
 import com.example.baseproject.ui.main.MainViewModel
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.RealmAnimationCache
+import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.animateBottomNavPress
 import com.example.baseproject.utils.animateBottomNavSelection
 import com.example.baseproject.utils.enableMarquee
+import com.example.baseproject.utils.gone
 import com.example.baseproject.utils.setBottomNavLabelSelected
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -28,10 +34,14 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     companion object {
         const val EXTRA_SELECTED_TAB = "EXTRA_SELECTED_TAB"
         const val EXTRA_REALM_ID = "EXTRA_REALM_ID"
+        const val EXTRA_SKIP_PREPARING_OVERLAY = "EXTRA_SKIP_PREPARING_OVERLAY"
         const val TAB_LIBRARY = 0
         const val TAB_COLOR_REALM = 2
         private const val BOTTOM_NAV_ICON_SELECTED_SCALE = 1.22f
         private const val BOTTOM_NAV_ICON_SELECTED_LIFT_DP = 2f
+        private const val PREPARING_MIN_DURATION_MS = 900L
+        private const val PREPARING_MAX_DURATION_MS = 5_500L
+        private const val PREPARING_FADE_DURATION_MS = 260L
     }
 
     private val viewModel: MainViewModel by viewModels {
@@ -41,6 +51,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private val mAdapter by lazy {
         MainVPAdapter(this)
     }
+    private var preparingStartedAt = 0L
+    private var preparingOverlayHidden = false
+    private var shouldShowPreparingOverlay = false
 
     override fun initData() {
         viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
@@ -49,6 +62,25 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
 
     override fun initView() {
         AppThemeManager.applyFullBackground(binding.main)
+        preparingStartedAt = SystemClock.elapsedRealtime()
+        preparingOverlayHidden = false
+        shouldShowPreparingOverlay = shouldShowPreparingOverlay()
+        if (shouldShowPreparingOverlay) {
+            binding.contentPreparingOverlay.apply {
+                alpha = 1f
+                visibility = View.VISIBLE
+                bringToFront()
+            }
+            lifecycleScope.launch {
+                delay(PREPARING_MAX_DURATION_MS)
+                SharedPrefManager.hasSeenLibraryPreparing = true
+                preparingOverlayHidden = true
+                hidePreparingOverlay()
+            }
+        } else {
+            preparingOverlayHidden = true
+            binding.contentPreparingOverlay.gone()
+        }
 
         binding.tvLib.enableMarquee()
         binding.tvDaily.enableMarquee()
@@ -59,7 +91,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         binding.viewPager2.apply {
             adapter = mAdapter
             isUserInputEnabled = false
-            offscreenPageLimit = mAdapter.itemCount
+            offscreenPageLimit = 1
         }
 
         binding.viewPager2.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
@@ -77,6 +109,38 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
                 updateByPosition(state.selectedTab)
             }
         }
+    }
+
+    fun notifyInitialLibraryContentReady() {
+        if (!shouldShowPreparingOverlay || preparingOverlayHidden) return
+        preparingOverlayHidden = true
+        SharedPrefManager.hasSeenLibraryPreparing = true
+
+        val elapsed = SystemClock.elapsedRealtime() - preparingStartedAt
+        val delayMillis = (PREPARING_MIN_DURATION_MS - elapsed).coerceAtLeast(0L)
+        lifecycleScope.launch {
+            delay(delayMillis)
+            hidePreparingOverlay()
+        }
+    }
+
+    private fun shouldShowPreparingOverlay(): Boolean =
+        !intent.getBooleanExtra(EXTRA_SKIP_PREPARING_OVERLAY, false) &&
+            !SharedPrefManager.hasSeenLibraryPreparing
+
+    private fun hidePreparingOverlay() {
+        if (binding.contentPreparingOverlay.visibility != View.VISIBLE) return
+
+        binding.contentPreparingOverlay.animate().cancel()
+        binding.contentPreparingOverlay.animate()
+            .alpha(0f)
+            .setDuration(PREPARING_FADE_DURATION_MS)
+            .setInterpolator(DecelerateInterpolator())
+            .withEndAction {
+                binding.contentPreparingOverlay.gone()
+                binding.contentPreparingOverlay.alpha = 1f
+            }
+            .start()
     }
 
     override fun initActionView() {

@@ -15,6 +15,7 @@ object SharedPrefManager {
     private const val HIGHLIGHT_THEME_ID = "highlight_theme_id"
     private const val SELECTED_APP_THEME_ID = "selected_app_theme_id"
     private const val SELECTED_REALM_ID = "selected_realm_id"
+    private const val HAS_SEEN_LIBRARY_PREPARING = "has_seen_library_preparing"
     private lateinit var preferences: SharedPreferences
 
     var isShowGuide: Boolean
@@ -56,6 +57,12 @@ object SharedPrefManager {
             ?: DEFAULT_SELECTED_REALM_ID
         set(value) {
             preferences.edit { putString(SELECTED_REALM_ID, value) }
+        }
+
+    var hasSeenLibraryPreparing: Boolean
+        get() = preferences.getBoolean(HAS_SEEN_LIBRARY_PREPARING, false)
+        set(value) {
+            preferences.edit { putBoolean(HAS_SEEN_LIBRARY_PREPARING, value) }
         }
 
     fun init(context: Context) {

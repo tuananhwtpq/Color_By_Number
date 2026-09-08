@@ -3,6 +3,7 @@ package com.example.baseproject.fragments
 import android.content.Intent
 import android.view.View
 import android.view.LayoutInflater
+import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
@@ -11,6 +12,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.example.baseproject.MyApplication
 import com.example.baseproject.R
 import com.example.baseproject.activities.AchieveActivity
+import com.example.baseproject.activities.MainActivity
 import com.example.baseproject.activities.PaintActivity
 import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
@@ -48,6 +50,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     }
     private var renderedCategories: List<String> = emptyList()
     private var renderedCategoryNames: Map<String, String> = emptyMap()
+    private var initialHomeRevealPlayed = false
     private val completedPictureActions by lazy {
         CompletedPictureActions(
             activity = requireActivity(),
@@ -79,6 +82,9 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                     updateTabSelection(state.selectedCategory)
                 }
                 levelAdapter.submitList(state.visibleLevels)
+                if (state.categories.isNotEmpty() && state.visibleLevels.isNotEmpty()) {
+                    revealInitialHomeContent()
+                }
             }
         }
     }
@@ -222,6 +228,32 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
             binding.shimmerLevels.stopShimmer()
             binding.shimmerLevels.visibility = View.GONE
             binding.rvLevels.visibility = View.VISIBLE
+        }
+    }
+
+    private fun revealInitialHomeContent() {
+        if (initialHomeRevealPlayed) return
+        initialHomeRevealPlayed = true
+        (activity as? MainActivity)?.notifyInitialLibraryContentReady()
+
+        val offset = 12f * resources.displayMetrics.density
+        val groups = listOf(
+            listOf(binding.ivTopImage, binding.btnAchieve, binding.tvAppName1, binding.tvAppName2),
+            listOf(binding.hsvCategories),
+            listOf(binding.rvLevels),
+        )
+        groups.forEachIndexed { index, views ->
+            views.forEach { view ->
+                view.animate().cancel()
+                view.translationY = offset
+                view.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setStartDelay(index * 90L)
+                    .setDuration(280L)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
         }
     }
 

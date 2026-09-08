@@ -1,45 +1,24 @@
 package com.example.baseproject.data.remote
 
-import android.util.Log
 import com.example.baseproject.data.LevelConfig
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 
 class RemoteLevelMetadataLoader(
     private val api: PixcolorApi,
-    private val assetLoader: RemoteAssetLoader,
-    private val detailRequestLimit: Int = DEFAULT_DETAIL_REQUEST_LIMIT
+    private val assetLoader: RemoteAssetLoader
 ) {
 
     suspend fun loadGroupLevelConfigs(
         groupType: String,
         groupId: String,
         groupName: String? = null
-    ): List<LevelConfig> {
-        val summaries = loadGroupLevelSummaries(groupType, groupId)
-        val requestLimiter = Semaphore(detailRequestLimit.coerceAtLeast(1))
-        return coroutineScope {
-            summaries.map { summary ->
-                async {
-                    val summaryConfig = RemoteLevelMapper.levelSummaryToConfig(
-                        dto = summary,
-                        assetLoader = assetLoader,
-                        groupName = groupName
-                    )
-                    requestLimiter.withPermit {
-                        runCatching { loadConfig(summaryConfig) }
-                            .getOrElse { error ->
-                                Log.w(TAG, "Failed to enrich level ${summaryConfig.id}; using summary", error)
-                                summaryConfig
-                            }
-                    }
-                }
-            }.awaitAll()
+    ): List<LevelConfig> =
+        loadGroupLevelSummaries(groupType, groupId).map { summary ->
+            RemoteLevelMapper.levelSummaryToConfig(
+                dto = summary,
+                assetLoader = assetLoader,
+                groupName = groupName
+            )
         }
-    }
 
     suspend fun loadGroupLevelSummaries(
         groupType: String,
@@ -93,8 +72,4 @@ class RemoteLevelMetadataLoader(
         )
     }
 
-    private companion object {
-        const val TAG = "RemoteLevelMetadata"
-        const val DEFAULT_DETAIL_REQUEST_LIMIT = 3
-    }
 }
