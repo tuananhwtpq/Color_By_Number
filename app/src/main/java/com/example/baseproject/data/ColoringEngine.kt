@@ -328,6 +328,187 @@ internal object FillCoverageCollector {
     }
 }
 
+internal data class AnimationFillFrame(
+    val pixels: IntArray,
+    val left: Int,
+    val top: Int,
+    val width: Int,
+    val height: Int
+)
+
+internal object AnimationFillFrameComposer {
+    fun compose(
+        region: FillRegionPixels,
+        maskPixels: IntArray,
+        coloredPixels: IntArray,
+        detailPixels: IntArray?,
+        fillCoveragePixels: IntArray?,
+        lineLumaPixels: IntArray?,
+        imageWidth: Int,
+        imageHeight: Int,
+        maskColor: Int,
+        targetColor: Int,
+        underpaintRadius: Int = 1,
+        edgeDetailSuppressionRadius: Int = 2,
+        inkThreshold: Int = 245,
+        linePixelThreshold: Int = 252
+    ): AnimationFillFrame {
+        val pad = if (lineLumaPixels != null) underpaintRadius.coerceAtLeast(0) else 0
+        val left = (region.minX - pad).coerceAtLeast(0)
+        val top = (region.minY - pad).coerceAtLeast(0)
+        val right = (region.maxX + pad).coerceAtMost(imageWidth - 1)
+        val bottom = (region.maxY + pad).coerceAtMost(imageHeight - 1)
+        val frameWidth = right - left + 1
+        val frameHeight = bottom - top + 1
+        val localPx = IntArray(frameWidth * frameHeight)
+
+        for (idx in region.indices) {
+            val x = idx % imageWidth
+            val y = idx / imageWidth
+            localPx[(y - top) * frameWidth + (x - left)] = colorForAnimation(
+                index = idx,
+                maskPixels = maskPixels,
+                detailPixels = detailPixels,
+                lineLumaPixels = lineLumaPixels,
+                imageWidth = imageWidth,
+                imageHeight = imageHeight,
+                maskColor = maskColor,
+                targetColor = targetColor,
+                edgeDetailSuppressionRadius = edgeDetailSuppressionRadius,
+                inkThreshold = inkThreshold
+            )
+        }
+
+        if (lineLumaPixels != null) {
+            applyLineUnderpaint(
+                region = region,
+                maskPixels = maskPixels,
+                coloredPixels = coloredPixels,
+                fillCoveragePixels = fillCoveragePixels,
+                lineLumaPixels = lineLumaPixels,
+                localPixels = localPx,
+                localLeft = left,
+                localTop = top,
+                localWidth = frameWidth,
+                imageWidth = imageWidth,
+                imageHeight = imageHeight,
+                maskColor = maskColor,
+                targetColor = targetColor,
+                radius = underpaintRadius,
+                linePixelThreshold = linePixelThreshold
+            )
+        }
+
+        return AnimationFillFrame(
+            pixels = localPx,
+            left = left,
+            top = top,
+            width = frameWidth,
+            height = frameHeight
+        )
+    }
+
+    private fun colorForAnimation(
+        index: Int,
+        maskPixels: IntArray,
+        detailPixels: IntArray?,
+        lineLumaPixels: IntArray?,
+        imageWidth: Int,
+        imageHeight: Int,
+        maskColor: Int,
+        targetColor: Int,
+        edgeDetailSuppressionRadius: Int,
+        inkThreshold: Int
+    ): Int {
+        val detailColor = detailPixels?.getOrNull(index)
+        val shouldSuppressDetail = detailColor != null &&
+            lineLumaPixels != null &&
+            isBrightDetail(detailColor) &&
+            isNearInk(index, lineLumaPixels, imageWidth, imageHeight, edgeDetailSuppressionRadius, inkThreshold)
+        return FillColorComposer.colorWithOptionalDetail(
+            isMaskPixel = maskPixels[index] == maskColor && !shouldSuppressDetail,
+            targetColor = targetColor,
+            detailColor = detailColor,
+        )
+    }
+
+    private fun applyLineUnderpaint(
+        region: FillRegionPixels,
+        maskPixels: IntArray,
+        coloredPixels: IntArray,
+        fillCoveragePixels: IntArray?,
+        lineLumaPixels: IntArray,
+        localPixels: IntArray,
+        localLeft: Int,
+        localTop: Int,
+        localWidth: Int,
+        imageWidth: Int,
+        imageHeight: Int,
+        maskColor: Int,
+        targetColor: Int,
+        radius: Int,
+        linePixelThreshold: Int
+    ) {
+        for (idx in region.indices) {
+            val x = idx % imageWidth
+            val y = idx / imageWidth
+            for (dy in -radius..radius) {
+                val ny = y + dy
+                if (ny !in 0 until imageHeight) continue
+                for (dx in -radius..radius) {
+                    val nx = x + dx
+                    if (nx !in 0 until imageWidth) continue
+                    val nIdx = ny * imageWidth + nx
+                    if (coloredPixels[nIdx] != 0) continue
+                    if (isRegionPixel(nIdx, maskPixels, fillCoveragePixels, maskColor)) continue
+                    if (lineLumaPixels[nIdx] >= linePixelThreshold) continue
+                    localPixels[(ny - localTop) * localWidth + (nx - localLeft)] = targetColor
+                }
+            }
+        }
+    }
+
+    private fun isRegionPixel(
+        idx: Int,
+        maskPixels: IntArray,
+        fillCoveragePixels: IntArray?,
+        maskColor: Int
+    ): Boolean =
+        maskPixels[idx] == maskColor || fillCoveragePixels?.getOrNull(idx) == maskColor
+
+    private fun isNearInk(
+        idx: Int,
+        lineLumaPixels: IntArray,
+        width: Int,
+        height: Int,
+        radius: Int,
+        threshold: Int
+    ): Boolean {
+        val x = idx % width
+        val y = idx / width
+        for (dy in -radius..radius) {
+            val ny = y + dy
+            if (ny !in 0 until height) continue
+            for (dx in -radius..radius) {
+                val nx = x + dx
+                if (nx !in 0 until width) continue
+                if (lineLumaPixels[ny * width + nx] < threshold) return true
+            }
+        }
+        return false
+    }
+
+    private fun isBrightDetail(pixel: Int): Boolean {
+        val alpha = (pixel ushr 24) and 0xFF
+        if (alpha == 0) return true
+        val r = (pixel shr 16) and 0xFF
+        val g = (pixel shr 8) and 0xFF
+        val b = pixel and 0xFF
+        val luma = (r * 299 + g * 587 + b * 114) / 1000
+        return alpha < 32 || luma > 220
+    }
+}
+
 private class GrowingIntArray(initialCapacity: Int) {
     private var values = IntArray(initialCapacity.coerceAtLeast(1))
     var size = 0
@@ -360,7 +541,8 @@ class AnimatedFiller(
     // lúc loang chỉ thấy màu phẳng rồi mới "nhảy" sang màu đúng khi animation kết thúc — đo
     // trên data: lệch so với màu gốc 24.1 lúc đang loang so với 4.9 sau khi xong (Art/09).
     private val detailPixels: IntArray? = null,
-    private val fillCoveragePixels: IntArray? = null
+    private val fillCoveragePixels: IntArray? = null,
+    private val lineLumaPixels: IntArray? = null
 ) {
     val localBitmap: Bitmap
     val left: Int
@@ -390,13 +572,23 @@ class AnimatedFiller(
         )
         indices = region.indices
 
-        left = region.minX
-        top = region.minY
+        val frame = AnimationFillFrameComposer.compose(
+            region = region,
+            maskPixels = maskPixels,
+            coloredPixels = coloredPixels,
+            detailPixels = detailPixels,
+            fillCoveragePixels = fillCoveragePixels,
+            lineLumaPixels = lineLumaPixels,
+            imageWidth = width,
+            imageHeight = height,
+            maskColor = maskColor,
+            targetColor = targetColor
+        )
+
+        left = frame.left
+        top = frame.top
         val right = region.maxX
         val bottom = region.maxY
-
-        val bw = right - left + 1
-        val bh = bottom - top + 1
 
         // Tính toán bán kính tối đa cần để loang hết bounding box
         val dx1 = (region.minX - startX).toDouble()
@@ -409,16 +601,8 @@ class AnimatedFiller(
         val d4 = Math.sqrt(dx2 * dx2 + dy2 * dy2)
         maxRadius = Math.max(Math.max(d1, d2), Math.max(d3, d4)).toFloat() + 5f
 
-        // 2. Tạo một Bitmap thu nhỏ chứa riêng mảng màu này
-        val localPx = IntArray(bw * bh)
-        for (idx in indices) {
-            val x = idx % width
-            val y = idx / width
-            localPx[(y - top) * bw + (x - left)] = colorWithDetail(idx)
-        }
-
-        localBitmap = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
-        localBitmap.setPixels(localPx, 0, bw, 0, 0, bw, bh)
+        localBitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
+        localBitmap.setPixels(frame.pixels, 0, frame.width, 0, 0, frame.width, frame.height)
     }
 
     /**

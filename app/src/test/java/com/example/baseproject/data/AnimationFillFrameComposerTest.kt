@@ -1,0 +1,121 @@
+package com.example.baseproject.data
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class AnimationFillFrameComposerTest {
+    @Test
+    fun includesLineCoveredUnderpaintPixelInAnimationFrame() {
+        val width = 5
+        val height = 3
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFF6E5362.toInt()
+        val maskPixels = IntArray(width * height)
+        val coloredPixels = IntArray(width * height)
+        val lineLumaPixels = IntArray(width * height) { 255 }
+        val filledIndex = 1 * width + 1
+        val lineIndex = 1 * width + 2
+
+        maskPixels[filledIndex] = maskColor
+        lineLumaPixels[lineIndex] = 20
+
+        val frame = AnimationFillFrameComposer.compose(
+            region = FillRegionPixels(
+                indices = intArrayOf(filledIndex),
+                minX = 1,
+                maxX = 1,
+                minY = 1,
+                maxY = 1
+            ),
+            maskPixels = maskPixels,
+            coloredPixels = coloredPixels,
+            detailPixels = null,
+            fillCoveragePixels = null,
+            lineLumaPixels = lineLumaPixels,
+            imageWidth = width,
+            imageHeight = height,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+
+        assertEquals(targetColor, frame.pixels[(1 - frame.top) * frame.width + (2 - frame.left)])
+    }
+
+    @Test
+    fun doesNotUnderpaintTransparentBackgroundOnlyNearLineInAnimationFrame() {
+        val width = 5
+        val height = 3
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFF6E5362.toInt()
+        val maskPixels = IntArray(width * height)
+        val coloredPixels = IntArray(width * height)
+        val lineLumaPixels = IntArray(width * height) { 255 }
+        val filledIndex = 1 * width + 1
+        val outsideIndex = 1 * width + 2
+        val nearbyInkIndex = 0 * width + 2
+
+        maskPixels[filledIndex] = maskColor
+        lineLumaPixels[nearbyInkIndex] = 20
+
+        val frame = AnimationFillFrameComposer.compose(
+            region = FillRegionPixels(
+                indices = intArrayOf(filledIndex),
+                minX = 1,
+                maxX = 1,
+                minY = 1,
+                maxY = 1
+            ),
+            maskPixels = maskPixels,
+            coloredPixels = coloredPixels,
+            detailPixels = null,
+            fillCoveragePixels = null,
+            lineLumaPixels = lineLumaPixels,
+            imageWidth = width,
+            imageHeight = height,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+
+        assertEquals(0, frame.pixels[(1 - frame.top) * frame.width + (2 - frame.left)])
+        assertEquals(outsideIndex, 1 * width + 2)
+    }
+
+    @Test
+    fun suppressesBrightDetailNearInkInAnimationFrame() {
+        val width = 5
+        val height = 3
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFF6E5362.toInt()
+        val maskPixels = IntArray(width * height)
+        val coloredPixels = IntArray(width * height)
+        val detailPixels = IntArray(width * height)
+        val lineLumaPixels = IntArray(width * height) { 255 }
+        val filledIndex = 1 * width + 1
+        val nearbyInkIndex = 1 * width + 2
+
+        maskPixels[filledIndex] = maskColor
+        detailPixels[filledIndex] = 0xFFFFFFFF.toInt()
+        lineLumaPixels[nearbyInkIndex] = 20
+
+        val frame = AnimationFillFrameComposer.compose(
+            region = FillRegionPixels(
+                indices = intArrayOf(filledIndex),
+                minX = 1,
+                maxX = 1,
+                minY = 1,
+                maxY = 1
+            ),
+            maskPixels = maskPixels,
+            coloredPixels = coloredPixels,
+            detailPixels = detailPixels,
+            fillCoveragePixels = null,
+            lineLumaPixels = lineLumaPixels,
+            imageWidth = width,
+            imageHeight = height,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+
+        assertEquals(targetColor, frame.pixels[(1 - frame.top) * frame.width + (1 - frame.left)])
+    }
+}

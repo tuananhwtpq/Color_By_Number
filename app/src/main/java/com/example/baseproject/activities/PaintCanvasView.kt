@@ -846,6 +846,7 @@ class PaintCanvasView @JvmOverloads constructor(
         val heightSnapshot = maskHeight
         val detailPx = detailSourcePixelsArray
         val coveragePx = fillCoveragePixelsArray
+        val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) displayLineLumaPixelsArray else null
 
         preparingFillColors.add(clickedColor)
         scope.launch {
@@ -866,7 +867,8 @@ class PaintCanvasView @JvmOverloads constructor(
                             onRegionFilledListener?.invoke(it)
                         },
                         detailPixels = detailPx,
-                        fillCoveragePixels = coveragePx
+                        fillCoveragePixels = coveragePx,
+                        lineLumaPixels = lineLumaPx
                     )
                 }
 
