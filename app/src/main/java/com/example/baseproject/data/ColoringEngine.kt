@@ -59,6 +59,7 @@ object EdgeUnderpaintEngine {
         revealedDetailPixels: IntArray? = null,
         radius: Int = 1,
         lineProximityRadius: Int = 1,
+        edgeDetailSuppressionRadius: Int = 2,
         inkThreshold: Int = 245,
         linePixelThreshold: Int = 252
     ) {
@@ -79,12 +80,25 @@ object EdgeUnderpaintEngine {
                     val nIdx = ny * width + nx
                     if (coloredPixels[nIdx] != 0) continue
                     if (isRegionPixel(nIdx, maskPixels, fillCoveragePixels, maskColor)) continue
-                    if (maskPixels[nIdx] != 0 && lineLumaPixels[nIdx] >= linePixelThreshold) continue
+                    if (lineLumaPixels[nIdx] >= linePixelThreshold) continue
                     if (!isNearInk(nIdx, lineLumaPixels, width, height, lineProximityRadius, inkThreshold)) continue
                     additions.add(nIdx)
                 }
             }
         }
+
+        suppressBrightDetailNearInk(
+            maskPixels = maskPixels,
+            fillCoveragePixels = fillCoveragePixels,
+            detailSourcePixels = detailSourcePixels,
+            revealedDetailPixels = revealedDetailPixels,
+            lineLumaPixels = lineLumaPixels,
+            width = width,
+            height = height,
+            maskColor = maskColor,
+            radius = edgeDetailSuppressionRadius,
+            inkThreshold = inkThreshold
+        )
 
         for (i in 0 until additions.size) {
             val idx = additions[i]
@@ -128,6 +142,30 @@ object EdgeUnderpaintEngine {
             }
         }
         return false
+    }
+
+    private fun suppressBrightDetailNearInk(
+        maskPixels: IntArray,
+        fillCoveragePixels: IntArray?,
+        detailSourcePixels: IntArray?,
+        revealedDetailPixels: IntArray?,
+        lineLumaPixels: IntArray,
+        width: Int,
+        height: Int,
+        maskColor: Int,
+        radius: Int,
+        inkThreshold: Int
+    ) {
+        if (detailSourcePixels == null || revealedDetailPixels == null) return
+        if (detailSourcePixels.size != maskPixels.size || revealedDetailPixels.size != maskPixels.size) return
+
+        for (idx in maskPixels.indices) {
+            if (!isRegionPixel(idx, maskPixels, fillCoveragePixels, maskColor)) continue
+            if (!isNearInk(idx, lineLumaPixels, width, height, radius, inkThreshold)) continue
+            if (isBrightDetail(detailSourcePixels[idx])) {
+                revealedDetailPixels[idx] = 0
+            }
+        }
     }
 
     private fun isBrightDetail(pixel: Int): Boolean {
