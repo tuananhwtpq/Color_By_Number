@@ -45,22 +45,22 @@ class RemoteRealmRepositoryImpl(
                 realms.map { RemoteRealmMapper.toRealm(it, assetLoader) }
                     .also { loadedRealms ->
                         cachedRealms = loadedRealms
-                        loadedRealms.forEach { realm -> cachedRealmsById[realm.id] = realm }
+                        loadedRealms.forEach(::cacheRealm)
                     }
             }
         }
 
     override suspend fun loadRealm(realmId: String): Realm? =
-        cachedRealmsById[realmId] ?: loadRealmFromRemote(realmId)
+        cachedRealmFor(realmId) ?: loadRealmFromRemote(realmId)
 
     private suspend fun loadRealmFromRemote(realmId: String): Realm? =
         withFallback("loadRealm($realmId)", fallbackAction = { loadRealm(realmId) }) {
             realmMutex.withLock {
-                cachedRealmsById[realmId]?.let { return@withLock it }
+                cachedRealmFor(realmId)?.let { return@withLock it }
 
                 val realm = loadRemoteRealm(realmId)
                 RemoteRealmMapper.toRealm(realm, assetLoader)
-                    .also { cachedRealmsById[realmId] = it }
+                    .also(::cacheRealm)
             }
         }
 
@@ -79,6 +79,13 @@ class RemoteRealmRepositoryImpl(
         val dashedId = realmId.replace('_', '-')
         val underscoredId = realmId.replace('-', '_')
         return listOf(realmId, dashedId, underscoredId).distinct()
+    }
+
+    private fun cachedRealmFor(realmId: String): Realm? =
+        realmIdVariants(realmId).firstNotNullOfOrNull(cachedRealmsById::get)
+
+    private fun cacheRealm(realm: Realm) {
+        realmIdVariants(realm.id).forEach { id -> cachedRealmsById[id] = realm }
     }
 
     private suspend fun <T> withFallback(

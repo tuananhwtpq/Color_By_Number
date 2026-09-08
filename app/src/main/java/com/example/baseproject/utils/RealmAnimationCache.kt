@@ -7,16 +7,20 @@ import com.airbnb.lottie.LottieCompositionFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 object RealmAnimationCache {
+
+    private val compositions = ConcurrentHashMap<Int, LottieComposition>()
 
     suspend fun loadComposition(
         context: Context,
         @RawRes animationRes: Int,
-    ): LottieComposition = withContext(Dispatchers.Default) {
+    ): LottieComposition = compositions[animationRes] ?: withContext(Dispatchers.Default) {
         val appContext = context.applicationContext
-        LottieCompositionFactory
+        val composition = LottieCompositionFactory
             .fromRawResSync(appContext, animationRes)
             .value ?: throw IOException("Cannot load realm animation $animationRes")
+        compositions.putIfAbsent(animationRes, composition) ?: composition
     }
 }

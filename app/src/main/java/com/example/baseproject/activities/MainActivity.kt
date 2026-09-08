@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
+import com.example.baseproject.MyApplication
 import com.example.baseproject.adapters.MainVPAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
@@ -25,6 +26,7 @@ import com.example.baseproject.utils.gone
 import com.example.baseproject.utils.setBottomNavLabelSelected
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -42,6 +44,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         private const val PREPARING_MIN_DURATION_MS = 900L
         private const val PREPARING_MAX_DURATION_MS = 5_500L
         private const val PREPARING_FADE_DURATION_MS = 260L
+        private const val REALM_WARM_UP_DELAY_MS = 350L
     }
 
     private val viewModel: MainViewModel by viewModels {
@@ -54,10 +57,18 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private var preparingStartedAt = 0L
     private var preparingOverlayHidden = false
     private var shouldShowPreparingOverlay = false
+    private var realmWarmUpJob: Job? = null
+    private var realmWarmUpStarted = false
+    private val appContainer by lazy {
+        (application as MyApplication).appContainer
+    }
 
     override fun initData() {
-        viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
-        preloadRealmAnimation()
+        val initialTab = intent.getIntExtra(EXTRA_SELECTED_TAB, 0)
+        viewModel.onTabSelected(initialTab)
+        if (initialTab == TAB_COLOR_REALM) {
+            scheduleRealmWarmUp(delayMillis = 0L)
+        }
     }
 
     override fun initView() {
@@ -112,6 +123,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     }
 
     fun notifyInitialLibraryContentReady() {
+        scheduleRealmWarmUp()
+
         if (!shouldShowPreparingOverlay || preparingOverlayHidden) return
         preparingOverlayHidden = true
         SharedPrefManager.hasSeenLibraryPreparing = true
@@ -171,7 +184,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         super.onNewIntent(intent)
         setIntent(intent)
         viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
-        preloadRealmAnimation()
+        realmWarmUpJob?.cancel()
+        realmWarmUpStarted = false
+        scheduleRealmWarmUp(delayMillis = 0L)
     }
 
     override fun onResume() {
@@ -179,18 +194,32 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         AppThemeManager.applyFullBackground(binding.main)
     }
 
-    private fun preloadRealmAnimation() {
+    private fun scheduleRealmWarmUp(delayMillis: Long = REALM_WARM_UP_DELAY_MS) {
+        if (realmWarmUpStarted) return
+        if (realmWarmUpJob?.isActive == true) return
+
+        realmWarmUpStarted = true
+        realmWarmUpJob = lifecycleScope.launch {
+            delay(delayMillis)
+            warmUpRealmContent()
+        }
+    }
+
+    private suspend fun warmUpRealmContent() {
         val realm = RealmCatalog.findById(intent.getStringExtra(EXTRA_REALM_ID))
             ?: RealmCatalog.default
 
-        lifecycleScope.launch {
-            try {
-                RealmAnimationCache.loadComposition(this@MainActivity, realm.animationRes)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                // Preload is only an optimisation; RealmFragment still has a loading fallback.
+        try {
+            RealmAnimationCache.loadComposition(this@MainActivity, realm.animationRes)
+            val remoteRealms = appContainer.realmRepository.loadRealms()
+            val selectedRealmId = SharedPrefManager.selectedRealmId ?: realm.id
+            if (remoteRealms.none { it.id == selectedRealmId }) {
+                appContainer.realmRepository.loadRealm(selectedRealmId)
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Warm up is only an optimisation; RealmFragment still has local fallbacks.
         }
     }
 

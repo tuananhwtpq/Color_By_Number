@@ -82,7 +82,10 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
         loadRemoteRealmJob?.cancel()
         loadRemoteRealmJob = viewLifecycleOwner.lifecycleScope.launch {
             val remoteRealm = try {
-                appContainer.realmRepository.loadRealm(remoteRequestId)
+                val remoteRealms = appContainer.realmRepository.loadRealms()
+                remoteRealms.findByIdVariant(remoteRequestId)
+                    ?: appContainer.realmRepository.loadRealm(remoteRequestId)
+                    ?: remoteRealms.findByIdVariant(RealmCatalog.default.id)
                     ?: appContainer.realmRepository.loadRealm(RealmCatalog.default.id)
             } catch (e: CancellationException) {
                 throw e
@@ -99,6 +102,8 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     private fun renderRealm(realmToRender: Realm) {
         if (realmToRender == realm && binding.tvRealmName.text == realmToRender.name) return
 
+        val hasVisibleAnimation = binding.lavRealmBackground.visibility == View.VISIBLE
+
         realm = realmToRender
         binding.tvRealmName.text = realmToRender.name
         if (!realmToRender.previewImageUrl.isNullOrBlank()) {
@@ -108,10 +113,12 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
         } else {
             binding.ivRealmPlaceholder.setImageResource(realmToRender.thumbnailRes)
         }
-        binding.ivRealmPlaceholder.visibility = View.VISIBLE
-        binding.progressBar.visibility = View.VISIBLE
-        binding.lavRealmBackground.visibility = View.GONE
-        binding.lavRealmBackground.cancelAnimation()
+        binding.ivRealmPlaceholder.visibility = if (hasVisibleAnimation) View.GONE else View.VISIBLE
+        binding.progressBar.visibility = if (hasVisibleAnimation) View.GONE else View.VISIBLE
+        if (!hasVisibleAnimation) {
+            binding.lavRealmBackground.visibility = View.GONE
+            binding.lavRealmBackground.cancelAnimation()
+        }
 
         loadRealmAnimationJob?.cancel()
         loadRealmAnimationJob = viewLifecycleOwner.lifecycleScope.launch {
@@ -151,6 +158,15 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
                 binding.progressBar.visibility = View.GONE
             }
         }
+    }
+
+    private fun List<Realm>.findByIdVariant(realmId: String): Realm? {
+        val variants = listOf(
+            realmId,
+            realmId.replace('_', '-'),
+            realmId.replace('-', '_')
+        )
+        return firstOrNull { realm -> realm.id in variants }
     }
 
     override fun onDestroyView() {
