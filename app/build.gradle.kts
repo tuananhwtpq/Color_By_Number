@@ -26,6 +26,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PIXCOLOR_BASE_URL", "\"https://pixlory.dktechgroup.com/\"")
         buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
+        buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "false")
+        buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "false")
     }
 
     signingConfigs {
@@ -51,11 +53,15 @@ android {
     buildTypes {
         debug {
             buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
+            buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "true")
+            buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "true")
         }
 
         release {
             isMinifyEnabled = false
             buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
+            buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "false")
+            buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "false")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

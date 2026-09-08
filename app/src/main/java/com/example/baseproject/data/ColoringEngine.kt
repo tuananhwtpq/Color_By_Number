@@ -45,6 +45,102 @@ internal object FillColorComposer {
     }
 }
 
+object EdgeUnderpaintEngine {
+    fun applyForMaskColor(
+        maskPixels: IntArray,
+        coloredPixels: IntArray,
+        lineLumaPixels: IntArray?,
+        width: Int,
+        height: Int,
+        maskColor: Int,
+        targetColor: Int,
+        fillCoveragePixels: IntArray? = null,
+        detailSourcePixels: IntArray? = null,
+        revealedDetailPixels: IntArray? = null,
+        radius: Int = 1,
+        lineProximityRadius: Int = 1,
+        inkThreshold: Int = 245,
+        linePixelThreshold: Int = 252
+    ) {
+        if (lineLumaPixels == null || width <= 0 || height <= 0) return
+        if (maskPixels.size != coloredPixels.size || lineLumaPixels.size != maskPixels.size) return
+
+        val additions = GrowingIntArray(256)
+        for (idx in maskPixels.indices) {
+            if (!isRegionPixel(idx, maskPixels, fillCoveragePixels, maskColor)) continue
+            val x = idx % width
+            val y = idx / width
+            for (dy in -radius..radius) {
+                val ny = y + dy
+                if (ny !in 0 until height) continue
+                for (dx in -radius..radius) {
+                    val nx = x + dx
+                    if (nx !in 0 until width) continue
+                    val nIdx = ny * width + nx
+                    if (coloredPixels[nIdx] != 0) continue
+                    if (isRegionPixel(nIdx, maskPixels, fillCoveragePixels, maskColor)) continue
+                    if (maskPixels[nIdx] != 0 && lineLumaPixels[nIdx] >= linePixelThreshold) continue
+                    if (!isNearInk(nIdx, lineLumaPixels, width, height, lineProximityRadius, inkThreshold)) continue
+                    additions.add(nIdx)
+                }
+            }
+        }
+
+        for (i in 0 until additions.size) {
+            val idx = additions[i]
+            coloredPixels[idx] = targetColor
+            if (detailSourcePixels != null &&
+                revealedDetailPixels != null &&
+                idx in detailSourcePixels.indices &&
+                idx in revealedDetailPixels.indices
+            ) {
+                val detailColor = detailSourcePixels[idx]
+                revealedDetailPixels[idx] = if (isBrightDetail(detailColor)) 0 else detailColor
+            }
+        }
+    }
+
+    private fun isRegionPixel(
+        idx: Int,
+        maskPixels: IntArray,
+        fillCoveragePixels: IntArray?,
+        maskColor: Int
+    ): Boolean =
+        maskPixels[idx] == maskColor || fillCoveragePixels?.getOrNull(idx) == maskColor
+
+    private fun isNearInk(
+        idx: Int,
+        lineLumaPixels: IntArray,
+        width: Int,
+        height: Int,
+        radius: Int,
+        threshold: Int
+    ): Boolean {
+        val x = idx % width
+        val y = idx / width
+        for (dy in -radius..radius) {
+            val ny = y + dy
+            if (ny !in 0 until height) continue
+            for (dx in -radius..radius) {
+                val nx = x + dx
+                if (nx !in 0 until width) continue
+                if (lineLumaPixels[ny * width + nx] < threshold) return true
+            }
+        }
+        return false
+    }
+
+    private fun isBrightDetail(pixel: Int): Boolean {
+        val alpha = (pixel ushr 24) and 0xFF
+        if (alpha == 0) return true
+        val r = (pixel shr 16) and 0xFF
+        val g = (pixel shr 8) and 0xFF
+        val b = pixel and 0xFF
+        val luma = (r * 299 + g * 587 + b * 114) / 1000
+        return alpha < 32 || luma > 220
+    }
+}
+
 internal data class FillRegionPixels(
     val indices: IntArray,
     val minX: Int,

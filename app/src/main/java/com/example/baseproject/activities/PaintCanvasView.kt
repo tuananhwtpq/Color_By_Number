@@ -19,8 +19,10 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import com.caverock.androidsvg.SVG
+import com.example.baseproject.BuildConfig
 import com.example.baseproject.data.AnimatedFiller
 import com.example.baseproject.data.DetailRevealEngine
+import com.example.baseproject.data.EdgeUnderpaintEngine
 import com.example.baseproject.data.RegionData
 import com.example.baseproject.highlight.HighlightRenderer
 import com.example.baseproject.highlight.HighlightTheme
@@ -47,6 +49,7 @@ class PaintCanvasView @JvmOverloads constructor(
         // nền, chỉ còn bóng đổ làm ranh giới nên nhìn rất bẩn. Trắng cũng là phần tử đơn vị
         // của phép nhân nên nét vẽ (multiplyPaint) vẫn giữ nguyên độ sắc.
         private const val THUMBNAIL_BACKGROUND_COLOR = 0xFFFFFFFF.toInt()
+        private const val WARM_PAPER_BACKGROUND_COLOR = 0xFFFAF7F1.toInt()
 
         // Ngưỡng bán kính trên MÀN HÌNH (không phải trên bitmap) để quyết định có hiện số
         // hay không — giữ nguyên như trước, chỉ đổi nguồn region.radius (giờ chính xác hơn).
@@ -83,6 +86,7 @@ class PaintCanvasView @JvmOverloads constructor(
     // Arrays for fast processing
     private var maskPixelsArray: IntArray? = null
     private var fillCoveragePixelsArray: IntArray? = null
+    private var displayLineLumaPixelsArray: IntArray? = null
     private var coloredPixelsArray: IntArray? = null
     private var hlPixelsArray: IntArray? = null
     private var detailSourcePixelsArray: IntArray? = null
@@ -97,7 +101,7 @@ class PaintCanvasView @JvmOverloads constructor(
         xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
     }
     private val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = if (BuildConfig.USE_WARM_PAPER_CANVAS) WARM_PAPER_BACKGROUND_COLOR else Color.WHITE
         style = Paint.Style.FILL
     }
 
@@ -205,6 +209,11 @@ class PaintCanvasView @JvmOverloads constructor(
             val coloredBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val highlightBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val detailRevealBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val displayLineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+                createDisplayLineLumaPixels(displayLineSvg, displayLine, w, h)
+            } else {
+                null
+            }
 
             val maskPx = IntArray(w * h)
             mask.getPixels(maskPx, 0, w, 0, 0, w, h)
@@ -245,6 +254,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
                 maskPixelsArray = maskPx
                 fillCoveragePixelsArray = coveragePx
+                displayLineLumaPixelsArray = displayLineLumaPx
                 coloredPixelsArray = IntArray(w * h)
                 hlPixelsArray = IntArray(w * h)
                 detailSourcePixelsArray = detailPx
@@ -347,6 +357,22 @@ class PaintCanvasView @JvmOverloads constructor(
                     if (isMaskPixel && detailSrcPx != null && detailOutPx != null) {
                         detailOutPx[i] = detailSrcPx[i]
                     }
+                }
+            }
+            if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+                for ((maskColor, targetColor) in completedMap) {
+                    EdgeUnderpaintEngine.applyForMaskColor(
+                        maskPixels = maskPx,
+                        coloredPixels = colPx,
+                        lineLumaPixels = displayLineLumaPixelsArray,
+                        width = w,
+                        height = h,
+                        maskColor = maskColor,
+                        targetColor = targetColor,
+                        fillCoveragePixels = coveragePx,
+                        detailSourcePixels = detailSrcPx,
+                        revealedDetailPixels = detailOutPx,
+                    )
                 }
             }
 
@@ -461,6 +487,20 @@ class PaintCanvasView @JvmOverloads constructor(
             targetColor = targetColor,
             fillCoveragePixels = fillCoveragePixelsArray,
         )
+        if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+            EdgeUnderpaintEngine.applyForMaskColor(
+                maskPixels = maskPx,
+                coloredPixels = colArr,
+                lineLumaPixels = displayLineLumaPixelsArray,
+                width = maskWidth,
+                height = maskHeight,
+                maskColor = maskColor,
+                targetColor = targetColor,
+                fillCoveragePixels = fillCoveragePixelsArray,
+                detailSourcePixels = detailSrcPx,
+                revealedDetailPixels = detailOutPx,
+            )
+        }
         colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
         if (detailBmp != null && detailOutPx != null) {
             detailBmp.setPixels(detailOutPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
@@ -1106,6 +1146,49 @@ class PaintCanvasView @JvmOverloads constructor(
     private fun drawBitmapInMaskBounds(canvas: Canvas, bitmap: Bitmap, paint: Paint?) {
         bitmapBounds.set(0f, 0f, maskWidth.toFloat(), maskHeight.toFloat())
         canvas.drawBitmap(bitmap, null, bitmapBounds, paint)
+    }
+
+    private fun createDisplayLineLumaPixels(
+        svg: SVG?,
+        fallbackBitmap: Bitmap,
+        width: Int,
+        height: Int
+    ): IntArray? {
+        if (width <= 0 || height <= 0) return null
+        val source = if (svg != null) {
+            try {
+                Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+                    bitmap.eraseColor(Color.TRANSPARENT)
+                    svg.renderToCanvas(Canvas(bitmap), RectF(0f, 0f, width.toFloat(), height.toFloat()))
+                }
+            } catch (_: Exception) {
+                null
+            }
+        } else {
+            null
+        } ?: fallbackBitmap.takeIf { it.width == width && it.height == height } ?: return null
+
+        val pixels = IntArray(width * height)
+        source.getPixels(pixels, 0, width, 0, 0, width, height)
+        if (source !== fallbackBitmap) {
+            source.recycle()
+        }
+
+        return IntArray(pixels.size) { i ->
+            val pixel = pixels[i]
+            val alpha = (pixel ushr 24) and 0xFF
+            if (alpha == 0) {
+                255
+            } else {
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
+                val blendedR = (r * alpha + 255 * (255 - alpha)) / 255
+                val blendedG = (g * alpha + 255 * (255 - alpha)) / 255
+                val blendedB = (b * alpha + 255 * (255 - alpha)) / 255
+                (blendedR * 299 + blendedG * 587 + blendedB * 114) / 1000
+            }
+        }
     }
 
     private fun drawDisplayLineInMaskBounds(canvas: Canvas, fallbackBitmap: Bitmap) {
