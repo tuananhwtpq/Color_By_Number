@@ -30,10 +30,6 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
         private const val EXTRA_REALM_ID = "REALM_ID"
         private const val EXTRA_PROGRESS = "PROGRESS"
 
-        /**
-         * [progress] là vị trí animation đang chạy ở màn trước (0..1) để mở full screen không
-         * bị giật về đầu.
-         */
         fun newIntent(context: Context, realmId: String, progress: Float): Intent =
             Intent(context, RealmFullScreenActivity::class.java)
                 .putExtra(EXTRA_REALM_ID, realmId)

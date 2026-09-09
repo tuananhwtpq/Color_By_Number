@@ -140,6 +140,22 @@ class LevelConfigTest {
     }
 
     @Test
+    fun progressFractionFallsBackToStatsWhenRegionsAreEmpty() {
+        val config = LevelConfig(
+            id = "remote-level",
+            name = "Remote level",
+            category = "Art",
+            width = 100,
+            height = 100,
+            palette = emptyList(),
+            regions = emptyList(),
+            stats = LevelStats(totalRegions = 4)
+        )
+
+        assertEquals(0.5f, config.progressFraction(setOf(1, 2)), 0.001f)
+    }
+
+    @Test
     fun maskRegionHitTesterMapsCoordinatesToMaskColor() {
         val pixels = intArrayOf(
             0x000001, 0x000001, 0x000002,

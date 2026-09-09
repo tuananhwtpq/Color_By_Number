@@ -23,7 +23,7 @@ class HighlightOptionView @JvmOverloads constructor(
     private val previewPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val previewClipPath = Path()
     private val selectedStartColor = "#F07962".toColorInt()
-    private val selectedEndColor = "#FFD43D".toColorInt()
+    private val selectedEndColor = "#E033FF".toColorInt()
     private val unselectedColor = "#D8D0DA".toColorInt()
     private val strokeWidthPx = 5f.dp()
     private val previewDiameterPx = 56f.dp()

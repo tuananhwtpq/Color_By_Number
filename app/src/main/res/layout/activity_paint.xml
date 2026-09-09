@@ -102,7 +102,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btnHint"
-        tools:visibility="visible">
+        tools:visibility="gone">
 
         <ImageView
             android:id="@+id/ivFullPreview"
@@ -179,7 +179,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:background="@drawable/bg_full_main_theme_01"
-        tools:visibility="visible">
+        tools:visibility="gone">
 
         <LinearLayout
             android:id="@+id/layoutPreparationContent"
@@ -358,7 +358,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="visible">
+        tools:visibility="gone">
 
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lavCompletionBlast"

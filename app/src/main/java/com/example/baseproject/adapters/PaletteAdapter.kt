@@ -65,13 +65,11 @@ class PaletteAdapter(
         holder.colorCircle.setCardBackgroundColor(colorInt)
         holder.tvNumber.text = item.number.toString()
 
-        // Tính màu chữ (trắng hoặc đen) dựa vào độ sáng của màu nền
         val r = Color.red(colorInt)
         val g = Color.green(colorInt)
         val b = Color.blue(colorInt)
         val brightness = 0.299 * r + 0.587 * g + 0.114 * b
         holder.tvNumber.setTextColor(if (brightness > 186) Color.BLACK else Color.WHITE)
-//        holder.tvNumber.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.grey_800))
 
         val isCompleted = completedIndexes.contains(originalIndex)
         val isSelected = originalIndex == selectedIndex

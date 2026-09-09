@@ -46,6 +46,14 @@ class LibraryViewModel(
         }
     }
 
+    fun reloadLevels() {
+        viewModelScope.launch {
+            runCatching {
+                assetLevelRepository.loadAllLevels()
+            }.onSuccess(::showLevels)
+        }
+    }
+
     fun selectCategory(category: String) {
         _uiState.update {
             it.copy(

@@ -3,6 +3,7 @@ package com.example.baseproject.data.repository
 import android.util.Log
 import com.example.baseproject.data.CentroidCalculator
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.progressRegionCount
 import com.example.baseproject.data.remote.PixcolorApi
 import com.example.baseproject.data.remote.RemoteApiException
 import com.example.baseproject.data.remote.RemoteAssetLoader
@@ -88,10 +89,15 @@ class RemoteLevelRepositoryImpl(
                             }
                         }
                     }.awaitAll().flatten()
-                }.also { levels ->
-                    cachedAllLevels = levels
+                }.let { levels ->
+                    val mergedLevels = RemoteLevelCachePolicy.mergeFreshLevels(
+                        freshLevels = levels,
+                        cachedLevels = cachedAllLevels.orEmpty()
+                    )
+                    cachedAllLevels = mergedLevels
                     lastRemoteLoadedAtMillis = System.currentTimeMillis()
-                    writeCachedLevels(levels)
+                    writeCachedLevels(mergedLevels)
+                    mergedLevels
                 }
             }
         }
@@ -114,6 +120,7 @@ class RemoteLevelRepositoryImpl(
                 detail = detail,
                 assetLoader = assetLoader
             )
+            cacheResolvedLevel(config)
 
             val lineUrl = requireAsset(detail, "LINE")
             val maskUrl = requireAsset(detail, "MASK")
@@ -166,6 +173,20 @@ class RemoteLevelRepositoryImpl(
                 regions = regions
             )
         }
+
+    private suspend fun cacheResolvedLevel(config: LevelConfig) {
+        levelsMutex.withLock {
+            val currentLevels = cachedAllLevels ?: readCachedLevels().orEmpty()
+            val updatedLevels = RemoteLevelCachePolicy.replaceWithResolvedConfig(
+                levels = currentLevels,
+                resolvedConfig = config
+            )
+            if (updatedLevels != currentLevels) {
+                cachedAllLevels = updatedLevels
+                writeCachedLevels(updatedLevels)
+            }
+        }
+    }
 
     private data class LevelBitmaps(
         val line: android.graphics.Bitmap,
@@ -241,6 +262,42 @@ class RemoteLevelRepositoryImpl(
             }
         }
     }
+}
+
+internal object RemoteLevelCachePolicy {
+    fun replaceWithResolvedConfig(
+        levels: List<LevelConfig>,
+        resolvedConfig: LevelConfig
+    ): List<LevelConfig> = levels.map { cachedLevel ->
+        if (cachedLevel.hasSameIdentityAs(resolvedConfig)) {
+            cachedLevel.copy(
+                totalRegions = resolvedConfig.progressRegionCount().takeIf { it > 0 }
+                    ?: cachedLevel.totalRegions
+            )
+        } else {
+            cachedLevel
+        }
+    }
+
+    fun mergeFreshLevels(
+        freshLevels: List<LevelConfig>,
+        cachedLevels: List<LevelConfig>
+    ): List<LevelConfig> {
+        val resolvedByIdentity = cachedLevels
+            .filter { it.progressRegionCount() > 0 }
+            .associateBy { it.category to it.id }
+
+        return freshLevels.map { freshLevel ->
+            val resolved = resolvedByIdentity[freshLevel.category to freshLevel.id]
+                ?: return@map freshLevel
+            freshLevel.copy(
+                totalRegions = resolved.progressRegionCount()
+            )
+        }
+    }
+
+    private fun LevelConfig.hasSameIdentityAs(other: LevelConfig): Boolean =
+        category == other.category && id == other.id
 }
 
 internal object RemoteDisplayLineAssetPolicy {

@@ -51,6 +51,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     private var renderedCategories: List<String> = emptyList()
     private var renderedCategoryNames: Map<String, String> = emptyMap()
     private var initialHomeRevealPlayed = false
+    private var hasResumedOnce = false
     private val completedPictureActions by lazy {
         CompletedPictureActions(
             activity = requireActivity(),
@@ -145,6 +146,11 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     override fun onResume() {
         super.onResume()
         applyAppTheme()
+        if (hasResumedOnce) {
+            viewModel.reloadLevels()
+        } else {
+            hasResumedOnce = true
+        }
         levelAdapter.notifyDataSetChanged()
     }
 
