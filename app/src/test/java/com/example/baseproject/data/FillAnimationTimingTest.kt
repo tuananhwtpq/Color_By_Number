@@ -6,10 +6,10 @@ import org.junit.Test
 
 class FillAnimationTimingTest {
     @Test
-    fun durationIsShortAndBoundedByRegionSize() {
-        assertEquals(140f, FillAnimationTiming.durationMs(0), 0.001f)
-        assertTrue(FillAnimationTiming.durationMs(10_000) > FillAnimationTiming.durationMs(100))
-        assertEquals(220f, FillAnimationTiming.durationMs(1_000_000), 0.001f)
+    fun durationIsShortAndBoundedByScreenSpaceRadius() {
+        assertEquals(120f, FillAnimationTiming.durationMs(0f), 0.001f)
+        assertTrue(FillAnimationTiming.durationMs(800f) > FillAnimationTiming.durationMs(80f))
+        assertEquals(260f, FillAnimationTiming.durationMs(10_000f), 0.001f)
     }
 
     @Test

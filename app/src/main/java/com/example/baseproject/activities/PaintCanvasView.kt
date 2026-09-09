@@ -52,10 +52,6 @@ class PaintCanvasView @JvmOverloads constructor(
         private const val THUMBNAIL_BACKGROUND_COLOR = 0xFFFFFFFF.toInt()
         private const val WARM_PAPER_BACKGROUND_COLOR = 0xFFFAF7F1.toInt()
 
-        // Ngưỡng bán kính trên MÀN HÌNH (không phải trên bitmap) để quyết định có hiện số
-        // hay không — giữ nguyên như trước, chỉ đổi nguồn region.radius (giờ chính xác hơn).
-        private const val MIN_SCREEN_RADIUS_TO_SHOW_LABEL = 25f
-
         // Cỡ chữ MẶC ĐỊNH khi vùng đủ lớn, tính bằng px màn hình — KHÔNG nhân thêm
         // scaleFactor, để số giữ nguyên kích thước khi zoom ra/vào (giống app mẫu), thay vì
         // co giãn theo zoom như trước.
@@ -129,6 +125,8 @@ class PaintCanvasView @JvmOverloads constructor(
 
     private var regions: List<RegionData> = emptyList()
     private val labelPointBuffer = FloatArray(2)
+    private val labelCollisionBounds = ArrayList<RectF>()
+    private val labelVisibilityByMaskColor = mutableMapOf<Int, Boolean>()
     private var completedMaskColors: Set<Int> = emptySet()
 
     private var hideAllLabels: Boolean = false
@@ -145,6 +143,7 @@ class PaintCanvasView @JvmOverloads constructor(
     private var highlightRenderJob: Job? = null
     private var highlightRenderGeneration = 0
     private var highlightFadeAnimator: ValueAnimator? = null
+    private var highlightFadeAlpha = 255
     private val preparingFillColors = mutableSetOf<Int>()
 
     private data class TapEffect(
@@ -270,6 +269,7 @@ class PaintCanvasView @JvmOverloads constructor(
                 maskWidth = w
                 maskHeight = h
                 regions = regionsData
+                labelVisibilityByMaskColor.clear()
                 activeFillers.forEach { it.recycle() }
                 activeFillers.clear()
                 preparingFillColors.clear()
@@ -440,6 +440,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     fun resetProgress() {
         completedMaskColors = emptySet()
+        labelVisibilityByMaskColor.clear()
         activeFillers.forEach { it.recycle() }
         activeFillers.clear()
         preparingFillColors.clear()
@@ -612,7 +613,8 @@ class PaintCanvasView @JvmOverloads constructor(
         renderedHighlightTargets = IntArray(0)
         scheduledHighlightTargets = IntArray(0)
         highlightFadeAnimator?.cancel()
-        highlightPaint.alpha = 255
+        highlightFadeAlpha = 255
+        applyHighlightOpacity()
         val hl = highlightBitmap ?: return
         val hlPixels = hlPixelsArray ?: return
         java.util.Arrays.fill(hlPixels, 0)
@@ -686,13 +688,15 @@ class PaintCanvasView @JvmOverloads constructor(
             duration = highlightTheme.fadeInDurationMs
             interpolator = highlightTheme.interpolator
             addUpdateListener {
-                highlightPaint.alpha = it.animatedValue as Int
+                highlightFadeAlpha = it.animatedValue as Int
+                applyHighlightOpacity()
                 invalidate()
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     if (highlightFadeAnimator === animation) highlightFadeAnimator = null
-                    highlightPaint.alpha = 255
+                    highlightFadeAlpha = 255
+                    applyHighlightOpacity()
                 }
 
                 override fun onAnimationCancel(animation: Animator) {
@@ -728,7 +732,22 @@ class PaintCanvasView @JvmOverloads constructor(
         drawMatrix.postScale(scaleFactor, scaleFactor)
         drawMatrix.postTranslate(translateX, translateY)
         drawMatrix.invert(inverseMatrix)
+        applyHighlightOpacity()
         invalidate()
+    }
+
+    /**
+     * Checker cần bớt đậm khi vùng đã được zoom lớn: lúc này người dùng cần đọc nét và số,
+     * không cần một lớp phủ mạnh như ở góc nhìn tổng quan. Target được highlight không đổi.
+     */
+    private fun applyHighlightOpacity() {
+        val fitScale = Math.min(
+            width.toFloat() / (maskWidth.takeIf { it > 0 } ?: 1),
+            height.toFloat() / (maskHeight.takeIf { it > 0 } ?: 1)
+        ).coerceAtLeast(0.0001f)
+        val zoomRatio = scaleFactor / fitScale
+        val zoomReduction = ((zoomRatio - 1f) / 5f).coerceIn(0f, 1f) * 0.28f
+        highlightPaint.alpha = (highlightFadeAlpha * (1f - zoomReduction)).toInt().coerceIn(0, 255)
     }
 
     fun focusOnRegionByMaskColor(maskColor: Int) {
@@ -930,6 +949,7 @@ class PaintCanvasView @JvmOverloads constructor(
         val detailPx = detailSourcePixelsArray
         val coveragePx = fillCoveragePixelsArray
         val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) displayLineLumaPixelsArray else null
+        val animationScale = scaleFactor
 
         preparingFillColors.add(clickedColor)
         activeEffects.add(
@@ -954,6 +974,7 @@ class PaintCanvasView @JvmOverloads constructor(
                         targetColor = targetColor,
                         startX = startX,
                         startY = startY,
+                        animationScale = animationScale,
                         maxQueueSize = maxQueueSize,
                         onFinished = {
                             onRegionFilledListener?.invoke(it)
@@ -1201,35 +1222,61 @@ class PaintCanvasView @JvmOverloads constructor(
         }
         canvas.restore()
 
-        // Vẽ số ở toạ độ MÀN HÌNH (không canvas.concat(drawMatrix)) — cỡ chữ vì vậy KHÔNG bị
-        // co/phình theo scaleFactor như khi vẽ bên trong canvas đã transform. Ẩn/hiện vẫn
-        // dựa trên kích thước thật trên màn hình ở zoom hiện tại (screenRadius), giữ nguyên
-        // hành vi cũ — chỉ cỡ chữ khi hiện là cố định thay vì co theo zoom.
-        for (region in regions) {
-            if (hideAllLabels) break
-            if (completedMaskColors.contains(region.maskColorInt) || region.hideNumber) continue
-            val screenRadius = region.radius * scaleFactor
-            if (screenRadius < MIN_SCREEN_RADIUS_TO_SHOW_LABEL) continue
-
-            labelPointBuffer[0] = region.labelX
-            labelPointBuffer[1] = region.labelY
-            drawMatrix.mapPoints(labelPointBuffer)
-
-            textPaint.textSize = Math.min(LABEL_TEXT_SIZE_PX, screenRadius * LABEL_SAFE_RADIUS_FACTOR)
-                .coerceAtLeast(8f)
-            val textOffset = (textPaint.descent() + textPaint.ascent()) / 2
-            canvas.drawText(
-                region.number.toString(),
-                labelPointBuffer[0],
-                labelPointBuffer[1] - textOffset,
-                textPaint
-            )
-        }
+        drawAdaptiveLabels(canvas)
 
         canvas.save()
         canvas.concat(drawMatrix)
         drawDisplayLineInMaskBounds(canvas, line)
         canvas.restore()
+    }
+
+    /** Draw selected-colour labels first so they survive collision culling. */
+    private fun drawAdaptiveLabels(canvas: Canvas) {
+        if (hideAllLabels) return
+        labelCollisionBounds.clear()
+        drawAdaptiveLabels(canvas, selectedColourFirst = true)
+        drawAdaptiveLabels(canvas, selectedColourFirst = false)
+    }
+
+    private fun drawAdaptiveLabels(canvas: Canvas, selectedColourFirst: Boolean) {
+        for (region in regions) {
+            if (completedMaskColors.contains(region.maskColorInt) || region.hideNumber) continue
+            val isSelectedColour = currentValidMaskColors.containsKey(region.maskColorInt)
+            if (isSelectedColour != selectedColourFirst) continue
+
+            val screenRadius = region.radius * scaleFactor
+            val wasVisible = labelVisibilityByMaskColor[region.maskColorInt] ?: false
+            val isVisible = LabelVisibilityPolicy.shouldShow(wasVisible, screenRadius)
+            labelVisibilityByMaskColor[region.maskColorInt] = isVisible
+            if (!isVisible) continue
+
+            labelPointBuffer[0] = region.labelX
+            labelPointBuffer[1] = region.labelY
+            drawMatrix.mapPoints(labelPointBuffer)
+            if (labelPointBuffer[0] !in 0f..width.toFloat() || labelPointBuffer[1] !in 0f..height.toFloat()) {
+                continue
+            }
+
+            textPaint.textSize = Math.min(LABEL_TEXT_SIZE_PX, screenRadius * LABEL_SAFE_RADIUS_FACTOR)
+                .coerceAtLeast(8f)
+            val textOffset = (textPaint.descent() + textPaint.ascent()) / 2f
+            val baseline = labelPointBuffer[1] - textOffset
+            val textWidth = textPaint.measureText(region.number.toString())
+            val candidate = RectF(
+                labelPointBuffer[0] - textWidth / 2f - 2f,
+                baseline + textPaint.ascent() - 2f,
+                labelPointBuffer[0] + textWidth / 2f + 2f,
+                baseline + textPaint.descent() + 2f,
+            )
+            if (labelCollisionBounds.any { RectF.intersects(it, candidate) }) continue
+            labelCollisionBounds.add(candidate)
+            canvas.drawText(
+                region.number.toString(),
+                labelPointBuffer[0],
+                baseline,
+                textPaint
+            )
+        }
     }
 
     private fun drawBitmapInMaskBounds(canvas: Canvas, bitmap: Bitmap, paint: Paint?) {

@@ -527,12 +527,19 @@ internal class GrowingIntArray(initialCapacity: Int) {
 }
 
 internal object FillAnimationTiming {
-    private const val MIN_DURATION_MS = 140f
-    private const val MAX_DURATION_MS = 220f
+    private const val MIN_DURATION_MS = 120f
+    private const val MAX_DURATION_MS = 260f
+    private const val MS_PER_SCREEN_RADIUS_PX = 0.12f
 
-    fun durationMs(pixelCount: Int): Float {
-        val sizeContribution = kotlin.math.sqrt(pixelCount.coerceAtLeast(0).toFloat()) * 0.25f
-        return (MIN_DURATION_MS + sizeContribution).coerceIn(MIN_DURATION_MS, MAX_DURATION_MS)
+    /**
+     * Tính thời lượng từ bán kính reveal sau khi đã được transform lên màn hình.
+     *
+     * Cùng một vùng sẽ reveal lâu hơn khi người dùng zoom vào, thay vì dùng số pixel bitmap
+     * gốc (vốn không phản ánh kích thước mà mắt người dùng đang thấy).
+     */
+    fun durationMs(screenRevealRadiusPx: Float): Float {
+        return (MIN_DURATION_MS + screenRevealRadiusPx.coerceAtLeast(0f) * MS_PER_SCREEN_RADIUS_PX)
+            .coerceIn(MIN_DURATION_MS, MAX_DURATION_MS)
     }
 
     fun easedProgress(elapsedMs: Float, durationMs: Float): Float {
@@ -552,6 +559,7 @@ class AnimatedFiller(
     val targetColor: Int,
     val startX: Int,
     val startY: Int,
+    animationScale: Float,
     maxQueueSize: Int,
     val onFinished: (Int) -> Unit,
     // Lớp detail (RGBA) kéo màu phẳng của bảng màu về gần màu ảnh gốc. Không truyền vào thì
@@ -615,7 +623,7 @@ class AnimatedFiller(
         val d3 = Math.sqrt(dx1 * dx1 + dy2 * dy2)
         val d4 = Math.sqrt(dx2 * dx2 + dy2 * dy2)
         maxRadius = Math.max(Math.max(d1, d2), Math.max(d3, d4)).toFloat() + 5f
-        durationMs = FillAnimationTiming.durationMs(indices.size)
+        durationMs = FillAnimationTiming.durationMs(maxRadius * animationScale.coerceAtLeast(0f))
 
         localBitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
         localBitmap.setPixels(frame.pixels, 0, frame.width, 0, 0, frame.width, frame.height)
