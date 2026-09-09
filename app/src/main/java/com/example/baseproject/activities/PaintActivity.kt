@@ -10,6 +10,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.drawable.Drawable
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -17,7 +18,12 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.example.baseproject.MyApplication
+import com.example.baseproject.R
 import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.adapters.PaletteAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
@@ -32,6 +38,7 @@ import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.SharedPrefManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -51,6 +58,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val COMPLETED_NAVIGATION_DELAY_MS = 400L
         private const val PREPARATION_MIN_DURATION_MS = 350L
         private const val PREPARATION_FADE_OUT_MS = 160L
+        private const val THUMBNAIL_SAVE_DEBOUNCE_MS = 450L
 
         const val EXTRA_CATEGORY = "CATEGORY"
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
@@ -93,6 +101,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var fullPreviewBitmap: Bitmap? = null
     private var fullPreviewRenderKey: String? = null
     private var lastRenderedSelectedPaletteIndex: Int = -1
+    private var thumbnailSaveJob: Job? = null
     private val guideRectBuffer = Rect()
 
     private val previewMultiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
@@ -139,6 +148,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
             viewModel.onRegionFilled(maskInt)
+            scheduleThumbnailSave()
         }
         binding.fullPreviewOverlay.visibility = View.GONE
         binding.completionAnimationOverlay.visibility = View.GONE
@@ -198,7 +208,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                 resetFullPreviewCache(newRenderKey)
                 exitFillAllPreviewState()
                 lifecycleScope.launch {
-                    ensureFullPreviewBitmap(renderData)
+                    showPreparationCanvasStage()
                     binding.paintCanvas.setBitmapsSuspend(
                         renderData.lineBitmap,
                         renderData.displayLineBitmap,
@@ -212,8 +222,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                         binding.paintCanvas.restoreProgressSuspend(state.completedColorMap)
                     }
                     binding.paintCanvas.setCompletedRegions(state.completedMaskColors)
-                    binding.paintCanvas.highlightNumber(state.highlightMaskColors)
                     binding.paintCanvas.setActiveColors(state.activeColors)
+                    binding.paintCanvas.highlightNumber(state.highlightMaskColors)
+                    showPreparationReadyStage()
                     hidePreparationOverlayWhenReady()
                     showPendingGuideIfNeeded()
                     binding.root.post { updateGuideOverlayForCurrentStep() }
@@ -227,8 +238,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                 } else {
                     binding.paintCanvas.setCompletedRegions(state.completedMaskColors)
                 }
-                binding.paintCanvas.highlightNumber(state.highlightMaskColors)
                 binding.paintCanvas.setActiveColors(state.activeColors)
+                binding.paintCanvas.highlightNumber(state.highlightMaskColors)
             }
         }
 
@@ -393,13 +404,48 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.paintPreparationOverlay.alpha = 1f
         binding.shimmerPreparationThumbnail.startShimmer()
         binding.ivPreparationThumbnail.setImageDrawable(null)
+        binding.tvPreparationMessage.setText(R.string.preparing_picture)
         preparationThumbnail?.let { thumbnail ->
             Glide.with(this)
                 .load(thumbnail)
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?,
+                        model: Any?,
+                        target: Target<Drawable>?,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        binding.shimmerPreparationThumbnail.stopShimmer()
+                        return false
+                    }
+
+                    override fun onResourceReady(
+                        resource: Drawable,
+                        model: Any,
+                        target: Target<Drawable>?,
+                        dataSource: DataSource,
+                        isFirstResource: Boolean
+                    ): Boolean {
+                        binding.shimmerPreparationThumbnail.stopShimmer()
+                        return false
+                    }
+                })
                 .into(binding.ivPreparationThumbnail)
         }
         setPaintChromeVisible(false)
         setMainContentVisible(false)
+    }
+
+    private fun showPreparationCanvasStage() {
+        if (isPreparationVisible) {
+            binding.tvPreparationMessage.setText(R.string.preparing_canvas)
+        }
+    }
+
+    private fun showPreparationReadyStage() {
+        if (isPreparationVisible) {
+            binding.tvPreparationMessage.setText(R.string.picture_ready_to_color)
+        }
     }
 
     private suspend fun hidePreparationOverlayWhenReady() {
@@ -425,6 +471,22 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                 }
             }
             .start()
+    }
+
+    /**
+     * Progress is persisted by the ViewModel when a fill completes.  Save the visual thumbnail
+     * shortly afterwards, once a burst of taps settles, so Library/My Work never stays stale
+     * while repeated fills still remain responsive.
+     */
+    private fun scheduleThumbnailSave() {
+        thumbnailSaveJob?.cancel()
+        thumbnailSaveJob = lifecycleScope.launch {
+            delay(THUMBNAIL_SAVE_DEBOUNCE_MS)
+            val thumbnail = binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE)
+            withContext(Dispatchers.IO) {
+                viewModel.saveThumbnail(thumbnail)
+            }
+        }
     }
 
     private fun setPaintChromeVisible(isVisible: Boolean) {
@@ -708,6 +770,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         super.onPause()
         if (isFillAllPreviewActive) return
         if (isNavigatingToCompleted) return
+        thumbnailSaveJob?.cancel()
+        thumbnailSaveJob = null
         viewModel.saveThumbnail(binding.paintCanvas.generateThumbnail(WORK_PREVIEW_THUMBNAIL_SIZE))
     }
 
@@ -717,6 +781,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     override fun onDestroy() {
+        thumbnailSaveJob?.cancel()
+        thumbnailSaveJob = null
         super.onDestroy()
         fullPreviewBitmap?.recycle()
         fullPreviewBitmap = null
