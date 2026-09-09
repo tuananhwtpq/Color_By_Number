@@ -33,7 +33,7 @@ class LevelProgressBarView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
     private val fillGradientColors = intArrayOf(
-        ContextCompat.getColor(context, R.color.newColorUnname),
+        ContextCompat.getColor(context, R.color.yellow_400),
         ContextCompat.getColor(context, R.color.orange350),
         ContextCompat.getColor(context, R.color.red_350)
     )
