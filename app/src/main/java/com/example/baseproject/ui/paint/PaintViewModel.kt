@@ -1,6 +1,5 @@
 package com.example.baseproject.ui.paint
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.baseproject.R
@@ -38,9 +37,6 @@ class PaintViewModel(
     private var category: String? = null
     private var levelId: String? = null
     private var autoSwitchColorEnabled: Boolean = false
-
-    // Tag debug tạm thời — xoá cùng các Log.d bên dưới sau khi xác định xong nguyên nhân.
-    private val dbgTag = "PBN_DBG_a91f"
 
     fun loadLevel(category: String, levelId: String) {
         if (this.category == category && this.levelId == levelId && _uiState.value.renderData != null) {
@@ -186,14 +182,8 @@ class PaintViewModel(
         val category = category ?: return
         val levelId = levelId ?: return
         val newCompleted = _uiState.value.completedMaskColors + maskInt
-        val saveStart = System.currentTimeMillis()
         paintingProgressRepository.appendPaintHistory(category, levelId, maskInt)
         paintingProgressRepository.saveProgress(category, levelId, newCompleted)
-        Log.d(
-            dbgTag,
-            "VM_ON_REGION_FILLED mask=$maskInt(${Integer.toHexString(maskInt)}) " +
-                "saveProgressMs=${System.currentTimeMillis() - saveStart} t=${System.currentTimeMillis()}"
-        )
 
         val paletteProgress = calculatePaletteProgress(newCompleted)
         val overallProgress = calculateOverallProgress(newCompleted)

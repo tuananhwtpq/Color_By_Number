@@ -72,19 +72,20 @@ object HighlightRenderer {
         val cellSize = theme.cellSizePx.coerceAtLeast(2)
         val total = outputPixels.size
         val height = if (width > 0) outputPixels.size / width else 0
-        val bounds = collectTargetBounds(
-            maskPixels = maskPixels,
-            width = width,
-            activeTargets = activeTargets,
-        )
-
-        renderTinyTargetHalos(
-            outputPixels = outputPixels,
-            width = width,
-            height = height,
-            bounds = bounds,
-            theme = theme,
-        )
+        if (theme.tinyTargetHaloAlpha > 0 && theme.tinyTargetHaloRadiusPx > 0) {
+            val bounds = collectTargetBounds(
+                maskPixels = maskPixels,
+                width = width,
+                activeTargets = activeTargets,
+            )
+            renderTinyTargetHalos(
+                outputPixels = outputPixels,
+                width = width,
+                height = height,
+                bounds = bounds,
+                theme = theme,
+            )
+        }
 
         for (i in 0 until total) {
             val maskColor = maskPixels[i]

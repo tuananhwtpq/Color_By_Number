@@ -11,7 +11,6 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.view.View
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -50,10 +49,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val GUIDE_PALETTE_VERTICAL_PADDING_DP = 14f
         private const val WORK_PREVIEW_THUMBNAIL_SIZE = 900
         private const val COMPLETED_NAVIGATION_DELAY_MS = 400L
-        private const val PREPARATION_MIN_DURATION_MS = 850L
-        private const val PREPARATION_FADE_OUT_MS = 220L
-
-        private const val DBG_TAG = "PBN_DBG_a91f"
+        private const val PREPARATION_MIN_DURATION_MS = 350L
+        private const val PREPARATION_FADE_OUT_MS = 160L
 
         const val EXTRA_CATEGORY = "CATEGORY"
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
@@ -141,10 +138,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.rvPalette.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
-            Log.d(
-                DBG_TAG,
-                "ON_REGION_FILLED_CB mask=$maskInt(${Integer.toHexString(maskInt)}) t=${System.currentTimeMillis()}"
-            )
             viewModel.onRegionFilled(maskInt)
         }
         binding.fullPreviewOverlay.visibility = View.GONE
@@ -226,11 +219,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     binding.root.post { updateGuideOverlayForCurrentStep() }
                 }
             } else if (!isFillAllPreviewActive) {
-                Log.d(
-                    DBG_TAG,
-                    "VM_STATE completed=${state.completedMaskColors} highlight=${state.highlightMaskColors} " +
-                        "t=${System.currentTimeMillis()}"
-                )
                 // Đang xem bản tô đầy thì bỏ qua: mọi lệnh vẽ ở đây sẽ đè lên lớp preview
                 // (ví dụ chọn màu khác trên palette sẽ bật lại highlight giữa ảnh đã tô).
                 if (lastCompletedMaskColors.isNotEmpty() && state.completedMaskColors.isEmpty()) {

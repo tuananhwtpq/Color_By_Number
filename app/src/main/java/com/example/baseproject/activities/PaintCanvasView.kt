@@ -12,8 +12,8 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
+import android.os.SystemClock
 import android.util.AttributeSet
-import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -23,12 +23,15 @@ import com.example.baseproject.BuildConfig
 import com.example.baseproject.data.AnimatedFiller
 import com.example.baseproject.data.DetailRevealEngine
 import com.example.baseproject.data.EdgeUnderpaintEngine
+import com.example.baseproject.data.MaskColorPixelIndex
+import com.example.baseproject.data.MaskColorPixelRegion
 import com.example.baseproject.data.RegionData
 import com.example.baseproject.highlight.HighlightRenderer
 import com.example.baseproject.highlight.HighlightTheme
 import com.example.baseproject.highlight.HighlightThemes
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -40,8 +43,6 @@ class PaintCanvasView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     companion object {
-        // Tag debug tạm thời — xoá cùng các Log.d/w bên dưới sau khi xác định xong nguyên nhân.
-        private const val DBG_TAG = "PBN_DBG_a91f"
         private const val CANVAS_BACKGROUND_COLOR = 0xFFF3F1F3.toInt()
 
         // Thumbnail phải nền TRẮNG, không dùng CANVAS_BACKGROUND_COLOR: nền xám trùng khít
@@ -59,9 +60,10 @@ class PaintCanvasView @JvmOverloads constructor(
         // scaleFactor, để số giữ nguyên kích thước khi zoom ra/vào (giống app mẫu), thay vì
         // co giãn theo zoom như trước.
         private const val LABEL_TEXT_SIZE_PX = 30f
-        private const val FILL_ANIMATION_DURATION_MS = 200f
         private const val COMPLETION_FIT_ANIMATION_DURATION_MS = 420L
-        private const val FRAME_DURATION_MS = 16.67f
+        private const val DEFAULT_FRAME_DURATION_MS = 16.67f
+        private const val FILL_TAP_EFFECT_DURATION_MS = 220L
+        private const val HINT_TAP_EFFECT_DURATION_MS = 1_000L
 
         // Vùng nhỏ hơn mức "thoải mái" vẫn phải hiện số (nếu đã qua ngưỡng ẩn/hiện ở trên),
         // nhưng chữ phải co lại theo đúng khoảng trống thật để không tràn ra ngoài — hệ số
@@ -91,12 +93,14 @@ class PaintCanvasView @JvmOverloads constructor(
     private var hlPixelsArray: IntArray? = null
     private var detailSourcePixelsArray: IntArray? = null
     private var revealedDetailPixelsArray: IntArray? = null
+    private var maskColorPixelRegions: Map<Int, MaskColorPixelRegion> = emptyMap()
 
     private val drawMatrix = Matrix()
     private val inverseMatrix = Matrix()
     private val bitmapBounds = RectF()
 
     private val normalPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+    private val highlightPaint = Paint(Paint.FILTER_BITMAP_FLAG)
     private val multiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
     }
@@ -136,15 +140,29 @@ class PaintCanvasView @JvmOverloads constructor(
     private var highlightTheme: HighlightTheme = HighlightThemes.defaultChecker()
     private var highlightEnabled: Boolean = true
     private var currentHighlightTargets: IntArray = IntArray(0)
+    private var renderedHighlightTargets: IntArray = IntArray(0)
+    private var scheduledHighlightTargets: IntArray = IntArray(0)
+    private var highlightRenderJob: Job? = null
+    private var highlightRenderGeneration = 0
+    private var highlightFadeAnimator: ValueAnimator? = null
     private val preparingFillColors = mutableSetOf<Int>()
 
-    data class TapEffect(val x: Float, val y: Float, val color: Int) {
+    private data class TapEffect(
+        val x: Float,
+        val y: Float,
+        val color: Int,
+        val durationMs: Long,
+        val reverse: Boolean = false,
+        val repeatCount: Int = 0,
+        val startedAtMs: Long = SystemClock.uptimeMillis(),
+    ) {
         var progress: Float = 0f
     }
 
     private val activeEffects = mutableListOf<TapEffect>()
     private val activeFillers = mutableListOf<AnimatedFiller>()
     private var viewportAnimator: ValueAnimator? = null
+    private var lastAnimationFrameUptimeMs = 0L
 
     init {
         setupGestureDetectors()
@@ -234,6 +252,14 @@ class PaintCanvasView @JvmOverloads constructor(
                 null
             }
 
+            val pixelRegions = MaskColorPixelIndex.build(
+                maskPixels = maskPx,
+                fillCoveragePixels = coveragePx,
+                width = w,
+                height = h,
+                targetMaskColors = regionsData.mapTo(HashSet(regionsData.size)) { it.maskColorInt },
+            )
+
             // Giải phóng maskBitmap để tiết kiệm 4.6MB RAM
             mask.recycle()
 
@@ -247,6 +273,8 @@ class PaintCanvasView @JvmOverloads constructor(
                 activeFillers.forEach { it.recycle() }
                 activeFillers.clear()
                 preparingFillColors.clear()
+                cancelHighlightRendering()
+                renderedHighlightTargets = IntArray(0)
 
                 coloredBitmap = coloredBmp
                 highlightBitmap = highlightBmp
@@ -259,6 +287,7 @@ class PaintCanvasView @JvmOverloads constructor(
                 hlPixelsArray = IntArray(w * h)
                 detailSourcePixelsArray = detailPx
                 revealedDetailPixelsArray = if (detailPx != null) IntArray(w * h) else null
+                maskColorPixelRegions = pixelRegions
 
                 scaleFactor = 1.0f
                 translateX = 0f
@@ -294,11 +323,6 @@ class PaintCanvasView @JvmOverloads constructor(
 
     suspend fun restoreProgressSuspend(completedMap: Map<Int, Int>) =
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            Log.w(
-                DBG_TAG,
-                "RESTORE_PROGRESS_CALLED mapSize=${completedMap.size} t=${System.currentTimeMillis()}",
-                Exception("stack trace")
-            )
             if (completedMap.isEmpty()) return@withContext
 
             val maskPx = maskPixelsArray ?: return@withContext
@@ -385,13 +409,6 @@ class PaintCanvasView @JvmOverloads constructor(
                 }
                 invalidate()
                 // ĐÃ XÓA vòng lặp onRegionFilledListener để tránh gọi 500 lần trên UI thread
-
-                // DEBUG: đọc lại pixel tại tâm mỗi vùng vừa khôi phục, để so sánh trực tiếp với
-                // các dòng PIXEL_WATCH[T*] ghi được lúc tô sống (trước khi back ra vào lại).
-                for (maskColor in completedMap.keys) {
-                    val r = regions.find { it.maskColorInt == maskColor } ?: continue
-                    logPixelWatch("AFTER_RESTORE", r.number, maskColor, r.centerX.toInt(), r.centerY.toInt())
-                }
             }
         }
 
@@ -422,12 +439,6 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     fun resetProgress() {
-        Log.w(
-            DBG_TAG,
-            "RESET_PROGRESS_CALLED completedBefore=$completedMaskColors " +
-                "activeFillersBefore=${activeFillers.map { it.maskColor }} t=${System.currentTimeMillis()}",
-            Exception("stack trace")
-        )
         completedMaskColors = emptySet()
         activeFillers.forEach { it.recycle() }
         activeFillers.clear()
@@ -453,7 +464,7 @@ class PaintCanvasView @JvmOverloads constructor(
 
     fun setHighlightTheme(theme: HighlightTheme) {
         highlightTheme = theme
-        rerenderHighlight()
+        rerenderHighlight(force = true)
     }
 
     fun setHighlightEnabled(enabled: Boolean) {
@@ -478,15 +489,29 @@ class PaintCanvasView @JvmOverloads constructor(
         val detailOutPx = revealedDetailPixelsArray
         val detailBmp = revealedDetailBitmap
 
-        DetailRevealEngine.completeRegionForMaskColor(
-            maskPixels = maskPx,
-            coloredPixels = colArr,
-            detailSourcePixels = detailSrcPx,
-            revealedDetailPixels = detailOutPx,
-            maskColor = maskColor,
-            targetColor = targetColor,
-            fillCoveragePixels = fillCoveragePixelsArray,
-        )
+        val indexedRegion = maskColorPixelRegions[maskColor]
+        if (indexedRegion != null) {
+            DetailRevealEngine.completeRegionAtIndices(
+                region = indexedRegion,
+                maskPixels = maskPx,
+                coloredPixels = colArr,
+                detailSourcePixels = detailSrcPx,
+                revealedDetailPixels = detailOutPx,
+                maskColor = maskColor,
+                targetColor = targetColor,
+                fillCoveragePixels = fillCoveragePixelsArray,
+            )
+        } else {
+            DetailRevealEngine.completeRegionForMaskColor(
+                maskPixels = maskPx,
+                coloredPixels = colArr,
+                detailSourcePixels = detailSrcPx,
+                revealedDetailPixels = detailOutPx,
+                maskColor = maskColor,
+                targetColor = targetColor,
+                fillCoveragePixels = fillCoveragePixelsArray,
+            )
+        }
         if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
             EdgeUnderpaintEngine.applyForMaskColor(
                 maskPixels = maskPx,
@@ -501,28 +526,33 @@ class PaintCanvasView @JvmOverloads constructor(
                 revealedDetailPixels = detailOutPx,
             )
         }
-        colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
-        if (detailBmp != null && detailOutPx != null) {
-            detailBmp.setPixels(detailOutPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+        if (indexedRegion != null && !BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+            colBmp.setPixels(
+                colArr,
+                indexedRegion.minY * maskWidth + indexedRegion.minX,
+                maskWidth,
+                indexedRegion.minX,
+                indexedRegion.minY,
+                indexedRegion.width,
+                indexedRegion.height,
+            )
+            if (detailBmp != null && detailOutPx != null) {
+                detailBmp.setPixels(
+                    detailOutPx,
+                    indexedRegion.minY * maskWidth + indexedRegion.minX,
+                    maskWidth,
+                    indexedRegion.minX,
+                    indexedRegion.minY,
+                    indexedRegion.width,
+                    indexedRegion.height,
+                )
+            }
+        } else {
+            colBmp.setPixels(colArr, 0, colBmp.width, 0, 0, colBmp.width, colBmp.height)
+            if (detailBmp != null && detailOutPx != null) {
+                detailBmp.setPixels(detailOutPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+            }
         }
-    }
-
-    // DEBUG: đọc lại đúng 1 pixel của vùng vừa tô xong, tại nhiều mốc thời gian sau đó, để
-    // phát hiện xem có gì đó âm thầm ghi đè coloredBitmap/revealedDetailBitmap sau khi tô
-    // xong hay không (nếu colored/detail đổi giá trị giữa các mốc log thì đó chính là thủ phạm).
-    private fun logPixelWatch(label: String, regionNumber: Int?, maskColor: Int, x: Int, y: Int) {
-        val colored = coloredBitmap ?: return
-        val detail = revealedDetailBitmap
-        if (x !in 0 until colored.width || y !in 0 until colored.height) return
-        val coloredPx = colored.getPixel(x, y)
-        val detailPx = detail?.getPixel(x, y) ?: 0
-        val stillCompleted = completedMaskColors.contains(maskColor)
-        Log.d(
-            DBG_TAG,
-            "PIXEL_WATCH[$label] region=$regionNumber mask=$maskColor(${Integer.toHexString(maskColor)}) " +
-                "colored=${Integer.toHexString(coloredPx)} detail=${Integer.toHexString(detailPx)} " +
-                "stillCompleted=$stillCompleted t=${System.currentTimeMillis()}"
-        )
     }
 
     /**
@@ -565,14 +595,8 @@ class PaintCanvasView @JvmOverloads constructor(
         val animatingColors = activeFillers.map { it.maskColor }.toSet()
         val activeTargets = targetMaskColors.filter {
             !completedMaskColors.contains(it) && !animatingColors.contains(it)
-        }.toIntArray()
+        }.distinct().sorted().toIntArray()
         currentHighlightTargets = activeTargets
-        Log.d(
-            DBG_TAG,
-            "HIGHLIGHT_REQ in=$targetMaskColors completed=$completedMaskColors " +
-                "animating=$animatingColors -> active=${activeTargets.toList()} " +
-                "t=${System.currentTimeMillis()}"
-        )
 
         if (activeTargets.isEmpty()) {
             clearHighlightImmediately()
@@ -583,6 +607,12 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     private fun clearHighlightImmediately() {
+        cancelHighlightRendering()
+        currentHighlightTargets = IntArray(0)
+        renderedHighlightTargets = IntArray(0)
+        scheduledHighlightTargets = IntArray(0)
+        highlightFadeAnimator?.cancel()
+        highlightPaint.alpha = 255
         val hl = highlightBitmap ?: return
         val hlPixels = hlPixelsArray ?: return
         java.util.Arrays.fill(hlPixels, 0)
@@ -590,33 +620,88 @@ class PaintCanvasView @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun rerenderHighlight() {
+    private fun rerenderHighlight(force: Boolean = false) {
+        if (!highlightEnabled || currentHighlightTargets.isEmpty()) {
+            clearHighlightImmediately()
+            return
+        }
+
         val hl = highlightBitmap ?: return
-        val hlPixels = hlPixelsArray ?: return
         val width = maskWidth
         val height = maskHeight
         if (width == 0 || height == 0) return
         val maskPixels = maskPixelsArray ?: return
-
-        if (!highlightEnabled || currentHighlightTargets.isEmpty()) {
-            java.util.Arrays.fill(hlPixels, 0)
-        } else {
-            HighlightRenderer.render(
-                maskPixels = maskPixels,
-                outputPixels = hlPixels,
-                width = width,
-                activeTargets = currentHighlightTargets.copyOf(),
-                theme = highlightTheme,
-                alphaFraction = 1f
-            )
+        val targets = currentHighlightTargets.copyOf()
+        if (!force && renderedHighlightTargets.contentEquals(targets)) return
+        if (!force && highlightRenderJob?.isActive == true && scheduledHighlightTargets.contentEquals(targets)) {
+            return
         }
 
-        hl.setPixels(hlPixels, 0, width, 0, 0, width, height)
-        Log.d(
-            DBG_TAG,
-            "HIGHLIGHT_RENDER targets=${currentHighlightTargets.toList()} t=${System.currentTimeMillis()}"
-        )
-        invalidate()
+        cancelHighlightRendering()
+        scheduledHighlightTargets = targets
+        val theme = highlightTheme
+        val generation = highlightRenderGeneration
+        highlightRenderJob = scope.launch {
+            val renderedPixels = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                IntArray(maskPixels.size).also { output ->
+                    HighlightRenderer.render(
+                        maskPixels = maskPixels,
+                        outputPixels = output,
+                        width = width,
+                        activeTargets = targets,
+                        theme = theme,
+                        alphaFraction = 1f,
+                    )
+                }
+            }
+
+            if (
+                generation != highlightRenderGeneration ||
+                maskPixelsArray !== maskPixels ||
+                highlightBitmap !== hl ||
+                !currentHighlightTargets.contentEquals(targets)
+            ) {
+                return@launch
+            }
+
+            hlPixelsArray = renderedPixels
+            hl.setPixels(renderedPixels, 0, width, 0, 0, width, height)
+            renderedHighlightTargets = targets
+            scheduledHighlightTargets = IntArray(0)
+            highlightRenderJob = null
+            startHighlightFade()
+        }
+    }
+
+    private fun cancelHighlightRendering() {
+        highlightRenderJob?.cancel()
+        highlightRenderJob = null
+        highlightRenderGeneration++
+        scheduledHighlightTargets = IntArray(0)
+    }
+
+    private fun startHighlightFade() {
+        highlightFadeAnimator?.cancel()
+        val animator = ValueAnimator.ofInt(0, 255).apply {
+            duration = highlightTheme.fadeInDurationMs
+            interpolator = highlightTheme.interpolator
+            addUpdateListener {
+                highlightPaint.alpha = it.animatedValue as Int
+                invalidate()
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (highlightFadeAnimator === animation) highlightFadeAnimator = null
+                    highlightPaint.alpha = 255
+                }
+
+                override fun onAnimationCancel(animation: Animator) {
+                    if (highlightFadeAnimator === animation) highlightFadeAnimator = null
+                }
+            })
+        }
+        highlightFadeAnimator = animator
+        animator.start()
     }
 
     private fun updateMatrix() {
@@ -765,23 +850,17 @@ class PaintCanvasView @JvmOverloads constructor(
         // Thêm hiệu ứng chớp nhá/ripple tại vùng hint để thu hút chú ý
         val targetColor =
             if (currentValidMaskColors.isNotEmpty()) currentValidMaskColors.values.first() else Color.RED
-        val effect = TapEffect(cx, cy, targetColor)
-        activeEffects.add(effect)
-        val effectAnimator = ValueAnimator.ofFloat(0f, 1f)
-        effectAnimator.duration = 1000
-        effectAnimator.repeatCount = 1
-        effectAnimator.repeatMode = ValueAnimator.REVERSE
-        effectAnimator.addUpdateListener { anim ->
-            effect.progress = anim.animatedValue as Float
-            invalidate()
-        }
-        effectAnimator.addListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) {
-                activeEffects.remove(effect)
-                invalidate()
-            }
-        })
-        effectAnimator.start()
+        activeEffects.add(
+            TapEffect(
+                x = cx,
+                y = cy,
+                color = targetColor,
+                durationMs = HINT_TAP_EFFECT_DURATION_MS,
+                reverse = true,
+                repeatCount = 1,
+            )
+        )
+        startAnimationLoop()
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -802,12 +881,16 @@ class PaintCanvasView @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         viewportAnimator?.cancel()
         viewportAnimator = null
+        highlightFadeAnimator?.cancel()
+        highlightFadeAnimator = null
+        cancelHighlightRendering()
         removeCallbacks(animationRunnable)
         activeFillers.forEach { it.recycle() }
         activeFillers.clear()
         activeEffects.clear()
         preparingFillColors.clear()
         isAnimatingLoop = false
+        lastAnimationFrameUptimeMs = 0L
         isViewportAnimationLocked = false
         scope.cancel()
         super.onDetachedFromWindow()
@@ -849,6 +932,15 @@ class PaintCanvasView @JvmOverloads constructor(
         val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) displayLineLumaPixelsArray else null
 
         preparingFillColors.add(clickedColor)
+        activeEffects.add(
+            TapEffect(
+                x = startX.toFloat(),
+                y = startY.toFloat(),
+                color = targetColor,
+                durationMs = FILL_TAP_EFFECT_DURATION_MS,
+            )
+        )
+        startAnimationLoop()
         scope.launch {
             var filler: AnimatedFiller? = null
             try {
@@ -885,40 +977,10 @@ class PaintCanvasView @JvmOverloads constructor(
                     return@launch
                 }
 
-                Log.d(
-                    DBG_TAG,
-                    "TAP_START region=${region?.number} mask=$clickedColor(${Integer.toHexString(clickedColor)}) " +
-                        "indices=${filler.indices.size} activeFillersBefore=${activeFillers.map { it.maskColor }} " +
-                        "hasDetailData=${detailPx != null} hasFillCoverage=${coveragePx != null} " +
-                        "t=${System.currentTimeMillis()}"
-                )
                 activeFillers.add(filler)
 
                 // Cập nhật ngay lập tức: Xóa highlight của mảng màu này để animation hiện rõ
-                val hl = highlightBitmap
-                val hlPx = hlPixelsArray
-                if (hl != null && hlPx != null) {
-                    filler.clearHighlight(hlPx)
-                    hl.setPixels(hlPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
-                    currentHighlightTargets =
-                        currentHighlightTargets.filter { it != clickedColor }.toIntArray()
-                }
-
-                if (region != null) {
-                    val effect = TapEffect(region.centerX, region.centerY, targetColor)
-                    activeEffects.add(effect)
-                    val animator = ValueAnimator.ofFloat(0f, 1f)
-                    animator.duration = 600
-                    animator.addUpdateListener { anim ->
-                        effect.progress = anim.animatedValue as Float
-                    }
-                    animator.addListener(object : AnimatorListenerAdapter() {
-                        override fun onAnimationEnd(animation: Animator) {
-                            activeEffects.remove(effect)
-                        }
-                    })
-                    animator.start()
-                }
+                clearHighlightForMaskColor(clickedColor)
                 startAnimationLoop()
             } finally {
                 preparingFillColors.remove(clickedColor)
@@ -967,6 +1029,7 @@ class PaintCanvasView @JvmOverloads constructor(
     private fun startAnimationLoop() {
         if (isAnimatingLoop) return
         isAnimatingLoop = true
+        lastAnimationFrameUptimeMs = SystemClock.uptimeMillis()
         postOnAnimation(animationRunnable)
     }
 
@@ -974,18 +1037,18 @@ class PaintCanvasView @JvmOverloads constructor(
         override fun run() {
             if (activeFillers.isEmpty() && activeEffects.isEmpty()) {
                 isAnimatingLoop = false
+                lastAnimationFrameUptimeMs = 0L
                 return
             }
-            var changed = false
+            val now = SystemClock.uptimeMillis()
+            val deltaMs = (now - lastAnimationFrameUptimeMs).toFloat()
+                .takeIf { it > 0f } ?: DEFAULT_FRAME_DURATION_MS
+            lastAnimationFrameUptimeMs = now
+
             val iterator = activeFillers.iterator()
             while (iterator.hasNext()) {
                 val filler = iterator.next()
-
-                // Tốc độ loang màu (pixel/frame)
-                val speed =
-                    Math.max(10f, filler.maxRadius / (FILL_ANIMATION_DURATION_MS / FRAME_DURATION_MS))
-
-                val isRunning = filler.tick(speed)
+                val isRunning = filler.tick(deltaMs)
                 if (!isRunning) {
                     iterator.remove()
                     // Khi filler kết thúc: tick() đã ghi đúng màu cuối của cụm liên thông cục bộ.
@@ -993,30 +1056,26 @@ class PaintCanvasView @JvmOverloads constructor(
                     // cùng mã màu và đồng bộ lớp detail/coverage với buffer chính.
                     completeRegionForMaskColor(filler.maskColor, filler.targetColor)
                     completedMaskColors = completedMaskColors + filler.maskColor
-                    val regionNumber = regions.find { it.maskColorInt == filler.maskColor }?.number
-                    Log.d(
-                        DBG_TAG,
-                        "FILL_DONE region=$regionNumber mask=${filler.maskColor}(${Integer.toHexString(filler.maskColor)}) " +
-                            "currentHighlightTargets=${currentHighlightTargets.toList()} " +
-                            "t=${System.currentTimeMillis()}"
-                    )
-                    // Dùng tâm vùng (thay vì điểm chạm tay) để toạ độ trùng khớp với log
-                    // AFTER_RESTORE trong restoreProgressSuspend() — so sánh đúng 1 pixel.
-                    val watchRegion = regions.find { it.maskColorInt == filler.maskColor }
-                    val watchX = watchRegion?.centerX?.toInt() ?: filler.startX
-                    val watchY = watchRegion?.centerY?.toInt() ?: filler.startY
-                    logPixelWatch("T0", regionNumber, filler.maskColor, watchX, watchY)
-                    postDelayed({
-                        logPixelWatch("T300", regionNumber, filler.maskColor, watchX, watchY)
-                    }, 300)
-                    postDelayed({
-                        logPixelWatch("T1000", regionNumber, filler.maskColor, watchX, watchY)
-                    }, 1000)
-                    postDelayed({
-                        logPixelWatch("T3000", regionNumber, filler.maskColor, watchX, watchY)
-                    }, 3000)
                     filler.dispatchFinished()
                     filler.recycle()
+                }
+            }
+
+            val effectIterator = activeEffects.iterator()
+            while (effectIterator.hasNext()) {
+                val effect = effectIterator.next()
+                val elapsedMs = (now - effect.startedAtMs).coerceAtLeast(0L)
+                val segment = (elapsedMs / effect.durationMs).toInt()
+                if (segment > effect.repeatCount) {
+                    effectIterator.remove()
+                    continue
+                }
+
+                val segmentProgress = (elapsedMs % effect.durationMs).toFloat() / effect.durationMs
+                effect.progress = if (effect.reverse && segment % 2 == 1) {
+                    1f - segmentProgress
+                } else {
+                    segmentProgress
                 }
             }
             invalidate()
@@ -1033,23 +1092,51 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     private fun clearHighlightForMaskColor(maskColor: Int) {
-        val maskPx = maskPixelsArray ?: return
+        cancelHighlightRendering()
         val hl = highlightBitmap ?: return
         val hlPx = hlPixelsArray ?: return
+        val region = maskColorPixelRegions[maskColor]
         var changed = false
 
-        for (index in maskPx.indices) {
-            if (maskPx[index] == maskColor && hlPx[index] != 0) {
+        val maskPx = maskPixelsArray ?: return
+        fun clearAt(index: Int) {
+            if (index in hlPx.indices && hlPx[index] != 0) {
                 hlPx[index] = 0
                 changed = true
             }
         }
+        if (region != null) {
+            for (index in region.indices) clearAt(index)
+        } else {
+            for (index in maskPx.indices) {
+                if (maskPx[index] == maskColor) clearAt(index)
+            }
+        }
 
         if (changed) {
-            hl.setPixels(hlPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+            if (region != null) {
+                hl.setPixels(
+                    hlPx,
+                    region.minY * maskWidth + region.minX,
+                    maskWidth,
+                    region.minX,
+                    region.minY,
+                    region.width,
+                    region.height,
+                )
+            } else {
+                hl.setPixels(hlPx, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+            }
         }
         currentHighlightTargets =
             currentHighlightTargets.filter { it != maskColor }.toIntArray()
+        renderedHighlightTargets =
+            renderedHighlightTargets.filter { it != maskColor }.toIntArray()
+        if (currentHighlightTargets.isEmpty() && renderedHighlightTargets.isNotEmpty()) {
+            clearHighlightImmediately()
+        } else if (!currentHighlightTargets.contentEquals(renderedHighlightTargets)) {
+            rerenderHighlight()
+        }
     }
 
     private val clipPath = android.graphics.Path()
@@ -1090,7 +1177,7 @@ class PaintCanvasView @JvmOverloads constructor(
             canvas.restore()
         }
         revealedDetailBitmap?.let { canvas.drawBitmap(it, drawMatrix, normalPaint) }
-        canvas.drawBitmap(hl, drawMatrix, normalPaint)
+        canvas.drawBitmap(hl, drawMatrix, highlightPaint)
         canvas.save()
         canvas.concat(drawMatrix)
         for (effect in activeEffects) {
@@ -1104,8 +1191,8 @@ class PaintCanvasView @JvmOverloads constructor(
             particlePaint.color = effect.color
             particlePaint.alpha = ((1f - p) * 255).toInt()
             val particleRadius = (1f - p) * 3f / scaleFactor
-            for (i in 0 until 8) {
-                val angle = i * Math.PI / 4.0
+            for (i in 0 until 4) {
+                val angle = i * Math.PI / 2.0
                 val distance = 5f / scaleFactor + p * 50f / scaleFactor
                 val px = effect.x + Math.cos(angle).toFloat() * distance
                 val py = effect.y + Math.sin(angle).toFloat() * distance

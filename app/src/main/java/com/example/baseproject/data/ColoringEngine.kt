@@ -509,7 +509,7 @@ internal object AnimationFillFrameComposer {
     }
 }
 
-private class GrowingIntArray(initialCapacity: Int) {
+internal class GrowingIntArray(initialCapacity: Int) {
     private var values = IntArray(initialCapacity.coerceAtLeast(1))
     var size = 0
         private set
@@ -524,6 +524,23 @@ private class GrowingIntArray(initialCapacity: Int) {
     }
 
     fun toIntArray(): IntArray = values.copyOf(size)
+}
+
+internal object FillAnimationTiming {
+    private const val MIN_DURATION_MS = 140f
+    private const val MAX_DURATION_MS = 220f
+
+    fun durationMs(pixelCount: Int): Float {
+        val sizeContribution = kotlin.math.sqrt(pixelCount.coerceAtLeast(0).toFloat()) * 0.25f
+        return (MIN_DURATION_MS + sizeContribution).coerceIn(MIN_DURATION_MS, MAX_DURATION_MS)
+    }
+
+    fun easedProgress(elapsedMs: Float, durationMs: Float): Float {
+        if (durationMs <= 0f) return 1f
+        val linear = (elapsedMs / durationMs).coerceIn(0f, 1f)
+        val remaining = 1f - linear
+        return 1f - remaining * remaining * remaining
+    }
 }
 
 class AnimatedFiller(
@@ -549,8 +566,9 @@ class AnimatedFiller(
     val top: Int
     var currentRadius = 0f
     val maxRadius: Float
-    // internal để PaintCanvasView có thể clear highlight theo đúng vùng animation.
-    internal val indices: IntArray
+    private var elapsedMs = 0f
+    private val durationMs: Float
+    private val indices: IntArray
 
     init {
         val maskRegion = FillRegionCollector.collect(
@@ -587,9 +605,6 @@ class AnimatedFiller(
 
         left = frame.left
         top = frame.top
-        val right = region.maxX
-        val bottom = region.maxY
-
         // Tính toán bán kính tối đa cần để loang hết bounding box
         val dx1 = (region.minX - startX).toDouble()
         val dx2 = (region.maxX - startX).toDouble()
@@ -600,6 +615,7 @@ class AnimatedFiller(
         val d3 = Math.sqrt(dx1 * dx1 + dy2 * dy2)
         val d4 = Math.sqrt(dx2 * dx2 + dy2 * dy2)
         maxRadius = Math.max(Math.max(d1, d2), Math.max(d3, d4)).toFloat() + 5f
+        durationMs = FillAnimationTiming.durationMs(indices.size)
 
         localBitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
         localBitmap.setPixels(frame.pixels, 0, frame.width, 0, 0, frame.width, frame.height)
@@ -621,9 +637,10 @@ class AnimatedFiller(
     /**
      * Cập nhật bán kính loang màu
      */
-    fun tick(speed: Float): Boolean {
-        currentRadius += speed
-        val isFinished = currentRadius >= maxRadius
+    fun tick(deltaMs: Float): Boolean {
+        elapsedMs += deltaMs.coerceAtLeast(0f)
+        currentRadius = maxRadius * FillAnimationTiming.easedProgress(elapsedMs, durationMs)
+        val isFinished = elapsedMs >= durationMs
         if (isFinished) {
             // Giữ frame cuối giống hệt màu đang animation: pixel mask thật có detail,
             // pixel coverage quanh line chỉ lấy màu nền để không tạo "flash" màu phẳng.
@@ -636,12 +653,6 @@ class AnimatedFiller(
 
     fun dispatchFinished() {
         onFinished(maskColor)
-    }
-
-    fun clearHighlight(hlPx: IntArray) {
-        for (idx in indices) {
-            hlPx[idx] = 0
-        }
     }
 
     fun recycle() {

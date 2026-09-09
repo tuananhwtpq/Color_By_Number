@@ -2,6 +2,7 @@ package com.example.baseproject.highlight
 
 import android.graphics.Color
 import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 
 enum class HighlightStyle {
@@ -47,9 +48,9 @@ object HighlightThemes {
             primaryColor = Color.parseColor("#E7E4E7"),
             secondaryColor = Color.parseColor("#9E92A0"),
             cellSizePx = 10,
-            baseAlpha = 255,
-            fadeInDurationMs = 200L,
-            interpolator = AccelerateInterpolator(),
+            baseAlpha = 215,
+            fadeInDurationMs = 140L,
+            interpolator = DecelerateInterpolator(),
             tinyTargetHaloAlpha = 0
         )
     }
