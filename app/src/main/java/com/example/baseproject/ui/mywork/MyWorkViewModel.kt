@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.data.progressFraction
+import com.example.baseproject.data.progress.SavedProgressMetadataResolver
 import com.example.baseproject.data.repository.AssetLevelRepository
 import com.example.baseproject.data.repository.CollectionRepository
 import com.example.baseproject.data.repository.PaintingProgressRepository
@@ -24,6 +25,11 @@ class MyWorkViewModel(
     private val thumbnailRepository: ThumbnailRepository
 ) : ViewModel() {
 
+    private val savedProgressMetadataResolver = SavedProgressMetadataResolver(
+        assetLevelRepository,
+        paintingProgressRepository
+    )
+
     private val _uiState = MutableStateFlow(MyWorkUiState())
     val uiState: StateFlow<MyWorkUiState> = _uiState.asStateFlow()
     private var loadJob: Job? = null
@@ -43,7 +49,8 @@ class MyWorkViewModel(
                 // Tranh trong Collection không nằm trong loadAllLevels() (tab Library bỏ qua
                 // folder Collection), nên phải gộp thêm ở đây để My Work thấy được chúng.
                 assetLevelRepository.loadAllLevels() + collectionRepository.loadAllCollectionLevels()
-            }.onSuccess { levels ->
+            }.onSuccess { loadedLevels ->
+                val levels = savedProgressMetadataResolver.resolve(loadedLevels)
                 val inProgress = mutableListOf<LevelConfig>()
                 val completed = mutableListOf<LevelConfig>()
                 levels.forEach { level ->

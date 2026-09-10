@@ -66,6 +66,10 @@ class RemoteLevelRepositoryImpl(
                         ?.let { return@withLock it }
                 }
 
+                // A process restart clears the in-memory list, but resolved levels on disk still
+                // carry totalRegions needed to restore a saved painting's progress percentage.
+                val cachedLevels = cachedAllLevels ?: readCachedLevels().orEmpty()
+
                 val response = api.categories()
                     .requireSuccessfulBody("/api/v1/categories")
                     .takeIf { it.success }
@@ -92,7 +96,7 @@ class RemoteLevelRepositoryImpl(
                 }.let { levels ->
                     val mergedLevels = RemoteLevelCachePolicy.mergeFreshLevels(
                         freshLevels = levels,
-                        cachedLevels = cachedAllLevels.orEmpty()
+                        cachedLevels = cachedLevels
                     )
                     cachedAllLevels = mergedLevels
                     lastRemoteLoadedAtMillis = System.currentTimeMillis()
@@ -172,6 +176,21 @@ class RemoteLevelRepositoryImpl(
                 detailBitmap = bitmaps.detail,
                 regions = regions
             )
+        }
+
+    override suspend fun resolveProgressMetadata(level: LevelConfig): LevelConfig =
+        withFallback(
+            operation = "resolveProgressMetadata(${level.category}/${level.id})",
+            fallbackAction = { resolveProgressMetadata(level) }
+        ) {
+            val resolvedConfig = metadataLoader.loadConfig(level.id)
+            val regionCount = resolvedConfig.progressRegionCount()
+            if (regionCount <= 0) {
+                level
+            } else {
+                cacheResolvedLevel(resolvedConfig)
+                level.copy(totalRegions = regionCount)
+            }
         }
 
     private suspend fun cacheResolvedLevel(config: LevelConfig) {

@@ -40,7 +40,8 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         SimpleViewModelFactory {
             LibraryViewModel(
                 assetLevelRepository = appContainer.assetLevelRepository,
-                startupContentPreloader = appContainer.startupContentPreloader
+                startupContentPreloader = appContainer.startupContentPreloader,
+                paintingProgressRepository = appContainer.paintingProgressRepository
             )
         }
     }

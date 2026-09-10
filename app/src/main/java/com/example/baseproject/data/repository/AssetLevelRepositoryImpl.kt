@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import com.caverock.androidsvg.SVG
 import com.example.baseproject.data.CentroidCalculator
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.progressRegionCount
 import com.example.baseproject.utils.AssetImageResolver
 import com.example.baseproject.utils.Constants
 import com.google.gson.Gson
@@ -106,6 +107,21 @@ class AssetLevelRepositoryImpl(
 
         levels
     }
+
+    override suspend fun resolveProgressMetadata(level: LevelConfig): LevelConfig =
+        withContext(ioDispatcher) {
+            runCatching {
+                context.assets.open("${level.category}/${level.id}/config.json").use { inputStream ->
+                    InputStreamReader(inputStream).use { reader ->
+                        gson.fromJson(reader, LevelConfig::class.java)
+                    }
+                }
+            }.map { config ->
+                config.progressRegionCount().takeIf { it > 0 }
+                    ?.let { regionCount -> level.copy(totalRegions = regionCount) }
+                    ?: level
+            }.getOrDefault(level)
+        }
 
     override suspend fun loadLevelBundle(category: String, levelId: String): LevelBundle =
         withContext(ioDispatcher) {

@@ -17,7 +17,7 @@ import com.example.baseproject.R
 
 /**
  * Thanh tiến độ của một achievement: nền trắng 20%, viền 1dp gradient trắng (20% → 70% → 20%)
- * và phần đã đạt tô gradient cam → đỏ → tím hồng. Chữ trạng thái ("3/9") nằm giữa thanh.
+ * và phần đã đạt tô gradient đỏ → cam → vàng. Chữ trạng thái ("3/9") nằm giữa thanh.
  *
  * Phải tự vẽ chứ không dùng SeekBar/ProgressBar được: viền gradient không làm được bằng
  * shape drawable (thẻ <stroke> chỉ nhận màu đặc), còn mẹo "lồng hai view" thì hỏng vì nền
@@ -53,9 +53,9 @@ class AchievementProgressView @JvmOverloads constructor(
     }
 
     private val fillGradientColors = intArrayOf(
-        ContextCompat.getColor(context, R.color.orange350),
         ContextCompat.getColor(context, R.color.red_350),
-        ContextCompat.getColor(context, R.color.newColorUnname)
+        ContextCompat.getColor(context, R.color.orange350),
+        ContextCompat.getColor(context, R.color.yellow_400)
     )
     private val borderGradientColors = intArrayOf(
         ContextCompat.getColor(context, R.color.white_20),
@@ -73,6 +73,24 @@ class AchievementProgressView @JvmOverloads constructor(
         setWillNotDraw(false)
         LayoutInflater.from(context).inflate(R.layout.view_achievement_progress, this, true)
         tvStatus = findViewById(R.id.tvProgressStatus)
+
+        context.obtainStyledAttributes(
+            attrs,
+            R.styleable.AchievementProgressView,
+            defStyleAttr,
+            0
+        ).use { attributes ->
+            trackPaint.color = attributes.getColor(
+                R.styleable.AchievementProgressView_achievementTrackColor,
+                ContextCompat.getColor(context, R.color.white_20)
+            )
+            tvStatus.setTextColor(
+                attributes.getColor(
+                    R.styleable.AchievementProgressView_achievementProgressTextColor,
+                    ContextCompat.getColor(context, R.color.white)
+                )
+            )
+        }
     }
 
     /**
@@ -128,7 +146,7 @@ class AchievementProgressView @JvmOverloads constructor(
         if (w <= 0) return
 
         // Cả hai gradient đều trải theo chiều ngang của toàn bộ thanh: progress thấp thì chỉ
-        // thấy phần cam, càng đầy càng chuyển qua đỏ rồi tím hồng.
+        // thấy phần đỏ, càng đầy càng chuyển qua cam rồi vàng.
         fillPaint.shader = LinearGradient(
             0f, 0f, w.toFloat(), 0f,
             fillGradientColors, gradientPositions, Shader.TileMode.CLAMP

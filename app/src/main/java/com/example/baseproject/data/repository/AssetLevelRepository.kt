@@ -8,6 +8,8 @@ import com.example.baseproject.data.RegionData
 interface AssetLevelRepository {
     suspend fun loadAllLevels(): List<LevelConfig>
     suspend fun refreshAllLevels(): List<LevelConfig> = loadAllLevels()
+    /** Resolves the region count needed to calculate saved painting progress. */
+    suspend fun resolveProgressMetadata(level: LevelConfig): LevelConfig = level
     suspend fun loadLevelBundle(category: String, levelId: String): LevelBundle
 }
 

@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.baseproject.app.StartupContentPreloader
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.progress.SavedProgressMetadataResolver
 import com.example.baseproject.data.repository.AssetLevelRepository
+import com.example.baseproject.data.repository.PaintingProgressRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,8 +15,14 @@ import kotlinx.coroutines.launch
 
 class LibraryViewModel(
     private val assetLevelRepository: AssetLevelRepository,
-    private val startupContentPreloader: StartupContentPreloader
+    private val startupContentPreloader: StartupContentPreloader,
+    paintingProgressRepository: PaintingProgressRepository
 ) : ViewModel() {
+
+    private val savedProgressMetadataResolver = SavedProgressMetadataResolver(
+        assetLevelRepository,
+        paintingProgressRepository
+    )
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
@@ -29,7 +37,9 @@ class LibraryViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
-                val levels = startupContentPreloader.start().await().getOrThrow()
+                val levels = savedProgressMetadataResolver.resolve(
+                    startupContentPreloader.start().await().getOrThrow()
+                )
                 showLevels(levels)
                 refreshLevelsInBackground(levels)
             } catch (error: kotlinx.coroutines.CancellationException) {
@@ -55,7 +65,9 @@ class LibraryViewModel(
                 // The startup result is only a first-load snapshot. PaintActivity may have
                 // resolved and cached the level's total region count after that snapshot was
                 // created, which is required to render the saved progress percentage.
-                val levels = assetLevelRepository.loadAllLevels()
+                val levels = savedProgressMetadataResolver.resolve(
+                    assetLevelRepository.loadAllLevels()
+                )
                 showLevels(levels)
             } catch (error: kotlinx.coroutines.CancellationException) {
                 throw error
