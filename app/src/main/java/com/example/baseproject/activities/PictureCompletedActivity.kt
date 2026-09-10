@@ -61,6 +61,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     private var savingVideoJob: Job? = null
     private var savingDialog: SavingDialog? = null
     private var preGenerateVideoJob: Job? = null
+    private var isOpeningTimelapse = false
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -116,10 +117,12 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
 
     override fun onResume() {
         super.onResume()
+        isOpeningTimelapse = false
         AppThemeManager.applyCompleteBackground(binding.main)
     }
 
     private fun openTimelapsePreview() {
+        if (isOpeningTimelapse) return
         val category = category
         val levelId = levelId
         if (category == null || levelId == null) {
@@ -127,12 +130,19 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
             return
         }
 
-        startActivity(
-            Intent(this, TimelapsePreviewActivity::class.java).apply {
-                putExtra(TimelapsePreviewActivity.EXTRA_CATEGORY, category)
-                putExtra(TimelapsePreviewActivity.EXTRA_LEVEL_ID, levelId)
-            }
-        )
+        isOpeningTimelapse = true
+        try {
+            startActivity(
+                Intent(this, TimelapsePreviewActivity::class.java).apply {
+                    putExtra(TimelapsePreviewActivity.EXTRA_CATEGORY, category)
+                    putExtra(TimelapsePreviewActivity.EXTRA_LEVEL_ID, levelId)
+                }
+            )
+        } catch (error: Exception) {
+            isOpeningTimelapse = false
+            Log.e(TAG, "Cannot open timelapse preview", error)
+            showToast(getString(R.string.timelapse_unavailable))
+        }
     }
 
     private fun sharePicture() {

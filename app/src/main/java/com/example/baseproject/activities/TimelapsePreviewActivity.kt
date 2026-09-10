@@ -1,6 +1,7 @@
 package com.example.baseproject.activities
 
 import android.os.SystemClock
+import android.util.Log
 import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
@@ -12,9 +13,11 @@ import com.example.baseproject.databinding.ActivityTimelapsePreviewBinding
 import com.example.baseproject.utils.setOnUnDoubleClick
 import com.example.baseproject.utils.showToast
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -29,6 +32,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
 
         private const val PREVIEW_DURATION_MS = 15_000L
         private const val PREVIEW_FRAME_DELAY_MS = 33L
+        private const val TAG = "TimelapsePreview"
     }
 
     private val appContainer by lazy {
@@ -40,10 +44,11 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     private var renderJob: Job? = null
     private var previewJob: Job? = null
     private var renderer: TimelapseFrameRenderer? = null
+    private var isClosing = false
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            finish()
+            closePreview()
         }
     }
 
@@ -62,15 +67,14 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
 
     override fun initActionView() {
         binding.btnSkip.setOnUnDoubleClick {
-            finish()
+            closePreview()
         }
     }
 
     override fun onDestroy() {
         renderJob?.cancel()
         previewJob?.cancel()
-        renderer?.recycle()
-        renderer = null
+        binding.previewView.setFrameBitmap(null)
         super.onDestroy()
     }
 
@@ -80,29 +84,44 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
 
         binding.progressBar.visibility = View.VISIBLE
         renderJob = lifecycleScope.launch {
-            val loadedRenderer = withContext(Dispatchers.Default) {
-                val history = appContainer.paintingProgressRepository
-                    .loadPaintHistory(category, levelId)
-                if (history.isEmpty()) return@withContext null
+            try {
+                val loadedRenderer = withContext(Dispatchers.Default) {
+                    val history = appContainer.paintingProgressRepository
+                        .loadPaintHistory(category, levelId)
+                    if (history.isEmpty()) return@withContext null
 
-                val bundle = appContainer.assetLevelRepository.loadLevelBundle(category, levelId)
-                TimelapseFrameRenderer(bundle, history)
-            }
-
-            if (loadedRenderer == null || loadedRenderer.stepCount == 0) {
-                showToast(getString(R.string.timelapse_unavailable))
-                finish()
-                return@launch
-            }
-
-            renderer = loadedRenderer
-            binding.progressBar.visibility = View.GONE
-            binding.previewView.setFrameBitmap(
-                withContext(Dispatchers.Default) {
-                    loadedRenderer.renderStep(0)
+                    val bundle = appContainer.assetLevelRepository.loadLevelBundle(category, levelId)
+                    TimelapseFrameRenderer(bundle, history)
                 }
-            )
-            startPreview(loadedRenderer)
+
+                if (loadedRenderer == null || loadedRenderer.stepCount == 0) {
+                    loadedRenderer?.recycle()
+                    showTimelapseUnavailable()
+                    return@launch
+                }
+
+                if (isClosing) {
+                    loadedRenderer.recycle()
+                    return@launch
+                }
+
+                renderer = loadedRenderer
+                binding.progressBar.visibility = View.GONE
+                binding.previewView.setFrameBitmap(
+                    withContext(Dispatchers.Default) {
+                        loadedRenderer.renderStep(0)
+                    }
+                )
+                startPreview(loadedRenderer)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: OutOfMemoryError) {
+                Log.e(TAG, "Not enough memory to render timelapse preview", error)
+                showTimelapseUnavailable()
+            } catch (error: Exception) {
+                Log.e(TAG, "Cannot render timelapse preview", error)
+                showTimelapseUnavailable()
+            }
         }
     }
 
@@ -129,6 +148,36 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
                 if (progress >= 1f) break
                 delay(PREVIEW_FRAME_DELAY_MS)
             }
+        }
+    }
+
+    private fun showTimelapseUnavailable() {
+        if (isClosing || isFinishing || isDestroyed) return
+        binding.progressBar.visibility = View.GONE
+        showToast(getString(R.string.timelapse_unavailable))
+        closePreview()
+    }
+
+    /**
+     * Bitmap rendering is CPU-bound and cancellation is cooperative.  Wait until every render
+     * coroutine has returned before recycling the renderer's buffers.
+     */
+    private fun closePreview() {
+        if (isClosing) return
+        isClosing = true
+        binding.btnSkip.isEnabled = false
+        binding.progressBar.visibility = View.VISIBLE
+        binding.previewView.setFrameBitmap(null)
+
+        val jobsToStop = listOfNotNull(renderJob, previewJob)
+        renderJob?.cancel()
+        previewJob?.cancel()
+
+        lifecycleScope.launch {
+            jobsToStop.joinAll()
+            renderer?.recycle()
+            renderer = null
+            finish()
         }
     }
 }

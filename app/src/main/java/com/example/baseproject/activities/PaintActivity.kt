@@ -153,6 +153,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.rvPalette.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
+            soundManagerOrNull()?.play(SoundEffect.CLICK)
             viewModel.onRegionFilled(maskInt)
             scheduleThumbnailSave()
         }
