@@ -2,6 +2,7 @@ package com.example.baseproject.fragments
 
 import android.content.Intent
 import android.view.View
+import com.example.baseproject.activities.AppInfoActivity
 import com.example.baseproject.activities.LanguageActivity
 import com.example.baseproject.activities.ThemeActivity
 import com.example.baseproject.bases.BaseFragment
@@ -50,6 +51,7 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
 
         binding.btnAppInfo.setOnUnDoubleClick {
             // nav to app info
+            startActivity(Intent(requireActivity(), AppInfoActivity::class.java))
         }
 
         binding.btnHighLight.setOnUnDoubleClick {

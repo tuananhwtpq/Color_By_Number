@@ -12,7 +12,7 @@ import com.example.baseproject.utils.Constants
  * - Suy ra từ việc đã tô xong tranh nào ([ArtworksCompleted], [ArtworkInCategory],
  *   [CollectionCompleted]): chỉ cần một danh sách các bức đã hoàn thành là tính được tất cả,
  *   không phải đọc lại assets.
- * - Đếm riêng ([ConsecutiveDaysOpened], [RealmsUnlocked], [HintsUsed], [DailyArtworksCompleted]):
+ * - Đếm riêng ([ConsecutiveDaysOpened], [RealmsUnlocked], [HintsUsed]):
  *   những hành động không để lại dấu vết nào khác nên phải tự ghi lại.
  */
 sealed interface AchievementRule {
@@ -36,7 +36,6 @@ sealed interface AchievementRule {
 
     data object HintsUsed : AchievementRule
 
-    data object DailyArtworksCompleted : AchievementRule
 }
 
 /**
@@ -131,14 +130,18 @@ object AchievementCatalog {
             titleRes = R.string.achievement_color_legend_title,
             descriptionRes = R.string.achievement_color_legend_desc,
             targetCount = 100,
-            rule = AchievementRule.ConsecutiveDaysOpened
+            rule = AchievementRule.ConsecutiveDaysOpened,
+            iconRes = R.drawable.color_legend,
+            iconCompletedRes = R.drawable.color_legend_done
         ),
         AchievementDefinition(
             id = "eternal_artist",
             titleRes = R.string.achievement_eternal_artist_title,
             descriptionRes = R.string.achievement_eternal_artist_desc,
             targetCount = 365,
-            rule = AchievementRule.ConsecutiveDaysOpened
+            rule = AchievementRule.ConsecutiveDaysOpened,
+            iconRes = R.drawable.eternal_artist,
+            iconCompletedRes = R.drawable.eternal_artist_done
         ),
         AchievementDefinition(
             id = "first_masterpiece",
@@ -154,259 +157,288 @@ object AchievementCatalog {
             titleRes = R.string.achievement_rising_artist_title,
             descriptionRes = R.string.achievement_rising_artist_desc,
             targetCount = 5,
-            rule = AchievementRule.ArtworksCompleted
+            rule = AchievementRule.ArtworksCompleted,
+            iconRes = R.drawable.rising_artist,
+            iconCompletedRes = R.drawable.rising_artist_done
         ),
         AchievementDefinition(
             id = "gallery_builder",
             titleRes = R.string.achievement_gallery_builder_title,
             descriptionRes = R.string.achievement_gallery_builder_desc,
             targetCount = 10,
-            rule = AchievementRule.ArtworksCompleted
+            rule = AchievementRule.ArtworksCompleted,
+            iconRes = R.drawable.gallery_builder,
+            iconCompletedRes = R.drawable.gallery_builder_done
         ),
         AchievementDefinition(
             id = "art_collector",
             titleRes = R.string.achievement_art_collector_title,
             descriptionRes = R.string.achievement_art_collector_desc,
             targetCount = 15,
-            rule = AchievementRule.ArtworksCompleted
+            rule = AchievementRule.ArtworksCompleted,
+            iconRes = R.drawable.art_collector,
+            iconCompletedRes = R.drawable.art_collector_done
         ),
         AchievementDefinition(
             id = "color_virtuoso",
             titleRes = R.string.achievement_color_virtuoso_title,
             descriptionRes = R.string.achievement_color_virtuoso_desc,
             targetCount = 25,
-            rule = AchievementRule.ArtworksCompleted
+            rule = AchievementRule.ArtworksCompleted,
+            iconRes = R.drawable.color_virtuoso,
+            iconCompletedRes = R.drawable.color_virtuoso_done
         ),
         AchievementDefinition(
             id = "master_of_colors",
             titleRes = R.string.achievement_master_of_colors_title,
             descriptionRes = R.string.achievement_master_of_colors_desc,
             targetCount = 40,
-            rule = AchievementRule.ArtworksCompleted
+            rule = AchievementRule.ArtworksCompleted,
+            iconRes = R.drawable.master_of_colors,
+            iconCompletedRes = R.drawable.master_of_colors_done
         ),
         AchievementDefinition(
             id = "anime_fan",
             titleRes = R.string.achievement_anime_fan_title,
             descriptionRes = R.string.achievement_anime_fan_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Manga")
+            rule = AchievementRule.ArtworkInCategory("Manga"),
+            iconRes = R.drawable.anime_fan,
+            iconCompletedRes = R.drawable.anime_fan_done
         ),
         AchievementDefinition(
             id = "inner_peace",
             titleRes = R.string.achievement_inner_peace_title,
             descriptionRes = R.string.achievement_inner_peace_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Meditate")
+            rule = AchievementRule.ArtworkInCategory("Meditate"),
+            iconRes = R.drawable.inner_peace,
+            iconCompletedRes = R.drawable.inner_peace_done
         ),
         AchievementDefinition(
             id = "summer_lover",
             titleRes = R.string.achievement_summer_lover_title,
             descriptionRes = R.string.achievement_summer_lover_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Summer")
+            rule = AchievementRule.ArtworkInCategory("Summer"),
+            iconRes = R.drawable.summer_lover,
+            iconCompletedRes = R.drawable.summer_lover_done
         ),
         AchievementDefinition(
             id = "animal_friend",
             titleRes = R.string.achievement_animal_friend_title,
             descriptionRes = R.string.achievement_animal_friend_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Animal")
+            rule = AchievementRule.ArtworkInCategory("Animal"),
+            iconRes = R.drawable.animal_friend,
+            iconCompletedRes = R.drawable.animal_friend_done
         ),
         AchievementDefinition(
             id = "festival_joy",
             titleRes = R.string.achievement_festival_joy_title,
             descriptionRes = R.string.achievement_festival_joy_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Festival")
+            rule = AchievementRule.ArtworkInCategory("Festival"),
+            iconRes = R.drawable.festival_joy,
+            iconCompletedRes = R.drawable.festival_joy_done
         ),
         AchievementDefinition(
             id = "food_lover",
             titleRes = R.string.achievement_food_lover_title,
             descriptionRes = R.string.achievement_food_lover_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Foods")
+            rule = AchievementRule.ArtworkInCategory("Foods"),
+            iconRes = R.drawable.food_lover,
+            iconCompletedRes = R.drawable.food_lover_done
         ),
         AchievementDefinition(
             id = "story_dreamer",
             titleRes = R.string.achievement_story_dreamer_title,
             descriptionRes = R.string.achievement_story_dreamer_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Fairy Tail")
+            rule = AchievementRule.ArtworkInCategory("Fairy Tail"),
+            iconRes = R.drawable.story_dreamer,
+            iconCompletedRes = R.drawable.story_dreamer_done
         ),
         AchievementDefinition(
             id = "bloom_seeker",
             titleRes = R.string.achievement_bloom_seeker_title,
             descriptionRes = R.string.achievement_bloom_seeker_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Florals")
+            rule = AchievementRule.ArtworkInCategory("Florals"),
+            iconRes = R.drawable.bloom_seeker,
+            iconCompletedRes = R.drawable.bloom_seeker_done
         ),
         AchievementDefinition(
             id = "art_enthusiast",
             titleRes = R.string.achievement_art_enthusiast_title,
             descriptionRes = R.string.achievement_art_enthusiast_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Art")
+            rule = AchievementRule.ArtworkInCategory("Art"),
+            iconRes = R.drawable.art_enthusiast,
+            iconCompletedRes = R.drawable.art_enthusiast_done
         ),
         AchievementDefinition(
             id = "world_explorer",
             titleRes = R.string.achievement_world_explorer_title,
             descriptionRes = R.string.achievement_world_explorer_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Travel")
+            rule = AchievementRule.ArtworkInCategory("Travel"),
+            iconRes = R.drawable.world_explorer,
+            iconCompletedRes = R.drawable.world_explorer_done
         ),
         AchievementDefinition(
             id = "playful_spirit",
             titleRes = R.string.achievement_playful_spirit_title,
             descriptionRes = R.string.achievement_playful_spirit_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Cartoon")
+            rule = AchievementRule.ArtworkInCategory("Cartoon"),
+            iconRes = R.drawable.playful_spirit,
+            iconCompletedRes = R.drawable.playful_spirit_done
         ),
         AchievementDefinition(
             id = "nature_explorer",
             titleRes = R.string.achievement_nature_explorer_title,
             descriptionRes = R.string.achievement_nature_explorer_desc,
             targetCount = 1,
-            rule = AchievementRule.ArtworkInCategory("Scenery")
+            rule = AchievementRule.ArtworkInCategory("Scenery"),
+            iconRes = R.drawable.nature_explorer,
+            iconCompletedRes = R.drawable.nature_explorer_done
         ),
         AchievementDefinition(
             id = "festival_of_fortune",
             titleRes = R.string.achievement_festival_of_fortune_title,
             descriptionRes = R.string.achievement_festival_of_fortune_desc,
             targetCount = 10,
-            rule = AchievementRule.CollectionCompleted("Lunar New Year")
+            rule = AchievementRule.CollectionCompleted("Lunar New Year"),
+            iconRes = R.drawable.festival_of_fortune,
+            iconCompletedRes = R.drawable.festival_of_fortune_done
         ),
         AchievementDefinition(
             id = "racing_spirit",
             titleRes = R.string.achievement_racing_spirit_title,
             descriptionRes = R.string.achievement_racing_spirit_desc,
             targetCount = 6,
-            rule = AchievementRule.CollectionCompleted("Racing Legends")
+            rule = AchievementRule.CollectionCompleted("Racing Legends"),
+            iconRes = R.drawable.racing_spirit,
+            iconCompletedRes = R.drawable.racing_spirit_done
         ),
         AchievementDefinition(
             id = "star_chaser",
             titleRes = R.string.achievement_star_chaser_title,
             descriptionRes = R.string.achievement_star_chaser_desc,
             targetCount = 6,
-            rule = AchievementRule.CollectionCompleted("Starlight Journey")
+            rule = AchievementRule.CollectionCompleted("Starlight Journey"),
+            iconRes = R.drawable.star_chaser,
+            iconCompletedRes = R.drawable.star_chaser_done
         ),
         AchievementDefinition(
             id = "purrfect_companion",
             titleRes = R.string.achievement_purrfect_companion_title,
             descriptionRes = R.string.achievement_purrfect_companion_desc,
             targetCount = 8,
-            rule = AchievementRule.CollectionCompleted("Cat moments")
+            rule = AchievementRule.CollectionCompleted("Cat moments"),
+            iconRes = R.drawable.purrfect_companion,
+            iconCompletedRes = R.drawable.purrfect_companion_done
         ),
         AchievementDefinition(
             id = "easter_celebration",
             titleRes = R.string.achievement_easter_celebration_title,
             descriptionRes = R.string.achievement_easter_celebration_desc,
             targetCount = 4,
-            rule = AchievementRule.CollectionCompleted("Happy Easter Day")
+            rule = AchievementRule.CollectionCompleted("Happy Easter Day"),
+            iconRes = R.drawable.easter_celebration,
+            iconCompletedRes = R.drawable.easter_celebration_done
         ),
         AchievementDefinition(
             id = "glass_artisan",
             titleRes = R.string.achievement_glass_artisan_title,
             descriptionRes = R.string.achievement_glass_artisan_desc,
             targetCount = 10,
-            rule = AchievementRule.CollectionCompleted("Light Through Glass")
+            rule = AchievementRule.CollectionCompleted("Light Through Glass"),
+            iconRes = R.drawable.glass_artisan,
+            iconCompletedRes = R.drawable.glass_artisan_done
         ),
         AchievementDefinition(
             id = "sweet_moments",
             titleRes = R.string.achievement_sweet_moments_title,
             descriptionRes = R.string.achievement_sweet_moments_desc,
             targetCount = 8,
-            rule = AchievementRule.CollectionCompleted("Sweet Paradise")
+            rule = AchievementRule.CollectionCompleted("Sweet Paradise"),
+            iconRes = R.drawable.sweet_moments,
+            iconCompletedRes = R.drawable.sweet_moments_done
         ),
         AchievementDefinition(
             id = "realm_explorer",
             titleRes = R.string.achievement_realm_explorer_title,
             descriptionRes = R.string.achievement_realm_explorer_desc,
             targetCount = 1,
-            rule = AchievementRule.RealmsUnlocked
+            rule = AchievementRule.RealmsUnlocked,
+            iconRes = R.drawable.realm_explorer,
+            iconCompletedRes = R.drawable.realm_explorer_done
         ),
         AchievementDefinition(
             id = "growing_world",
             titleRes = R.string.achievement_growing_world_title,
             descriptionRes = R.string.achievement_growing_world_desc,
             targetCount = 3,
-            rule = AchievementRule.RealmsUnlocked
+            rule = AchievementRule.RealmsUnlocked,
+            iconRes = R.drawable.growing_world,
+            iconCompletedRes = R.drawable.growing_world_done
         ),
         AchievementDefinition(
             id = "realm_guardian",
             titleRes = R.string.achievement_realm_guardian_title,
             descriptionRes = R.string.achievement_realm_guardian_desc,
             targetCount = 6,
-            rule = AchievementRule.RealmsUnlocked
+            rule = AchievementRule.RealmsUnlocked,
+            iconRes = R.drawable.realm_guardian,
+            iconCompletedRes = R.drawable.realm_guardian_done
         ),
         AchievementDefinition(
             id = "first_clue",
             titleRes = R.string.achievement_first_clue_title,
             descriptionRes = R.string.achievement_first_clue_desc,
             targetCount = 1,
-            rule = AchievementRule.HintsUsed
+            rule = AchievementRule.HintsUsed,
+            iconRes = R.drawable.first_clue,
+            iconCompletedRes = R.drawable.first_clue_done
         ),
         AchievementDefinition(
             id = "hint_hunter",
             titleRes = R.string.achievement_hint_hunter_title,
             descriptionRes = R.string.achievement_hint_hunter_desc,
             targetCount = 5,
-            rule = AchievementRule.HintsUsed
+            rule = AchievementRule.HintsUsed,
+            iconRes = R.drawable.hint_hunter,
+            iconCompletedRes = R.drawable.hint_hunter_done
         ),
         AchievementDefinition(
             id = "smart_solver",
             titleRes = R.string.achievement_smart_solver_title,
             descriptionRes = R.string.achievement_smart_solver_desc,
             targetCount = 10,
-            rule = AchievementRule.HintsUsed
+            rule = AchievementRule.HintsUsed,
+            iconRes = R.drawable.smart_solver,
+            iconCompletedRes = R.drawable.smart_solver_done
         ),
         AchievementDefinition(
             id = "guided_artist",
             titleRes = R.string.achievement_guided_artist_title,
             descriptionRes = R.string.achievement_guided_artist_desc,
             targetCount = 20,
-            rule = AchievementRule.HintsUsed
+            rule = AchievementRule.HintsUsed,
+            iconRes = R.drawable.guided_artist,
+            iconCompletedRes = R.drawable.guided_artist_done
         ),
         AchievementDefinition(
             id = "hint_master",
             titleRes = R.string.achievement_hint_master_title,
             descriptionRes = R.string.achievement_hint_master_desc,
             targetCount = 30,
-            rule = AchievementRule.HintsUsed
-        ),
-        AchievementDefinition(
-            id = "daily_starter",
-            titleRes = R.string.achievement_daily_starter_title,
-            descriptionRes = R.string.achievement_daily_starter_desc,
-            targetCount = 3,
-            rule = AchievementRule.DailyArtworksCompleted
-        ),
-        AchievementDefinition(
-            id = "daily_habit",
-            titleRes = R.string.achievement_daily_habit_title,
-            descriptionRes = R.string.achievement_daily_habit_desc,
-            targetCount = 7,
-            rule = AchievementRule.DailyArtworksCompleted
-        ),
-        AchievementDefinition(
-            id = "daily_artist",
-            titleRes = R.string.achievement_daily_artist_title,
-            descriptionRes = R.string.achievement_daily_artist_desc,
-            targetCount = 14,
-            rule = AchievementRule.DailyArtworksCompleted
-        ),
-        AchievementDefinition(
-            id = "daily_devotion",
-            titleRes = R.string.achievement_daily_devotion_title,
-            descriptionRes = R.string.achievement_daily_devotion_desc,
-            targetCount = 25,
-            rule = AchievementRule.DailyArtworksCompleted
-        ),
-        AchievementDefinition(
-            id = "daily_champion",
-            titleRes = R.string.achievement_daily_champion_title,
-            descriptionRes = R.string.achievement_daily_champion_desc,
-            targetCount = 40,
-            rule = AchievementRule.DailyArtworksCompleted
+            rule = AchievementRule.HintsUsed,
+            iconRes = R.drawable.hint_master,
+            iconCompletedRes = R.drawable.hint_master_done
         )
     )
 }

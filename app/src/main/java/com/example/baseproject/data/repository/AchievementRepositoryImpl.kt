@@ -25,7 +25,6 @@ class AchievementRepositoryImpl(
 
     private companion object {
         const val KEY_COMPLETED_LEVELS = "ACHIEVEMENT_COMPLETED_LEVELS"
-        const val KEY_COMPLETED_DAILY_LEVELS = "ACHIEVEMENT_COMPLETED_DAILY_LEVELS"
         const val KEY_UNLOCKED_REALMS = "ACHIEVEMENT_UNLOCKED_REALMS"
         const val KEY_HINTS_USED = "ACHIEVEMENT_HINTS_USED"
         const val KEY_STREAK_DAYS = "ACHIEVEMENT_STREAK_DAYS"
@@ -66,9 +65,6 @@ class AchievementRepositoryImpl(
 
             is AchievementEvent.ArtworkCompleted -> {
                 addToSet(KEY_COMPLETED_LEVELS, "${event.category}/${event.levelId}")
-                if (event.isDaily) {
-                    addToSet(KEY_COMPLETED_DAILY_LEVELS, "${event.category}/${event.levelId}")
-                }
             }
 
             AchievementEvent.HintUsed ->
@@ -129,7 +125,6 @@ class AchievementRepositoryImpl(
 
             AchievementRule.HintsUsed -> hintsUsed()
 
-            AchievementRule.DailyArtworksCompleted -> readSet(KEY_COMPLETED_DAILY_LEVELS).size
         }
 
     /** Khoá có dạng "category/levelId", mà category của collection lại chứa sẵn dấu "/". */

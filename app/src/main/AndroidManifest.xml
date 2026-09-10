@@ -11,45 +11,48 @@
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/logo_rect"
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/logo_rounded"
         android:supportsRtl="true"
         android:theme="@style/Theme.BaseProject"
         android:usesCleartextTraffic="true"
         tools:replace="android:networkSecurityConfig"
         tools:targetApi="31">
         <activity
+            android:name=".activities.AppInfoActivity"
+            android:exported="false" />
+        <activity
             android:name=".activities.ThemeActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.RealmGuideActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.RealmRoadActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.AchieveActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.CollectionDetailActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.RealmFullScreenActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -64,19 +67,18 @@
         <activity
             android:name=".activities.PictureCompletedActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.TimelapsePreviewActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
             android:exported="false"
-             />
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.SettingActivity"
             android:configChanges="uiMode"
-            android:screenOrientation="portrait"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.PaintActivity"
             android:configChanges="uiMode"
@@ -86,9 +88,7 @@
             android:name=".activities.MainActivity"
             android:configChanges="uiMode"
             android:exported="false"
-            android:screenOrientation="portrait">
-
-        </activity>
+            android:screenOrientation="portrait"></activity>
         <activity
             android:name=".activities.IntroActivity"
             android:configChanges="uiMode"
@@ -110,8 +110,7 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-        <!-- <service -->
+        </activity> <!-- <service -->
         <!-- android:name=".MyFirebaseMessagingService" -->
         <!-- android:directBootAware="true" -->
         <!-- android:exported="false"> -->

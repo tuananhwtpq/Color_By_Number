@@ -25,8 +25,7 @@ sealed interface AchievementEvent {
      */
     data class ArtworkCompleted(
         val category: String,
-        val levelId: String,
-        val isDaily: Boolean = false
+        val levelId: String
     ) : AchievementEvent
 
     /** Một gợi ý đã thực sự được dùng (có vùng để chỉ, không phải bấm hụt). */

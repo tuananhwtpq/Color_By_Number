@@ -21,7 +21,7 @@ android {
         versionName = "test"
 
         val dateTime = SimpleDateFormat("dd-MM-yyyy").format(System.currentTimeMillis())
-        setProperty("archivesBaseName", "Base_project_($versionCode)_$dateTime")
+        setProperty("archivesBaseName", "Pixlory_($versionCode)_$dateTime")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PIXCOLOR_BASE_URL", "\"https://pixlory.dktechgroup.com/\"")

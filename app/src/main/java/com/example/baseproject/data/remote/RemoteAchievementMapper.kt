@@ -33,7 +33,6 @@ object RemoteAchievementMapper {
                 ruleRefId?.let { AchievementRule.CollectionCompleted(it.removePrefix("${Constants.ASSET_COLLECTION_ROOT}/")) }
             "REALMS_UNLOCKED" -> AchievementRule.RealmsUnlocked
             "HINTS_USED" -> AchievementRule.HintsUsed
-            "DAILY_ARTWORKS_COMPLETED" -> AchievementRule.DailyArtworksCompleted
             else -> null
         }
 }
