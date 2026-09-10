@@ -11,9 +11,9 @@ import kotlinx.coroutines.async
 /**
  * Owns the first Library load for the lifetime of the process.
  *
- * Application starts this work while Splash and Language are visible. Language and Library await
- * the exact same deferred result, preventing competing first-load requests from queuing behind
- * the repository mutex and delaying the first Main screen.
+ * Application starts this work while Splash and Language are visible. Library awaits the exact
+ * same deferred result after Main opens, preventing competing first-load requests from queuing
+ * behind the repository mutex and delaying the first rendered Library screen.
  */
 class StartupContentPreloader(
     private val assetLevelRepository: AssetLevelRepository,
@@ -27,8 +27,13 @@ class StartupContentPreloader(
         initialLoad ?: launchLoad()
     }
 
-    /** Starts a new attempt only after the shared startup attempt has finished with an error. */
-    fun retryAfterFailure(): Deferred<Result<List<LevelConfig>>> = synchronized(lock) {
+    /** Awaits the shared startup load and makes one recovery attempt after a failed load. */
+    suspend fun awaitLevels(): Result<List<LevelConfig>> {
+        val initialResult = start().await()
+        return if (initialResult.isSuccess) initialResult else retryAfterFailure().await()
+    }
+
+    private fun retryAfterFailure(): Deferred<Result<List<LevelConfig>>> = synchronized(lock) {
         val currentLoad = initialLoad
         when {
             currentLoad == null -> launchLoad()

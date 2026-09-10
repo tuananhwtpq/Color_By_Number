@@ -1,6 +1,7 @@
 package com.example.baseproject.data.progress
 
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.progressFraction
 import com.example.baseproject.data.progressRegionCount
 import com.example.baseproject.data.repository.AssetLevelRepository
 import com.example.baseproject.data.repository.LevelBundle
@@ -33,6 +34,26 @@ class SavedProgressMetadataResolverTest {
         assertEquals(0, result[1].progressRegionCount())
         assertEquals(30, result[2].totalRegions)
         assertEquals(listOf(incompleteSummary.id), assetRepository.resolvedLevelIds)
+    }
+
+    @Test
+    fun refreshedSummaryKeepsSavedPaintingPercentageVisible() = runBlocking {
+        val refreshedSummary = summaryLevel(id = "owl-01")
+        val completedMaskColors = setOf(1, 2)
+        val resolver = SavedProgressMetadataResolver(
+            assetLevelRepository = FakeAssetLevelRepository(
+                resolvedMetadata = mapOf(
+                    refreshedSummary.id to refreshedSummary.copy(totalRegions = 4)
+                )
+            ),
+            paintingProgressRepository = FakePaintingProgressRepository(
+                progressByLevelId = mapOf(refreshedSummary.id to completedMaskColors)
+            )
+        )
+
+        val resolved = resolver.resolve(listOf(refreshedSummary)).single()
+
+        assertEquals(0.5f, resolved.progressFraction(completedMaskColors), 0.001f)
     }
 
     private fun summaryLevel(id: String) = LevelConfig(

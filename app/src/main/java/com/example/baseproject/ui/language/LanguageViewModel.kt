@@ -44,7 +44,7 @@ class LanguageViewModel(
         settingsRepository.setSelectedLanguage(selectedLanguage)
         emitEvent(
             if (_uiState.value.isFromHome) LanguageUiEvent.NavigateToMain
-            else LanguageUiEvent.NavigateToIntro
+            else LanguageUiEvent.NavigateToMainWithPreparing
         )
     }
 

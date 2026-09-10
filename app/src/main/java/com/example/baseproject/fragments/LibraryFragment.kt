@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
@@ -24,6 +25,7 @@ import com.example.baseproject.databinding.ItemLibraryCategoryTabBinding
 import com.example.baseproject.dialog.CurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.utils.AppThemeManager
+import com.example.baseproject.ui.library.LibraryUiState
 import com.example.baseproject.ui.library.LibraryViewModel
 import com.example.baseproject.utils.CompletedPictureActions
 import com.example.baseproject.utils.setOnUnDoubleClick
@@ -56,6 +58,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     private var renderedCategories: List<String> = emptyList()
     private var renderedCategoryNames: Map<String, String> = emptyMap()
     private var categoryToReveal: String? = null
+    private var initialHomeRevealScheduled = false
     private var initialHomeRevealPlayed = false
     private var hasResumedOnce = false
     private val completedPictureActions by lazy {
@@ -96,11 +99,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                 } else {
                     updateTabSelection(state.selectedCategory)
                 }
-                levelAdapter.submitList(state.visibleLevels)
-                revealRequestedCategoryIfReady(state.categories, state.selectedCategory)
-                if (state.categories.isNotEmpty() && state.visibleLevels.isNotEmpty()) {
-                    revealInitialHomeContent()
+                levelAdapter.submitList(state.visibleLevels) {
+                    scheduleInitialHomeReveal(state)
                 }
+                revealRequestedCategoryIfReady(state.categories, state.selectedCategory)
             }
         }
     }
@@ -284,10 +286,21 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         }
     }
 
+    private fun scheduleInitialHomeReveal(state: LibraryUiState) {
+        if (initialHomeRevealPlayed || initialHomeRevealScheduled) return
+        if (state.categories.isEmpty() || levelAdapter.currentList.isEmpty()) return
+
+        initialHomeRevealScheduled = true
+        binding.rvLevels.doOnPreDraw {
+            initialHomeRevealScheduled = false
+            revealInitialHomeContent()
+        }
+    }
+
     private fun revealInitialHomeContent() {
         if (initialHomeRevealPlayed) return
         initialHomeRevealPlayed = true
-        (activity as? MainActivity)?.notifyInitialLibraryContentReady()
+        (activity as? MainActivity)?.notifyInitialLibraryContentDrawn()
 
         val offset = 12f * resources.displayMetrics.density
         val groups = listOf(

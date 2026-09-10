@@ -38,6 +38,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         const val EXTRA_LIBRARY_CATEGORY = "EXTRA_LIBRARY_CATEGORY"
         const val EXTRA_REALM_ID = "EXTRA_REALM_ID"
         const val EXTRA_SKIP_PREPARING_OVERLAY = "EXTRA_SKIP_PREPARING_OVERLAY"
+        const val EXTRA_SHOW_LIBRARY_PREPARING = "EXTRA_SHOW_LIBRARY_PREPARING"
         const val TAB_LIBRARY = 0
         const val TAB_COLOR_REALM = 2
         private const val BOTTOM_NAV_ICON_SELECTED_SCALE = 1.22f
@@ -125,7 +126,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         }
     }
 
-    fun notifyInitialLibraryContentReady() {
+    fun notifyInitialLibraryContentDrawn() {
         scheduleRealmWarmUp()
         SharedPrefManager.hasSeenLibraryPreparing = true
         preparingTimeoutJob?.cancel()
@@ -142,8 +143,9 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     }
 
     private fun shouldShowPreparingOverlay(): Boolean =
-        !intent.getBooleanExtra(EXTRA_SKIP_PREPARING_OVERLAY, false) &&
-            !SharedPrefManager.hasSeenLibraryPreparing
+        intent.getBooleanExtra(EXTRA_SHOW_LIBRARY_PREPARING, false) ||
+            (!intent.getBooleanExtra(EXTRA_SKIP_PREPARING_OVERLAY, false) &&
+                !SharedPrefManager.hasSeenLibraryPreparing)
 
     private fun hidePreparingOverlay() {
         if (binding.contentPreparingOverlay.visibility != View.VISIBLE) return

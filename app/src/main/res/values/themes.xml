@@ -10,7 +10,7 @@
     <!-- Displayed by Android while MainActivity is being created after Language. It prevents the
          framework's default light window from flashing between the Preparing screen and Main. -->
     <style name="Theme.BaseProject.MainStarting" parent="Theme.BaseProject">
-        <item name="android:windowBackground">@drawable/bg_full_main_theme_01</item>
+        <item name="android:windowBackground">@color/preparing_content_background</item>
     </style>
 
     <style name="Display1">

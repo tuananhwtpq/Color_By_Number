@@ -38,7 +38,7 @@ class LibraryViewModel(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 val levels = savedProgressMetadataResolver.resolve(
-                    startupContentPreloader.start().await().getOrThrow()
+                    startupContentPreloader.awaitLevels().getOrThrow()
                 )
                 showLevels(levels)
                 refreshLevelsInBackground(levels)
@@ -114,10 +114,12 @@ class LibraryViewModel(
     private fun refreshLevelsInBackground(previousLevels: List<LevelConfig>) {
         viewModelScope.launch {
             runCatching {
-                assetLevelRepository.refreshAllLevels()
-            }.onSuccess { freshLevels ->
-                if (freshLevels != previousLevels) {
-                    showLevels(freshLevels)
+                savedProgressMetadataResolver.resolve(
+                    assetLevelRepository.refreshAllLevels()
+                )
+            }.onSuccess { resolvedFreshLevels ->
+                if (resolvedFreshLevels != previousLevels) {
+                    showLevels(resolvedFreshLevels)
                 }
             }
         }

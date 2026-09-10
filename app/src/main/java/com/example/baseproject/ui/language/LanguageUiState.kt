@@ -12,6 +12,6 @@ data class LanguageUiState(
 sealed interface LanguageUiEvent {
     object RequestNotificationPermission : LanguageUiEvent
     data class ShowToast(@param:StringRes val messageRes: Int) : LanguageUiEvent
-    object NavigateToIntro : LanguageUiEvent
+    object NavigateToMainWithPreparing : LanguageUiEvent
     object NavigateToMain : LanguageUiEvent
 }
