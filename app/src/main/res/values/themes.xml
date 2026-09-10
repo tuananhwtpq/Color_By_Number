@@ -13,6 +13,13 @@
         <item name="android:windowBackground">@color/preparing_content_background</item>
     </style>
 
+    <!-- Language already owns the visible preparing surface for this entry route. Keeping the
+         framework preview disabled prevents a second, empty Main starting surface covering it. -->
+    <style name="Theme.BaseProject.MainNoPreview" parent="Theme.BaseProject">
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowBackground">@color/preparing_content_background</item>
+    </style>
+
     <style name="Display1">
         <item name="android:fontFamily">@font/capriola_regular</item>
         <item name="android:textSize">52sp</item>

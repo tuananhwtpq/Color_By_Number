@@ -92,6 +92,11 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.BaseProject.MainStarting" />
+        <activity-alias
+            android:name=".activities.MainPreparingEntry"
+            android:exported="false"
+            android:targetActivity=".activities.MainActivity"
+            android:theme="@style/Theme.BaseProject.MainNoPreview" />
         <activity
             android:name=".activities.IntroActivity"
             android:configChanges="uiMode"

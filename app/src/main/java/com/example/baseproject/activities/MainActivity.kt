@@ -7,6 +7,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.viewModels
+import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.example.baseproject.MyApplication
@@ -16,6 +17,7 @@ import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.RealmCatalog
 import com.example.baseproject.databinding.ActivityMainBinding
 import com.example.baseproject.ui.main.MainViewModel
+import com.example.baseproject.ui.main.MainRevealCoordinator
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.RealmAnimationCache
 import com.example.baseproject.utils.SharedPrefManager
@@ -56,13 +58,14 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private val mAdapter by lazy {
         MainVPAdapter(this)
     }
-    private var preparingStartedAt = 0L
-    private var preparingOverlayHidden = false
     private var shouldShowPreparingOverlay = false
     private var preparingTimeoutJob: Job? = null
+    private var preparingRevealJob: Job? = null
+    private var mainContentInitialized = false
     private var realmWarmUpJob: Job? = null
     private var realmWarmUpStarted = false
     private var pendingLibraryCategory: String? = null
+    private val revealCoordinator = MainRevealCoordinator(PREPARING_MIN_DURATION_MS)
     private val appContainer by lazy {
         (application as MyApplication).appContainer
     }
@@ -78,24 +81,39 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
 
     override fun initView() {
         AppThemeManager.applyFullBackground(binding.main)
-        preparingStartedAt = SystemClock.elapsedRealtime()
-        preparingOverlayHidden = false
         shouldShowPreparingOverlay = shouldShowPreparingOverlay()
         if (shouldShowPreparingOverlay) {
             binding.contentPreparingOverlay.apply {
                 alpha = 1f
                 visibility = View.VISIBLE
                 bringToFront()
-            }
-            preparingTimeoutJob = lifecycleScope.launch {
-                delay(PREPARING_MAX_DURATION_MS)
-                preparingOverlayHidden = true
-                hidePreparingOverlay()
+                doOnPreDraw {
+                    onPreparingOverlayDrawn()
+                }
             }
         } else {
-            preparingOverlayHidden = true
             binding.contentPreparingOverlay.gone()
+            initializeMainContent()
         }
+    }
+
+    private fun onPreparingOverlayDrawn() {
+        revealCoordinator.onPreparingDrawn(SystemClock.elapsedRealtime())
+            ?.let(::schedulePreparingReveal)
+
+        preparingTimeoutJob?.cancel()
+        preparingTimeoutJob = lifecycleScope.launch {
+            delay(PREPARING_MAX_DURATION_MS)
+            revealCoordinator.onTimeout()?.let(::schedulePreparingReveal)
+        }
+
+        // Let the preparing surface complete this frame before ViewPager creates its fragments.
+        binding.root.post { initializeMainContent() }
+    }
+
+    private fun initializeMainContent() {
+        if (mainContentInitialized) return
+        mainContentInitialized = true
 
         binding.tvLib.enableMarquee()
         binding.tvDaily.enableMarquee()
@@ -129,17 +147,10 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     fun notifyInitialLibraryContentDrawn() {
         scheduleRealmWarmUp()
         SharedPrefManager.hasSeenLibraryPreparing = true
-        preparingTimeoutJob?.cancel()
+        if (!shouldShowPreparingOverlay) return
 
-        if (!shouldShowPreparingOverlay || preparingOverlayHidden) return
-        preparingOverlayHidden = true
-
-        val elapsed = SystemClock.elapsedRealtime() - preparingStartedAt
-        val delayMillis = (PREPARING_MIN_DURATION_MS - elapsed).coerceAtLeast(0L)
-        lifecycleScope.launch {
-            delay(delayMillis)
-            hidePreparingOverlay()
-        }
+        revealCoordinator.onContentReady(SystemClock.elapsedRealtime())
+            ?.let(::schedulePreparingReveal)
     }
 
     private fun shouldShowPreparingOverlay(): Boolean =
@@ -150,6 +161,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private fun hidePreparingOverlay() {
         if (binding.contentPreparingOverlay.visibility != View.VISIBLE) return
 
+        revealCoordinator.onRevealed()
         binding.contentPreparingOverlay.animate().cancel()
         binding.contentPreparingOverlay.animate()
             .alpha(0f)
@@ -162,8 +174,18 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
             .start()
     }
 
+    private fun schedulePreparingReveal(plan: MainRevealCoordinator.RevealPlan) {
+        preparingTimeoutJob?.cancel()
+        preparingRevealJob?.cancel()
+        preparingRevealJob = lifecycleScope.launch {
+            delay(plan.delayMillis)
+            hidePreparingOverlay()
+        }
+    }
+
     override fun onDestroy() {
         preparingTimeoutJob?.cancel()
+        preparingRevealJob?.cancel()
         super.onDestroy()
     }
 

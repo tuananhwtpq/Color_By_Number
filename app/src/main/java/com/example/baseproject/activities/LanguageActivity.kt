@@ -1,11 +1,14 @@
 package com.example.baseproject.activities
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.core.view.doOnPreDraw
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.baseproject.MyApplication
 import com.example.baseproject.adapters.LanguageAdapter
@@ -101,10 +104,33 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
         if (isOpeningMain) return
         isOpeningMain = true
         binding.ivDone.isEnabled = false
-        val intent = Intent(this@LanguageActivity, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (showPreparingOverlay) {
+
+        if (showPreparingOverlay) {
+            binding.contentPreparingOverlay.apply {
+                alpha = 1f
+                visibility = View.VISIBLE
+                bringToFront()
+                doOnPreDraw {
+                    postOnAnimation { launchMain(showPreparingOverlay = true) }
+                }
+            }
+        } else {
+            launchMain(showPreparingOverlay = false)
+        }
+    }
+
+    private fun launchMain(showPreparingOverlay: Boolean) {
+        val intent = if (showPreparingOverlay) {
+            Intent().apply {
+                component = ComponentName(
+                    packageName,
+                    "$packageName.activities.MainPreparingEntry"
+                )
                 putExtra(MainActivity.EXTRA_SHOW_LIBRARY_PREPARING, true)
+            }
+        } else {
+            Intent(this@LanguageActivity, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         }
         startActivity(intent)
