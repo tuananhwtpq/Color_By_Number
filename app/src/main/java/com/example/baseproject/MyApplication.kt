@@ -3,6 +3,7 @@ package com.example.baseproject
 import com.example.baseproject.app.AppContainer
 import com.example.baseproject.app.DefaultAppContainer
 import com.example.baseproject.utils.SharedPrefManager
+import com.example.baseproject.utils.SoundManager
 import com.snake.squad.adslib.AdsApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,11 +15,14 @@ class MyApplication : AdsApplication() {
 
     lateinit var appContainer: AppContainer
         private set
+    lateinit var soundManager: SoundManager
+        private set
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
         SharedPrefManager.init(this)
+        soundManager = SoundManager(this)
         appContainer = DefaultAppContainer(this)
         appContainer.paintDropRepository.trackAppOpened()
         preloadLibraryLevels()
@@ -34,6 +38,7 @@ class MyApplication : AdsApplication() {
 
     override fun onTerminate() {
         applicationScope.cancel()
+        soundManager.release()
         super.onTerminate()
     }
 

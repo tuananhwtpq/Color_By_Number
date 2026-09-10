@@ -18,8 +18,10 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewbinding.ViewBinding
 import com.example.baseproject.dialog.LoadingDialog
 import com.example.baseproject.dialog.NoInternetDialog
+import com.example.baseproject.MyApplication
 import com.example.baseproject.utils.Common
 import com.example.baseproject.utils.isNetworkAvailable
+import com.example.baseproject.utils.SoundScene
 import com.snake.squad.adslib.AdmobLib
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -29,6 +31,7 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
 
     val binding: viewBinding by lazy { inflater(layoutInflater) }
     open val shouldMonitorNetwork: Boolean = false
+    protected open val soundScene: SoundScene = SoundScene.HOME
     private var connectivityManager: ConnectivityManager? = null
 
     private val loadingDialog by lazy { LoadingDialog(this) }
@@ -94,6 +97,7 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
 
     override fun onResume() {
         super.onResume()
+        (application as? MyApplication)?.soundManager?.onSceneResumed(soundScene)
         if (shouldMonitorNetwork) {
             if (!isNetworkAvailable()) {
                 showNoInternetDialog()
@@ -103,6 +107,7 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
     }
 
     override fun onPause() {
+        (application as? MyApplication)?.soundManager?.onScenePaused(soundScene)
         super.onPause()
         if (shouldMonitorNetwork) {
             unregisterNetworkCallback()

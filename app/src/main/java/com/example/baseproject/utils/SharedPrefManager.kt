@@ -16,6 +16,8 @@ object SharedPrefManager {
     private const val SELECTED_APP_THEME_ID = "selected_app_theme_id"
     private const val SELECTED_REALM_ID = "selected_realm_id"
     private const val HAS_SEEN_LIBRARY_PREPARING = "has_seen_library_preparing"
+    private const val IS_BACKGROUND_MUSIC_ENABLED = "is_background_music_enabled"
+    private const val IS_SOUND_EFFECTS_ENABLED = "is_sound_effects_enabled"
     private lateinit var preferences: SharedPreferences
 
     var isShowGuide: Boolean
@@ -63,6 +65,18 @@ object SharedPrefManager {
         get() = preferences.getBoolean(HAS_SEEN_LIBRARY_PREPARING, false)
         set(value) {
             preferences.edit { putBoolean(HAS_SEEN_LIBRARY_PREPARING, value) }
+        }
+
+    var isBackgroundMusicEnabled: Boolean
+        get() = preferences.getBoolean(IS_BACKGROUND_MUSIC_ENABLED, true)
+        set(value) {
+            preferences.edit { putBoolean(IS_BACKGROUND_MUSIC_ENABLED, value) }
+        }
+
+    var isSoundEffectsEnabled: Boolean
+        get() = preferences.getBoolean(IS_SOUND_EFFECTS_ENABLED, true)
+        set(value) {
+            preferences.edit { putBoolean(IS_SOUND_EFFECTS_ENABLED, value) }
         }
 
     fun init(context: Context) {

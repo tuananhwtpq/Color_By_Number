@@ -12,6 +12,7 @@ import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.Common
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
+import com.example.baseproject.utils.soundManagerOrNull
 
 class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBinding::inflate) {
 
@@ -26,6 +27,7 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
     override fun onResume() {
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
+        renderPaintSettings()
     }
 
     override fun initActionView() {
@@ -73,11 +75,29 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
         binding.btnFillInAnimation.setOnUnDoubleClick {
             toggleFillInAnimation()
         }
+
+        binding.btnBackgroundMusic.setOnUnDoubleClick {
+            toggleBackgroundMusic()
+        }
+
+        binding.btnBackgroundMusicSwitch.setOnUnDoubleClick {
+            toggleBackgroundMusic()
+        }
+
+        binding.btnSoundEffect.setOnUnDoubleClick {
+            toggleSoundEffects()
+        }
+
+        binding.btnSoundEffectSwitch.setOnUnDoubleClick {
+            toggleSoundEffects()
+        }
     }
 
     private fun renderPaintSettings() {
         binding.btnSwitchColor.isSelected = SharedPrefManager.isAutoSwitchColor
         binding.btnFillInAnimation.isSelected = SharedPrefManager.isFillInAnimation
+        binding.btnBackgroundMusicSwitch.isSelected = SharedPrefManager.isBackgroundMusicEnabled
+        binding.btnSoundEffectSwitch.isSelected = SharedPrefManager.isSoundEffectsEnabled
     }
 
     private fun toggleAutoSwitchColor() {
@@ -87,6 +107,20 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
 
     private fun toggleFillInAnimation() {
         SharedPrefManager.isFillInAnimation = !SharedPrefManager.isFillInAnimation
+        renderPaintSettings()
+    }
+
+    private fun toggleBackgroundMusic() {
+        requireContext().soundManagerOrNull()?.setBackgroundMusicEnabled(
+            !SharedPrefManager.isBackgroundMusicEnabled
+        )
+        renderPaintSettings()
+    }
+
+    private fun toggleSoundEffects() {
+        requireContext().soundManagerOrNull()?.setSoundEffectsEnabled(
+            !SharedPrefManager.isSoundEffectsEnabled
+        )
         renderPaintSettings()
     }
 

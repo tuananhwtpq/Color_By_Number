@@ -17,9 +17,11 @@ import com.example.baseproject.ui.language.LanguageViewModel
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.gone
 import com.example.baseproject.utils.visible
+import com.example.baseproject.utils.SoundScene
 import kotlinx.coroutines.flow.collectLatest
 
 class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageBinding::inflate) {
+    override val soundScene = SoundScene.SILENT
     companion object {
         const val EXTRA_FROM_SPLASH = "EXTRA_FROM_SPLASH"
     }

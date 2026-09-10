@@ -14,6 +14,7 @@ class UnDoubleClick(
         if (System.currentTimeMillis() - lastClick < defaultInterval) return
 
         lastClick = System.currentTimeMillis()
+        view?.context?.soundManagerOrNull()?.play(SoundEffect.CLICK)
         onViewClick(view)
     }
 }

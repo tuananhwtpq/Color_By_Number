@@ -15,6 +15,7 @@ import com.example.baseproject.data.progressFraction
 import com.example.baseproject.data.repository.PaintingProgressRepository
 import com.example.baseproject.data.repository.ThumbnailRepository
 import com.example.baseproject.utils.AssetImageResolver
+import com.example.baseproject.utils.setOnSoundClickListener
 import kotlin.math.ceil
 
 class LevelAdapter(
@@ -28,7 +29,7 @@ class LevelAdapter(
         val tvCurrentPercent: TextView = view.findViewById(R.id.tvCurrentPercent)
 
         init {
-            view.setOnClickListener {
+            view.setOnSoundClickListener {
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onClick(getItem(position))

@@ -37,6 +37,10 @@ import com.example.baseproject.ui.paint.PaintViewModel
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.SharedPrefManager
+import com.example.baseproject.utils.SoundEffect
+import com.example.baseproject.utils.SoundScene
+import com.example.baseproject.utils.setOnSoundClickListener
+import com.example.baseproject.utils.soundManagerOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -47,6 +51,8 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
 class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::inflate) {
+
+    override val soundScene = SoundScene.DRAWING
 
     companion object {
         private const val GUIDE_STEP_01 = 0
@@ -126,12 +132,12 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnClickListener { finish() }
-        binding.btnHint.setOnClickListener { showWatchAdsDialog() }
-        binding.btnPreviewFull.setOnClickListener { toggleFullColorPreview() }
-        binding.btnFillAll.setOnClickListener { toggleFillAllOnCanvas() }
-        binding.btnCloseFullPreview.setOnClickListener { hideFullColorPreview() }
-        binding.fullPreviewOverlay.setOnClickListener { hideFullColorPreview() }
+        binding.btnBack.setOnSoundClickListener { finish() }
+        binding.btnHint.setOnSoundClickListener { showWatchAdsDialog() }
+        binding.btnPreviewFull.setOnSoundClickListener { toggleFullColorPreview() }
+        binding.btnFillAll.setOnSoundClickListener { toggleFillAllOnCanvas() }
+        binding.btnCloseFullPreview.setOnSoundClickListener { hideFullColorPreview() }
+        binding.fullPreviewOverlay.setOnSoundClickListener { hideFullColorPreview() }
         binding.ivFullPreview.setOnClickListener { }
 //        binding.btnReset.setOnClickListener { viewModel.requestResetConfirmation() }
 
@@ -153,7 +159,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.fullPreviewOverlay.visibility = View.GONE
         binding.completionAnimationOverlay.visibility = View.GONE
         binding.lavCompletionBlast.cancelAnimation()
-        binding.llGuide.setOnClickListener {
+        binding.llGuide.setOnSoundClickListener {
             when (guideStep) {
                 GUIDE_STEP_01 -> showGuideStep(GUIDE_STEP_02)
                 GUIDE_STEP_02 -> showGuideStep(GUIDE_STEP_03)
@@ -665,6 +671,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             PaintUiEvent.FinishScreen -> finish()
             is PaintUiEvent.FocusOnMaskColor -> {
                 achievementRepository.track(AchievementEvent.HintUsed)
+                soundManagerOrNull()?.play(SoundEffect.HINT)
                 binding.paintCanvas.focusOnRegionByMaskColor(event.maskColor)
             }
             is PaintUiEvent.LevelCompleted -> navigateToPictureCompleted(event)
@@ -736,6 +743,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
             binding.completionAnimationOverlay.visibility = View.VISIBLE
             binding.completionAnimationOverlay.bringToFront()
+            soundManagerOrNull()?.play(SoundEffect.COMPLETION)
             animationView.apply {
                 removeAllAnimatorListeners()
                 addAnimatorListener(listener)

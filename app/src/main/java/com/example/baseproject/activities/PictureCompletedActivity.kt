@@ -24,6 +24,7 @@ import com.example.baseproject.utils.ImageSharer
 import com.example.baseproject.utils.VideoSharer
 import com.example.baseproject.utils.VideoSaver
 import com.example.baseproject.utils.setOnUnDoubleClick
+import com.example.baseproject.utils.setOnSoundClickListener
 import com.example.baseproject.utils.showToast
 import com.example.baseproject.utils.toFileNameKey
 import java.io.File
@@ -96,7 +97,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     }
 
     override fun initActionView() {
-        binding.btnBackToHome.setOnClickListener {
+        binding.btnBackToHome.setOnSoundClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
 

@@ -27,6 +27,7 @@ import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.ui.library.LibraryViewModel
 import com.example.baseproject.utils.CompletedPictureActions
 import com.example.baseproject.utils.setOnUnDoubleClick
+import com.example.baseproject.utils.setOnSoundClickListener
 import kotlinx.coroutines.flow.collectLatest
 
 class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBinding::inflate) {
@@ -110,7 +111,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                 ItemLibraryCategoryTabBinding.inflate(inflater, binding.layoutCategories, false)
             tabBinding.tvCategoryTab.text = categoryNames[category] ?: category
             tabBinding.tvCategoryTab.tag = category
-            tabBinding.tvCategoryTab.setOnClickListener {
+            tabBinding.tvCategoryTab.setOnSoundClickListener {
                 viewModel.selectCategory(category)
             }
 

@@ -25,6 +25,7 @@ import com.example.baseproject.ui.mywork.MyWorkUiState
 import com.example.baseproject.ui.mywork.MyWorkViewModel
 import com.example.baseproject.utils.AppThemeManager
 import com.example.baseproject.utils.CompletedPictureActions
+import com.example.baseproject.utils.setOnSoundClickListener
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -85,12 +86,12 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     }
 
     override fun initActionView() {
-        binding.tvTabInProgress.setOnClickListener { updateTabSelection(TAB_IN_PROGRESS) }
-        binding.tvTabCompleted.setOnClickListener { updateTabSelection(TAB_COMPLETED) }
-        binding.btnArchive.setOnClickListener {
+        binding.tvTabInProgress.setOnSoundClickListener { updateTabSelection(TAB_IN_PROGRESS) }
+        binding.tvTabCompleted.setOnSoundClickListener { updateTabSelection(TAB_COMPLETED) }
+        binding.btnArchive.setOnSoundClickListener {
             startActivity(Intent(requireActivity(), AchieveActivity::class.java))
         }
-        binding.btnGoToLibrary.setOnClickListener {
+        binding.btnGoToLibrary.setOnSoundClickListener {
             mainViewModel.onTabSelected(LIBRARY_TAB_POSITION)
         }
     }

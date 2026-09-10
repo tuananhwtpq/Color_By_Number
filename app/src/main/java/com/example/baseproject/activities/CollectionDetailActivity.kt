@@ -17,6 +17,7 @@ import com.example.baseproject.databinding.ActivityCollectionDetailBinding
 import com.example.baseproject.dialog.CurrentPictureDialog
 import com.example.baseproject.dialog.ResetPictureDialog
 import com.example.baseproject.utils.AppThemeManager
+import com.example.baseproject.utils.setOnSoundClickListener
 import com.example.baseproject.utils.CompletedPictureActions
 import com.example.baseproject.ui.collection.CollectionDetailUiState
 import com.example.baseproject.ui.collection.CollectionDetailViewModel
@@ -81,7 +82,7 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnClickListener { finish() }
+        binding.btnBack.setOnSoundClickListener { finish() }
     }
 
     override fun onResume() {

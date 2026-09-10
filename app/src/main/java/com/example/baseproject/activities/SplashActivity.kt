@@ -13,6 +13,7 @@ import com.example.baseproject.ui.splash.SplashViewModel
 import com.example.baseproject.utils.Constants
 import com.example.baseproject.utils.invisible
 import com.example.baseproject.utils.visible
+import com.example.baseproject.utils.SoundScene
 import com.snake.squad.adslib.AdmobLib
 import com.snake.squad.adslib.cmp.GoogleMobileAdsConsentManager
 import com.snake.squad.adslib.utils.AdsHelper
@@ -20,6 +21,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlin.system.exitProcess
 
 class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding::inflate) {
+
+    override val soundScene = SoundScene.SILENT
 
     private val viewModel: SplashViewModel by viewModels {
         SimpleViewModelFactory { SplashViewModel() }

@@ -14,12 +14,14 @@ import com.example.baseproject.databinding.ActivityIntroBinding
 import com.example.baseproject.ui.intro.IntroViewModel
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.gone
+import com.example.baseproject.utils.SoundScene
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::inflate) {
+    override val soundScene = SoundScene.SILENT
     companion object {
         private const val PREPARING_MIN_DURATION_MS = 900L
         private const val PREPARING_MAX_DURATION_MS = 5_500L

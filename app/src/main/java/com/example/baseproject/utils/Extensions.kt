@@ -44,6 +44,14 @@ fun View.setOnUnDoubleClick(interval: Long = 500L, onViewClick: (View?) -> Unit)
     setOnClickListener(UnDoubleClick(defaultInterval = interval, onViewClick = onViewClick))
 }
 
+/** Use for ordinary clickable views that do not need debounce. */
+fun View.setOnSoundClickListener(onViewClick: (View) -> Unit) {
+    setOnClickListener { view ->
+        view.context.soundManagerOrNull()?.play(SoundEffect.CLICK)
+        onViewClick(view)
+    }
+}
+
 fun Context.showToast(message: String) {
     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
 }

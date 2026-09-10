@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.baseproject.data.AlbumCollection
 import com.example.baseproject.databinding.ItemCollectionBinding
+import com.example.baseproject.utils.setOnSoundClickListener
 
 class CollectionAdapter(
     private val onClick: (AlbumCollection) -> Unit
@@ -17,7 +18,7 @@ class CollectionAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         init {
-            binding.root.setOnClickListener {
+            binding.root.setOnSoundClickListener {
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onClick(getItem(position))

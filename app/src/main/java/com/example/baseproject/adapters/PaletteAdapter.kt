@@ -11,6 +11,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.baseproject.R
 import com.example.baseproject.data.PaletteItem
 import com.example.baseproject.utils.Constants
+import com.example.baseproject.utils.SoundEffect
+import com.example.baseproject.utils.soundManagerOrNull
 import com.example.baseproject.views.PaletteRingView
 
 class PaletteAdapter(
@@ -45,6 +47,7 @@ class PaletteAdapter(
                 val position = bindingAdapterPosition
                 val displayItem = displayItems.getOrNull(position)
                 if (displayItem != null && !completedIndexes.contains(displayItem.originalIndex)) {
+                    itemView.context.soundManagerOrNull()?.play(SoundEffect.PALETTE)
                     setSelection(displayItem.originalIndex)
                     onColorSelected(displayItem.originalIndex, displayItem.item)
                 }

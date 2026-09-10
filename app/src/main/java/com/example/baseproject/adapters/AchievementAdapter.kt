@@ -11,6 +11,7 @@ import com.example.baseproject.R
 import com.example.baseproject.data.Achievement
 import com.example.baseproject.databinding.ItemAchieveBinding
 import com.example.baseproject.utils.runText
+import com.example.baseproject.utils.setOnSoundClickListener
 
 class AchievementAdapter(
     private val onClick: (Achievement) -> Unit
@@ -20,7 +21,7 @@ class AchievementAdapter(
         RecyclerView.ViewHolder(binding.root) {
 
         init {
-            binding.root.setOnClickListener {
+            binding.root.setOnSoundClickListener {
                 val position = bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onClick(getItem(position))
@@ -59,8 +60,8 @@ class AchievementAdapter(
         if (!iconUrl.isNullOrBlank()) {
             Glide.with(holder.binding.ivImageAchieve)
                 .load(iconUrl)
-                .placeholder(iconRes ?: R.drawable.ic_mini_achieve)
-                .error(iconRes ?: R.drawable.ic_mini_achieve)
+                .placeholder(iconRes ?: R.drawable.first_splash)
+                .error(iconRes ?: R.drawable.first_splash)
                 .into(holder.binding.ivImageAchieve)
         } else {
             holder.binding.ivImageAchieve.setImageResource(iconRes ?: R.drawable.ic_mini_achieve)
