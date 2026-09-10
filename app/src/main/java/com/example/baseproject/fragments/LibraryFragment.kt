@@ -55,6 +55,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     }
     private var renderedCategories: List<String> = emptyList()
     private var renderedCategoryNames: Map<String, String> = emptyMap()
+    private var categoryToReveal: String? = null
     private var initialHomeRevealPlayed = false
     private var hasResumedOnce = false
     private val completedPictureActions by lazy {
@@ -75,6 +76,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         applyAppTheme()
         binding.rvLevels.layoutManager = GridLayoutManager(requireActivity(), 2)
         binding.rvLevels.adapter = levelAdapter
+        applyPendingCategoryRequest()
         collectWithLifecycle {
             viewModel.uiState.collectLatest { state ->
                 showLibraryLoading(state.isLoading && state.visibleLevels.isEmpty())
@@ -95,6 +97,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
                     updateTabSelection(state.selectedCategory)
                 }
                 levelAdapter.submitList(state.visibleLevels)
+                revealRequestedCategoryIfReady(state.categories, state.selectedCategory)
                 if (state.categories.isNotEmpty() && state.visibleLevels.isNotEmpty()) {
                     revealInitialHomeContent()
                 }
@@ -158,12 +161,44 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     override fun onResume() {
         super.onResume()
         applyAppTheme()
+        applyPendingCategoryRequest()
         if (hasResumedOnce) {
             viewModel.reloadLevels()
         } else {
             hasResumedOnce = true
         }
         levelAdapter.notifyDataSetChanged()
+    }
+
+    private fun applyPendingCategoryRequest() {
+        val requestedCategory =
+            (activity as? MainActivity)?.consumeLibraryCategoryRequest() ?: return
+        categoryToReveal = requestedCategory
+        viewModel.selectCategory(requestedCategory)
+    }
+
+    private fun revealRequestedCategoryIfReady(
+        categories: List<String>,
+        selectedCategory: String?
+    ) {
+        val requestedCategory = categoryToReveal ?: return
+        if (categories.isNotEmpty() && requestedCategory !in categories) {
+            categoryToReveal = null
+            return
+        }
+        if (requestedCategory != selectedCategory || requestedCategory !in categories) return
+
+        categoryToReveal = null
+        binding.rvLevels.post { binding.rvLevels.scrollToPosition(0) }
+        binding.layoutCategories.post {
+            val selectedTab = (0 until binding.layoutCategories.childCount)
+                .map(binding.layoutCategories::getChildAt)
+                .firstOrNull { it.tag == requestedCategory }
+                ?: return@post
+            val centeredScrollX = selectedTab.left -
+                (binding.hsvCategories.width - selectedTab.width) / 2
+            binding.hsvCategories.smoothScrollTo(centeredScrollX.coerceAtLeast(0), 0)
+        }
     }
 
     override fun onDestroyView() {

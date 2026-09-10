@@ -29,7 +29,7 @@ class LanguageAdapter(
 
             layoutRoot.setBackgroundResource(
                 if (isSelected) R.drawable.bg_language_enable
-                else R.drawable.bg_language_disable
+                else R.drawable.bg_library_category_tab_unselected
             )
             ivRadio.setImageResource(
                 if (isSelected) R.drawable.ic_checked_language

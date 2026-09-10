@@ -35,6 +35,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
 
     companion object {
         const val EXTRA_SELECTED_TAB = "EXTRA_SELECTED_TAB"
+        const val EXTRA_LIBRARY_CATEGORY = "EXTRA_LIBRARY_CATEGORY"
         const val EXTRA_REALM_ID = "EXTRA_REALM_ID"
         const val EXTRA_SKIP_PREPARING_OVERLAY = "EXTRA_SKIP_PREPARING_OVERLAY"
         const val TAB_LIBRARY = 0
@@ -60,6 +61,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private var preparingTimeoutJob: Job? = null
     private var realmWarmUpJob: Job? = null
     private var realmWarmUpStarted = false
+    private var pendingLibraryCategory: String? = null
     private val appContainer by lazy {
         (application as MyApplication).appContainer
     }
@@ -67,6 +69,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     override fun initData() {
         val initialTab = intent.getIntExtra(EXTRA_SELECTED_TAB, 0)
         viewModel.onTabSelected(initialTab)
+        pendingLibraryCategory = intent.getStringExtra(EXTRA_LIBRARY_CATEGORY)
         if (initialTab == TAB_COLOR_REALM) {
             scheduleRealmWarmUp(delayMillis = 0L)
         }
@@ -190,9 +193,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         super.onNewIntent(intent)
         setIntent(intent)
         viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
+        pendingLibraryCategory = intent.getStringExtra(EXTRA_LIBRARY_CATEGORY)
         realmWarmUpJob?.cancel()
         realmWarmUpStarted = false
         scheduleRealmWarmUp(delayMillis = 0L)
+    }
+
+    fun consumeLibraryCategoryRequest(): String? {
+        val category = pendingLibraryCategory
+        pendingLibraryCategory = null
+        intent.removeExtra(EXTRA_LIBRARY_CATEGORY)
+        return category
     }
 
     override fun onResume() {

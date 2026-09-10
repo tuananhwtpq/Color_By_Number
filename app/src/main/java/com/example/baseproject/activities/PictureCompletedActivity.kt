@@ -98,6 +98,10 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     }
 
     override fun initActionView() {
+        binding.btnContinue.setOnSoundClickListener {
+            openCompletedPictureCategory()
+        }
+
         binding.btnBackToHome.setOnSoundClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
@@ -113,6 +117,17 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         binding.btnVideo.setOnUnDoubleClick {
             openTimelapsePreview()
         }
+    }
+
+    private fun openCompletedPictureCategory() {
+        startActivity(
+            Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                putExtra(MainActivity.EXTRA_SELECTED_TAB, MainActivity.TAB_LIBRARY)
+                category?.let { putExtra(MainActivity.EXTRA_LIBRARY_CATEGORY, it) }
+            }
+        )
+        finish()
     }
 
     override fun onResume() {
