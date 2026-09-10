@@ -1,7 +1,9 @@
 package com.example.baseproject.data
 
-import androidx.annotation.RawRes
+import android.content.Context
 import androidx.annotation.DrawableRes
+import androidx.annotation.RawRes
+import androidx.annotation.StringRes
 import com.example.baseproject.R
 
 /**
@@ -10,7 +12,8 @@ import com.example.baseproject.R
  */
 data class Realm(
     val id: String,
-    val name: String,
+    val name: String? = null,
+    @StringRes val nameRes: Int? = null,
     @RawRes val animationRes: Int,
     @DrawableRes val thumbnailRes: Int,
     val unlockCost: Int,
@@ -18,14 +21,17 @@ data class Realm(
     val animationUrl: String? = null,
     val previewImageUrl: String? = null,
     val isPremium: Boolean = false,
-)
+) {
+    fun displayName(context: Context): String =
+        nameRes?.let(context::getString) ?: name.orEmpty()
+}
 
 object RealmCatalog {
 
     val realms: List<Realm> = listOf(
         Realm(
             id = "sakura_haven",
-            name = "Sakura Haven",
+            nameRes = R.string.realm_sakura_haven,
             animationRes = R.raw.sakura_heaven,
             thumbnailRes = R.drawable.sakura_haven_thumbnail,
             unlockCost = 0,
@@ -33,7 +39,7 @@ object RealmCatalog {
         ),
         Realm(
             id = "crystal_creek",
-            name = "Crystal Creek",
+            nameRes = R.string.realm_crystal_creek,
             animationRes = R.raw.crystal_creek,
             thumbnailRes = R.drawable.crystal_creek_thumbnail,
             unlockCost = 10,
@@ -41,7 +47,7 @@ object RealmCatalog {
         ),
         Realm(
             id = "sky_castle",
-            name = "Sky Castle",
+            nameRes = R.string.realm_sky_castle,
             animationRes = R.raw.sky_castle,
             thumbnailRes = R.drawable.sky_castle_thumbnail,
             unlockCost = 20,
@@ -49,7 +55,7 @@ object RealmCatalog {
         ),
         Realm(
             id = "snowy_peaks",
-            name = "Snowy Peaks",
+            nameRes = R.string.realm_snowy_peaks,
             animationRes = R.raw.snowy_peaks,
             thumbnailRes = R.drawable.snowy_peaks_thumbnail,
             unlockCost = 30,
@@ -57,7 +63,7 @@ object RealmCatalog {
         ),
         Realm(
             id = "starlit_forest",
-            name = "Starlit Forest",
+            nameRes = R.string.realm_starlit_forest,
             animationRes = R.raw.starlist_forest,
             thumbnailRes = R.drawable.starlist_forest_thumbnail,
             unlockCost = 40,
@@ -65,7 +71,7 @@ object RealmCatalog {
         ),
         Realm(
             id = "treasure_cove",
-            name = "Treasure Cove",
+            nameRes = R.string.realm_treasure_cove,
             animationRes = R.raw.treasure_cove,
             thumbnailRes = R.drawable.treasure_cove_thumbnail,
             unlockCost = 50,

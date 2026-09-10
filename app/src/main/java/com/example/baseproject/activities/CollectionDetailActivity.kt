@@ -8,6 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.bumptech.glide.Glide
 import com.example.baseproject.MyApplication
+import com.example.baseproject.R
 import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
@@ -110,7 +111,11 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
             binding.tvDescription.text = description.orEmpty()
         }
 
-        binding.tvNumberCountDone.text = "${state.completedCount}/${state.levels.size}"
+        binding.tvNumberCountDone.text = getString(
+            R.string.count_progress_format,
+            state.completedCount,
+            state.levels.size,
+        )
 
         binding.rvLevels.adapter = LevelAdapter(
             appContainer.paintingProgressRepository,

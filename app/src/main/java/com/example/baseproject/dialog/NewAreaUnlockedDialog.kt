@@ -20,7 +20,7 @@ class NewAreaUnlockedDialog : BaseDialog<FragmentNewAreaUnlockedDialogBinding>(
 
     override fun initView() {
         with(binding) {
-            tvRealmName.text = realm.name
+            tvRealmName.text = realm.displayName(requireContext())
             if (!realm.previewImageUrl.isNullOrBlank()) {
                 Glide.with(ivRealmThumbnail)
                     .load(realm.previewImageUrl)

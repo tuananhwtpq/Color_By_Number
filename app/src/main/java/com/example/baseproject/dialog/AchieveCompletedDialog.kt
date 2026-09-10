@@ -10,6 +10,7 @@ import com.example.baseproject.utils.setOnUnDoubleClick
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 
@@ -23,7 +24,6 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
 
     companion object {
         const val TAG = "AchieveCompletedDialog"
-        private const val DATE_PATTERN = "d MMMM yyyy"
     }
 
     var achievement: Achievement? = null
@@ -82,6 +82,9 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
     private fun formatUnlockedDate(millis: Long): String =
         Instant.ofEpochMilli(millis)
             .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern(DATE_PATTERN, Locale.getDefault()))
+            .format(
+                DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+                    .withLocale(Locale.getDefault())
+            )
 
 }

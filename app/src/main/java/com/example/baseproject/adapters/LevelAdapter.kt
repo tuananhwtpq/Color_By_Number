@@ -57,7 +57,10 @@ class LevelAdapter(
 
         if (progressPercent in 1..99) {
             holder.tvCurrentPercent.visibility = View.VISIBLE
-            holder.tvCurrentPercent.text = "$progressPercent%"
+            holder.tvCurrentPercent.text = context.getString(
+                R.string.progress_percent_format,
+                progressPercent,
+            )
         } else {
             holder.tvCurrentPercent.visibility = View.GONE
         }

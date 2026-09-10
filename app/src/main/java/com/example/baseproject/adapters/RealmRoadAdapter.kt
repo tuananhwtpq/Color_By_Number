@@ -50,7 +50,7 @@ class RealmRoadAdapter(
         }
 
         fun bind(item: RealmRoadItem) = with(binding) {
-            tvRealmName.text = item.realm.name
+            tvRealmName.text = item.realm.displayName(root.context)
             if (!item.realm.previewImageUrl.isNullOrBlank()) {
                 Glide.with(ivRealmThumbnail)
                     .load(item.realm.previewImageUrl)

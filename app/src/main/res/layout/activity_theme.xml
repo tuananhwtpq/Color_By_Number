@@ -57,7 +57,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ivTopImage"
         app:themeOptionThumbnail="@drawable/bg_top_main_theme_01"
-        app:themeOptionTitle="Midnight"
+        app:themeOptionTitle="@string/theme_midnight"
         app:themeOptionType="midnight" />
 
     <com.example.baseproject.views.ThemeOptionView
@@ -70,7 +70,7 @@
         app:layout_constraintStart_toEndOf="@id/viewThemeMidnight"
         app:layout_constraintTop_toTopOf="@id/viewThemeMidnight"
         app:themeOptionThumbnail="@drawable/bg_top_main_theme_02"
-        app:themeOptionTitle="Sunset"
+        app:themeOptionTitle="@string/theme_sunset"
         app:themeOptionType="sunset" />
 
     <com.example.baseproject.views.ThemeOptionView
@@ -82,7 +82,7 @@
         app:layout_constraintStart_toStartOf="@id/viewThemeMidnight"
         app:layout_constraintTop_toBottomOf="@id/viewThemeMidnight"
         app:themeOptionThumbnail="@drawable/bg_top_main_theme_03"
-        app:themeOptionTitle="Sunrise"
+        app:themeOptionTitle="@string/theme_sunrise"
         app:themeOptionType="sunrise" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

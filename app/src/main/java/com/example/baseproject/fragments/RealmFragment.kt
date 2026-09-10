@@ -100,12 +100,13 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     }
 
     private fun renderRealm(realmToRender: Realm) {
-        if (realmToRender == realm && binding.tvRealmName.text == realmToRender.name) return
+        val displayName = realmToRender.displayName(requireContext())
+        if (realmToRender == realm && binding.tvRealmName.text == displayName) return
 
         val hasVisibleAnimation = binding.lavRealmBackground.visibility == View.VISIBLE
 
         realm = realmToRender
-        binding.tvRealmName.text = realmToRender.name
+        binding.tvRealmName.text = displayName
         if (!realmToRender.previewImageUrl.isNullOrBlank()) {
             Glide.with(binding.ivRealmPlaceholder)
                 .load(realmToRender.previewImageUrl)

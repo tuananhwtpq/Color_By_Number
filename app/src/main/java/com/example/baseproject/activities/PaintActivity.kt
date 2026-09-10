@@ -539,12 +539,12 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         val state = viewModel.uiState.value
         val renderData = state.renderData
         if (renderData == null || state.isLoading) {
-            Toast.makeText(this, "Ảnh chưa sẵn sàng", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.image_not_ready, Toast.LENGTH_SHORT).show()
             return
         }
         if (isFillAllPreviewActive) {
             isFillAllPreviewActive = false
-            binding.btnFillAll.text = "Fill"
+            binding.btnFillAll.setText(R.string.fill)
             lifecycleScope.launch {
                 binding.paintCanvas.resetProgress()
                 if (state.completedColorMap.isNotEmpty()) {
@@ -558,7 +558,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             }
         } else {
             isFillAllPreviewActive = true
-            binding.btnFillAll.text = "Undo"
+            binding.btnFillAll.setText(R.string.undo)
             binding.paintCanvas.setPreviewFillMode(true)
             binding.paintCanvas.highlightNumber(emptyList())
             lifecycleScope.launch {
@@ -570,13 +570,13 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun exitFillAllPreviewState() {
         if (!isFillAllPreviewActive) return
         isFillAllPreviewActive = false
-        binding.btnFillAll.text = "Fill"
+        binding.btnFillAll.setText(R.string.fill)
         binding.paintCanvas.setPreviewFillMode(false)
     }
 
     private fun toggleFullColorPreview() {
         if (fullPreviewBitmap == null) {
-            Toast.makeText(this, "Preview chưa sẵn sàng", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.preview_not_ready, Toast.LENGTH_SHORT).show()
             return
         }
         isFullColorPreviewVisible = !isFullColorPreviewVisible
@@ -756,12 +756,12 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     private fun showResetConfirmationDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Reset")
-            .setMessage("Bạn có chắc chắn muốn xóa toàn bộ tiến trình của bức tranh này và tô lại từ đầu?")
-            .setPositiveButton("Có") { _, _ ->
+            .setTitle(R.string.reset)
+            .setMessage(R.string.reset_progress_confirmation)
+            .setPositiveButton(R.string.yes) { _, _ ->
                 viewModel.onResetConfirmed()
             }
-            .setNegativeButton("Không", null)
+            .setNegativeButton(R.string.no, null)
             .show()
     }
 
