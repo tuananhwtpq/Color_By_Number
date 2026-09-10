@@ -2,6 +2,7 @@ package com.example.baseproject.ui.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.baseproject.app.StartupContentPreloader
 import com.example.baseproject.data.LevelConfig
 import com.example.baseproject.data.repository.AssetLevelRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LibraryViewModel(
-    private val assetLevelRepository: AssetLevelRepository
+    private val assetLevelRepository: AssetLevelRepository,
+    private val startupContentPreloader: StartupContentPreloader
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -26,12 +28,13 @@ class LibraryViewModel(
     fun loadData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            runCatching {
-                assetLevelRepository.loadAllLevels()
-            }.onSuccess { levels ->
+            try {
+                val levels = startupContentPreloader.start().await().getOrThrow()
                 showLevels(levels)
                 refreshLevelsInBackground(levels)
-            }.onFailure { throwable ->
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (throwable: Exception) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -48,9 +51,17 @@ class LibraryViewModel(
 
     fun reloadLevels() {
         viewModelScope.launch {
-            runCatching {
-                assetLevelRepository.loadAllLevels()
-            }.onSuccess(::showLevels)
+            try {
+                // The startup result is only a first-load snapshot. PaintActivity may have
+                // resolved and cached the level's total region count after that snapshot was
+                // created, which is required to render the saved progress percentage.
+                val levels = assetLevelRepository.loadAllLevels()
+                showLevels(levels)
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (throwable: Exception) {
+                _uiState.update { it.copy(isLoading = false, errorMessage = throwable.message) }
+            }
         }
     }
 

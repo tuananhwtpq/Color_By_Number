@@ -5,11 +5,6 @@ import com.example.baseproject.app.DefaultAppContainer
 import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.SoundManager
 import com.snake.squad.adslib.AdsApplication
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 
 class MyApplication : AdsApplication() {
 
@@ -17,27 +12,18 @@ class MyApplication : AdsApplication() {
         private set
     lateinit var soundManager: SoundManager
         private set
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onCreate() {
         super.onCreate()
         SharedPrefManager.init(this)
         soundManager = SoundManager(this)
         appContainer = DefaultAppContainer(this)
         appContainer.paintDropRepository.trackAppOpened()
-        preloadLibraryLevels()
-    }
-
-    private fun preloadLibraryLevels() {
-        applicationScope.launch {
-            runCatching {
-                appContainer.assetLevelRepository.refreshAllLevels()
-            }
-        }
+        // Start metadata/category loading while Splash and Language are visible. Every later
+        // caller awaits this same job, so it cannot create a competing server request.
+        appContainer.startupContentPreloader.start()
     }
 
     override fun onTerminate() {
-        applicationScope.cancel()
         soundManager.release()
         super.onTerminate()
     }

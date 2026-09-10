@@ -25,6 +25,9 @@ import com.example.baseproject.data.repository.SettingsRepository
 import com.example.baseproject.data.repository.SettingsRepositoryImpl
 import com.example.baseproject.data.repository.ThumbnailRepository
 import com.example.baseproject.data.repository.ThumbnailRepositoryImpl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import java.io.File
 
 interface AppContainer {
@@ -37,10 +40,12 @@ interface AppContainer {
     val paintDropRepository: PaintDropRepository
     val realmRepository: RealmRepository
     val timelapseVideoCache: TimelapseVideoCache
+    val startupContentPreloader: StartupContentPreloader
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
     private val appContext = context.applicationContext
+    private val startupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val pixcolorApi by lazy { PixcolorApiClient.create() }
     private val remoteAssetLoader by lazy {
         RemoteAssetLoader(cacheDir = File(appContext.cacheDir, "remote_assets"))
@@ -123,6 +128,13 @@ class DefaultAppContainer(context: Context) : AppContainer {
             cacheDir = appContext.cacheDir,
             assetLevelRepository = assetLevelRepository,
             paintingProgressRepository = paintingProgressRepository,
+        )
+    }
+
+    override val startupContentPreloader: StartupContentPreloader by lazy {
+        StartupContentPreloader(
+            assetLevelRepository = assetLevelRepository,
+            scope = startupScope
         )
     }
 }

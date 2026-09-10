@@ -38,7 +38,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
 
     private val viewModel: LibraryViewModel by viewModels {
         SimpleViewModelFactory {
-            LibraryViewModel(appContainer.assetLevelRepository)
+            LibraryViewModel(
+                assetLevelRepository = appContainer.assetLevelRepository,
+                startupContentPreloader = appContainer.startupContentPreloader
+            )
         }
     }
     private val levelAdapter by lazy {
@@ -74,6 +77,13 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         collectWithLifecycle {
             viewModel.uiState.collectLatest { state ->
                 showLibraryLoading(state.isLoading && state.visibleLevels.isEmpty())
+                binding.tvLibraryLoadError.visibility = if (
+                    state.errorMessage != null && state.visibleLevels.isEmpty()
+                ) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
                 if (state.categories != renderedCategories ||
                     state.categoryNames != renderedCategoryNames
                 ) {

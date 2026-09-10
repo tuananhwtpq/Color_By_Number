@@ -57,6 +57,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private var preparingStartedAt = 0L
     private var preparingOverlayHidden = false
     private var shouldShowPreparingOverlay = false
+    private var preparingTimeoutJob: Job? = null
     private var realmWarmUpJob: Job? = null
     private var realmWarmUpStarted = false
     private val appContainer by lazy {
@@ -82,9 +83,8 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
                 visibility = View.VISIBLE
                 bringToFront()
             }
-            lifecycleScope.launch {
+            preparingTimeoutJob = lifecycleScope.launch {
                 delay(PREPARING_MAX_DURATION_MS)
-                SharedPrefManager.hasSeenLibraryPreparing = true
                 preparingOverlayHidden = true
                 hidePreparingOverlay()
             }
@@ -124,10 +124,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
 
     fun notifyInitialLibraryContentReady() {
         scheduleRealmWarmUp()
+        SharedPrefManager.hasSeenLibraryPreparing = true
+        preparingTimeoutJob?.cancel()
 
         if (!shouldShowPreparingOverlay || preparingOverlayHidden) return
         preparingOverlayHidden = true
-        SharedPrefManager.hasSeenLibraryPreparing = true
 
         val elapsed = SystemClock.elapsedRealtime() - preparingStartedAt
         val delayMillis = (PREPARING_MIN_DURATION_MS - elapsed).coerceAtLeast(0L)
@@ -154,6 +155,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
                 binding.contentPreparingOverlay.alpha = 1f
             }
             .start()
+    }
+
+    override fun onDestroy() {
+        preparingTimeoutJob?.cancel()
+        super.onDestroy()
     }
 
     override fun initActionView() {
