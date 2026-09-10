@@ -29,9 +29,10 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="32dp"
-        android:paddingBottom="60dp"
+        android:paddingBottom="90dp"
         app:layout_constraintBottom_toTopOf="@id/frNative"
         app:layout_constraintEnd_toEndOf="parent"
+        android:clipToPadding="false"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle">
 
