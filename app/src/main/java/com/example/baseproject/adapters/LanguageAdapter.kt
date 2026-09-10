@@ -28,7 +28,7 @@ class LanguageAdapter(
             ivRadio.visibility = View.INVISIBLE
 
             layoutRoot.setBackgroundResource(
-                if (isSelected) R.drawable.bg_language_enable
+                if (isSelected) R.drawable.bg_library_category_tab_selected
                 else R.drawable.bg_library_category_tab_unselected
             )
             ivRadio.setImageResource(
