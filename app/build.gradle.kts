@@ -58,7 +58,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
+            buildConfigField("Boolean", "USE_REMOTE_CONTENT", "false")
             buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "true")
             buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "true")
         }

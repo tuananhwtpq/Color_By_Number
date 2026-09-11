@@ -44,6 +44,7 @@ from tools.generate_level import (
     merge_label_hidden_regions_for_gate,
     merge_tiny_regions_into_neighbors,
     mark_protected_detail_regions,
+    order_palette_for_playability,
     preserve_source_strokes_as_walls,
     reclaim_non_ink_pixels_into_regions,
     resolve_generation_profile,
@@ -86,6 +87,399 @@ class GenerateLevelCliTest(unittest.TestCase):
             "hide_number": hide_number,
             "merged_region_count": 1,
         }
+
+    def make_playability_region(
+        self,
+        points,
+        target_color,
+        *,
+        radius,
+        hide_number=False,
+        is_tiny=False,
+    ):
+        info = self.make_region_info(points, target_color, hide_number=hide_number)
+        info["label_anchor"]["radius"] = radius
+        info["is_tiny_display_region"] = is_tiny
+        info["is_small_region"] = is_tiny
+        return info
+
+    def test_palette_playability_starts_with_large_readable_region_not_darkest_color(self):
+        dark = (10, 10, 10)
+        light = (220, 220, 220)
+        tiny_dark_region = self.make_playability_region(
+            [(1, 1), (1, 2), (2, 1), (2, 2)],
+            dark,
+            radius=1.0,
+            is_tiny=True,
+        )
+        large_light_region = self.make_playability_region(
+            [(x, y) for x in range(20, 31) for y in range(20, 31)],
+            light,
+            radius=5.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[dark, light],
+            color_mapping={dark: dark, light: light},
+            region_infos=[tiny_dark_region, large_light_region],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual([light, dark], result["palette_colors"])
+        self.assertEqual("#dcdcdc", result["report"]["entries"][0]["color"])
+
+    def test_palette_playability_does_not_start_with_giant_background_when_foreground_is_readable(self):
+        background = (245, 245, 245)
+        foreground = (180, 60, 90)
+        giant_background = self.make_playability_region(
+            [(0, 0), (99, 0), (0, 99), (99, 99)],
+            background,
+            radius=25.0,
+        )
+        giant_background["area"] = 6000
+        readable_foreground = self.make_playability_region(
+            [(x, y) for x in range(25, 55) for y in range(25, 55)],
+            foreground,
+            radius=15.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[foreground, background],
+            color_mapping={background: background, foreground: foreground},
+            region_infos=[giant_background, readable_foreground],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual(foreground, result["palette_colors"][0])
+        self.assertFalse(result["report"]["entries"][0]["background_like"])
+
+    def test_palette_playability_falls_back_to_readable_background_over_unreadable_foreground(self):
+        background = (245, 245, 245)
+        foreground = (40, 40, 40)
+        giant_background = self.make_playability_region(
+            [(0, 0), (99, 0), (0, 99), (99, 99)],
+            background,
+            radius=25.0,
+        )
+        giant_background["area"] = 6000
+        unreadable_foreground = self.make_playability_region(
+            [(45, 45), (45, 46)],
+            foreground,
+            radius=0.5,
+            is_tiny=True,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[foreground, background],
+            color_mapping={background: background, foreground: foreground},
+            region_infos=[giant_background, unreadable_foreground],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual(background, result["palette_colors"][0])
+
+    def test_palette_playability_starts_in_easy_band_before_medium_band(self):
+        medium = (80, 140, 210)
+        easy = (220, 100, 100)
+        medium_region = self.make_playability_region(
+            [(x, y) for x in range(10, 20) for y in range(10, 20)],
+            medium,
+            radius=2.0,
+        )
+        easy_regions = [
+            self.make_playability_region(
+                [(x, y) for x in range(50, 55) for y in range(50, 55)],
+                easy,
+                radius=3.0,
+            )
+        ]
+        for offset in range(3):
+            easy_regions.append(
+                self.make_playability_region(
+                    [(70 + offset * 3, 70), (70 + offset * 3, 71)],
+                    easy,
+                    radius=2.0,
+                )
+            )
+
+        result = order_palette_for_playability(
+            palette_colors=[medium, easy],
+            color_mapping={medium: medium, easy: easy},
+            region_infos=[medium_region, *easy_regions],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual(easy, result["palette_colors"][0])
+        self.assertEqual("easy", result["report"]["entries"][0]["difficulty_band"])
+
+    def test_palette_playability_prefers_connected_next_color_with_similar_difficulty(self):
+        first = (220, 80, 80)
+        connected = (220, 150, 80)
+        distant = (80, 160, 220)
+        first_region = self.make_playability_region(
+            [(x, y) for x in range(10, 21) for y in range(10, 21)],
+            first,
+            radius=10.0,
+        )
+        connected_region = self.make_playability_region(
+            [(x, y) for x in range(21, 28) for y in range(10, 21)],
+            connected,
+            radius=6.0,
+        )
+        distant_region = self.make_playability_region(
+            [(x, y) for x in range(70, 80) for y in range(70, 80)],
+            distant,
+            radius=8.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[first, connected, distant],
+            color_mapping={first: first, connected: connected, distant: distant},
+            region_infos=[first_region, connected_region, distant_region],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual([first, connected, distant], result["palette_colors"])
+        self.assertTrue(result["report"]["transitions"][0]["connected"])
+
+    def test_palette_playability_keeps_tiny_connected_detail_after_easy_colors(self):
+        first = (220, 80, 80)
+        easy_distant = (80, 160, 220)
+        tiny_connected = (30, 30, 30)
+        first_region = self.make_playability_region(
+            [(x, y) for x in range(10, 21) for y in range(10, 21)],
+            first,
+            radius=10.0,
+        )
+        easy_distant_region = self.make_playability_region(
+            [(x, y) for x in range(70, 81) for y in range(70, 81)],
+            easy_distant,
+            radius=9.0,
+        )
+        tiny_connected_region = self.make_playability_region(
+            [(21, 10), (21, 11)],
+            tiny_connected,
+            radius=1.0,
+            is_tiny=True,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[tiny_connected, first, easy_distant],
+            color_mapping={
+                first: first,
+                easy_distant: easy_distant,
+                tiny_connected: tiny_connected,
+            },
+            region_infos=[first_region, easy_distant_region, tiny_connected_region],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual([first, easy_distant, tiny_connected], result["palette_colors"])
+
+    def test_palette_playability_does_not_trade_large_ease_drop_for_adjacency_within_band(self):
+        first = (220, 80, 80)
+        easy_distant = (80, 160, 220)
+        fragmented_connected = (170, 110, 70)
+        first_region = self.make_playability_region(
+            [(x, y) for x in range(10, 21) for y in range(10, 21)],
+            first,
+            radius=10.0,
+        )
+        easy_distant_region = self.make_playability_region(
+            [(x, y) for x in range(70, 80) for y in range(70, 80)],
+            easy_distant,
+            radius=8.0,
+        )
+        connected_regions = [
+            self.make_playability_region(
+                [(x, y) for x in range(21, 26) for y in range(10, 21)],
+                fragmented_connected,
+                radius=3.0,
+            )
+        ]
+        for offset in range(5):
+            connected_regions.append(
+                self.make_playability_region(
+                    [(40 + offset * 3, 40), (40 + offset * 3, 41)],
+                    fragmented_connected,
+                    radius=2.0,
+                )
+            )
+
+        result = order_palette_for_playability(
+            palette_colors=[fragmented_connected, first, easy_distant],
+            color_mapping={
+                first: first,
+                easy_distant: easy_distant,
+                fragmented_connected: fragmented_connected,
+            },
+            region_infos=[first_region, easy_distant_region, *connected_regions],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual([first, easy_distant, fragmented_connected], result["palette_colors"])
+
+    def test_palette_playability_connects_regions_across_thin_ink_gap(self):
+        first = (220, 80, 80)
+        across_ink = (220, 150, 80)
+        distant = (80, 160, 220)
+        first_region = self.make_playability_region(
+            [(x, y) for x in range(10, 21) for y in range(10, 21)],
+            first,
+            radius=10.0,
+        )
+        across_ink_region = self.make_playability_region(
+            [(x, y) for x in range(23, 30) for y in range(10, 21)],
+            across_ink,
+            radius=6.0,
+        )
+        distant_region = self.make_playability_region(
+            [(x, y) for x in range(70, 80) for y in range(70, 80)],
+            distant,
+            radius=8.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[first, across_ink, distant],
+            color_mapping={first: first, across_ink: across_ink, distant: distant},
+            region_infos=[first_region, across_ink_region, distant_region],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual([first, across_ink, distant], result["palette_colors"])
+        self.assertTrue(result["report"]["transitions"][0]["connected"])
+
+    def test_palette_playability_uses_spatial_proximity_when_clusters_are_disconnected(self):
+        first = (220, 80, 80)
+        nearby = (220, 150, 80)
+        distant = (80, 160, 220)
+        first_region = self.make_playability_region(
+            [(x, y) for x in range(10, 21) for y in range(10, 21)],
+            first,
+            radius=10.0,
+        )
+        nearby_region = self.make_playability_region(
+            [(x, y) for x in range(30, 37) for y in range(10, 21)],
+            nearby,
+            radius=6.0,
+        )
+        distant_region = self.make_playability_region(
+            [(x, y) for x in range(70, 80) for y in range(70, 80)],
+            distant,
+            radius=8.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[first, nearby, distant],
+            color_mapping={first: first, nearby: nearby, distant: distant},
+            region_infos=[first_region, nearby_region, distant_region],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual([first, nearby, distant], result["palette_colors"])
+        self.assertFalse(result["report"]["transitions"][0]["connected"])
+        self.assertLess(result["report"]["transitions"][0]["distance_ratio"], 0.2)
+
+    def test_palette_playability_uses_color_similarity_as_secondary_tie_breaker(self):
+        first = (200, 70, 70)
+        similar = (215, 85, 80)
+        different = (40, 80, 220)
+        first_region = self.make_playability_region(
+            [(x, y) for x in range(45, 56) for y in range(45, 56)],
+            first,
+            radius=10.0,
+        )
+        similar_region = self.make_playability_region(
+            [(x, y) for x in range(20, 31) for y in range(45, 56)],
+            similar,
+            radius=8.0,
+        )
+        different_region = self.make_playability_region(
+            [(x, y) for x in range(70, 81) for y in range(45, 56)],
+            different,
+            radius=8.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[first, different, similar],
+            color_mapping={first: first, similar: similar, different: different},
+            region_infos=[first_region, similar_region, different_region],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual([first, similar, different], result["palette_colors"])
+
+    def test_palette_playability_penalizes_fragmented_color_even_with_slightly_larger_region(self):
+        fragmented = (180, 70, 90)
+        simple = (80, 150, 210)
+        fragmented_regions = [
+            self.make_playability_region(
+                [(x, y) for x in range(10, 20) for y in range(10, 20)],
+                fragmented,
+                radius=9.0,
+            )
+        ]
+        for offset in range(3):
+            fragmented_regions.append(
+                self.make_playability_region(
+                    [(40 + offset * 3, 40), (40 + offset * 3, 41)],
+                    fragmented,
+                    radius=1.0,
+                    is_tiny=offset == 0,
+                )
+            )
+        simple_region = self.make_playability_region(
+            [(x, y) for x in range(70, 80) for y in range(70, 80)],
+            simple,
+            radius=8.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[fragmented, simple],
+            color_mapping={fragmented: fragmented, simple: simple},
+            region_infos=[*fragmented_regions, simple_region],
+            width=100,
+            height=100,
+        )
+
+        self.assertEqual(simple, result["palette_colors"][0])
+
+    def test_palette_playability_report_summarizes_start_and_transitions(self):
+        first = (210, 80, 80)
+        second = (210, 150, 80)
+        first_region = self.make_playability_region(
+            [(x, y) for x in range(10, 21) for y in range(10, 21)],
+            first,
+            radius=10.0,
+        )
+        second_region = self.make_playability_region(
+            [(x, y) for x in range(21, 31) for y in range(10, 21)],
+            second,
+            radius=8.0,
+        )
+
+        result = order_palette_for_playability(
+            palette_colors=[first, second],
+            color_mapping={first: first, second: second},
+            region_infos=[first_region, second_region],
+            width=100,
+            height=100,
+        )
+
+        summary = result["report"]["summary"]
+        self.assertEqual("#d25050", summary["start_color"])
+        self.assertEqual(1, summary["connected_transition_count"])
+        self.assertEqual(100.0, summary["connected_transition_pct"])
 
     def test_svg_normalization_strips_near_white_background_fills(self):
         svg = """
@@ -185,6 +579,17 @@ class GenerateLevelCliTest(unittest.TestCase):
         self.assertEqual(("casual", 48), resolve_target_unique_colors("Animals", "easy", None))
         self.assertEqual(("hard", 80), resolve_target_unique_colors("Animals", "hard", None))
         self.assertEqual(("mandala", 80), resolve_target_unique_colors("Mandala", None, None))
+
+    def test_palette_order_mode_defaults_to_playability_and_keeps_luminance_fallback(self):
+        parser = create_parser()
+
+        default_args = parser.parse_args(["single", "line.png", "color.png"])
+        fallback_args = parser.parse_args(
+            ["--palette-order-mode", "luminance", "single", "line.png", "color.png"]
+        )
+
+        self.assertEqual("playability", default_args.palette_order_mode)
+        self.assertEqual("luminance", fallback_args.palette_order_mode)
 
     def test_tiny_merge_v2_uses_actual_shared_boundary_not_only_bbox_overlap(self):
         tiny = self.make_region_info([(5, 5)], (250, 0, 0), hide_number=True)
@@ -1308,6 +1713,62 @@ class GenerateLevelCliTest(unittest.TestCase):
             self.assertTrue((output_dir / "config.json").exists())
             report = json.loads((output_dir / "debug_report.json").read_text())
             self.assertEqual("D", report["quality_grade"])
+
+    def test_generated_config_numbers_palette_by_playability(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            line_path = tmp_dir / "line.png"
+            ref_path = tmp_dir / "ref.png"
+            output_dir = tmp_dir / "assets" / "Test" / "playable-order"
+
+            line = Image.new("RGB", (100, 100), "white")
+            line_draw = ImageDraw.Draw(line)
+            line_draw.rectangle((0, 0, 99, 99), outline="black", width=1)
+            line_draw.rectangle((5, 5, 20, 20), outline="black", width=1)
+            line_draw.rectangle((40, 40, 75, 75), outline="black", width=1)
+            line.save(line_path)
+
+            ref = Image.new("RGB", (100, 100), (245, 245, 245))
+            ref_draw = ImageDraw.Draw(ref)
+            ref_draw.rectangle((6, 6, 19, 19), fill=(20, 20, 20))
+            ref_draw.rectangle((41, 41, 74, 74), fill=(220, 100, 100))
+            ref.save(ref_path)
+
+            generate_level_assets(
+                str(line_path),
+                str(ref_path),
+                str(output_dir),
+                category_name="Test",
+                data_name="Playable order",
+                generated_id="playable-order",
+                min_region_area=1,
+                hide_small_label_threshold=1,
+                tiny_region_side_threshold=1,
+                tiny_merge_min_area=1,
+                tiny_merge_min_side=1,
+                target_unique_colors=4,
+                adaptive_palette=False,
+                min_touch_dp=1.0,
+                assumed_zoom=20.0,
+                palette_order_mode="playability",
+                allow_low_quality=True,
+            )
+
+            config = json.loads((output_dir / "config.json").read_text())
+            self.assertEqual("#dc6464", config["palette"][0]["target_color"])
+            self.assertEqual(
+                "playability",
+                config["generation_params"]["palette_order_mode"],
+            )
+            self.assertNotIn(
+                "entries",
+                config["generation_params"]["palette_order_report"],
+            )
+            debug_report = json.loads((output_dir / "debug_report.json").read_text())
+            self.assertGreater(
+                len(debug_report["generation_params"]["palette_order_report"]["entries"]),
+                0,
+            )
 
     def test_batch_source_category_can_continue_after_level_quality_failure(self):
         with tempfile.TemporaryDirectory() as tmp:

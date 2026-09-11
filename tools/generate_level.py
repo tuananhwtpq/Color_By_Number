@@ -42,6 +42,9 @@ DEFAULT_ASSETS_ROOT = os.path.abspath(
 )
 SOURCE_LINE_FORMATS = ("raster", "svg")
 DEFAULT_SOURCE_LINE_FORMAT = "raster"
+PALETTE_ORDER_MODES = ("playability", "luminance")
+DEFAULT_PALETTE_ORDER_MODE = "playability"
+PALETTE_EASE_LINK_WINDOW = 10.0
 GENERATION_PROFILE_DEFAULTS = {
     "casual": {
         "target_unique_colors": 48,
@@ -1282,6 +1285,354 @@ def sort_palette_colors(colors):
             color[2],
         ),
     )
+
+
+def palette_color_pair(color_a, color_b):
+    return (color_a, color_b) if color_a <= color_b else (color_b, color_a)
+
+
+def build_palette_adjacency_counts(
+    region_infos,
+    color_mapping,
+    ink_gap_px=DEFAULT_INK_GAP_ATTACH_PX,
+):
+    point_index = build_region_point_index(region_infos)
+    mapped_colors = [
+        tuple(color_mapping.get(tuple(info["target_color"]), tuple(info["target_color"])))
+        for info in region_infos
+    ]
+    adjacency_counts = Counter()
+    max_step = max(1, int(ink_gap_px) + 1)
+    for region_index, info in enumerate(region_infos):
+        source_color = mapped_colors[region_index]
+        for x, y in info.get("region", []):
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                for step in range(1, max_step + 1):
+                    neighbor_index = point_index.get((x + dx * step, y + dy * step))
+                    if neighbor_index == region_index:
+                        break
+                    if neighbor_index is None:
+                        continue
+                    target_color = mapped_colors[neighbor_index]
+                    if source_color != target_color:
+                        # Direct neighbours are stronger than regions separated by ink.
+                        adjacency_counts[palette_color_pair(source_color, target_color)] += (
+                            max_step - step + 1
+                        )
+                    break
+    return adjacency_counts
+
+
+def order_palette_for_playability(
+    palette_colors,
+    color_mapping,
+    region_infos,
+    width,
+    height,
+    ink_gap_px=DEFAULT_INK_GAP_ATTACH_PX,
+):
+    """Order palette colors so the first number is immediately approachable.
+
+    The function is deliberately side-effect free: callers keep ownership of region data,
+    while tests and reporting can observe the complete ordering through one interface.
+    """
+    original_order = [tuple(color) for color in palette_colors]
+    original_index = {color: index for index, color in enumerate(original_order)}
+    canvas_area = max(1, width * height)
+    canvas_side = max(1, min(width, height))
+    stats_by_color = {
+        color: {
+            "visible_region_count": 0,
+            "hidden_region_count": 0,
+            "tiny_region_count": 0,
+            "total_area": 0,
+            "visible_area": 0,
+            "max_visible_area": 0,
+            "max_visible_radius": 0.0,
+            "background_like": False,
+            "anchors": [],
+        }
+        for color in original_order
+    }
+
+    for info in region_infos:
+        source_color = tuple(info["target_color"])
+        palette_color = tuple(color_mapping.get(source_color, source_color))
+        stats = stats_by_color.get(palette_color)
+        if stats is None:
+            continue
+        area = max(0, int(info.get("area") or 0))
+        stats["total_area"] += area
+        if info.get("is_tiny_display_region"):
+            stats["tiny_region_count"] += 1
+        bbox = info.get("bbox") or {}
+        anchor = info.get("label_anchor") or info.get("centroid") or {}
+        if anchor.get("x") is not None and anchor.get("y") is not None:
+            stats["anchors"].append((float(anchor["x"]), float(anchor["y"])))
+        touched_edges = sum(
+            (
+                bbox.get("left", 1) <= 0,
+                bbox.get("top", 1) <= 0,
+                bbox.get("right", width - 2) >= width - 1,
+                bbox.get("bottom", height - 2) >= height - 1,
+            )
+        )
+        if area / canvas_area > 0.35 or touched_edges >= 3:
+            stats["background_like"] = True
+        if info.get("hide_number"):
+            stats["hidden_region_count"] += 1
+            continue
+        radius = float((info.get("label_anchor") or {}).get("radius") or 0.0)
+        stats["visible_region_count"] += 1
+        stats["visible_area"] += area
+        stats["max_visible_area"] = max(stats["max_visible_area"], area)
+        stats["max_visible_radius"] = max(stats["max_visible_radius"], radius)
+
+    def calculate_ease_score(color):
+        stats = stats_by_color[color]
+        region_count = stats["visible_region_count"] + stats["hidden_region_count"]
+        hidden_ratio = stats["hidden_region_count"] / max(1, region_count)
+        tiny_ratio = stats["tiny_region_count"] / max(1, region_count)
+        radius_ratio = stats["max_visible_radius"] / canvas_side
+        max_area_ratio = stats["max_visible_area"] / canvas_area
+        visible_area_ratio = stats["visible_area"] / canvas_area
+        radius_score = min(1.0, radius_ratio / 0.08)
+        area_score = min(1.0, math.sqrt(max_area_ratio / 0.08))
+        visible_area_score = min(1.0, math.sqrt(visible_area_ratio / 0.15))
+        fragmentation_score = 1.0 / (1.0 + max(0, region_count - 1) / 10.0)
+        return (
+            radius_score * 35.0
+            + area_score * 20.0
+            + visible_area_score * 5.0
+            + (1.0 - tiny_ratio) * 15.0
+            + (1.0 - hidden_ratio) * 5.0
+            + fragmentation_score * 20.0
+        )
+
+    ease_score_by_color = {
+        color: calculate_ease_score(color)
+        for color in original_order
+    }
+    ease_order = sorted(
+        original_order,
+        key=lambda color: (
+            ease_score_by_color[color],
+            stats_by_color[color]["max_visible_radius"],
+            stats_by_color[color]["max_visible_area"],
+            -original_index[color],
+        ),
+        reverse=True,
+    )
+    difficulty_rank = {color: index + 1 for index, color in enumerate(ease_order)}
+
+    def classify_difficulty(color):
+        stats = stats_by_color[color]
+        region_count = stats["visible_region_count"] + stats["hidden_region_count"]
+        hidden_ratio = stats["hidden_region_count"] / max(1, region_count)
+        tiny_ratio = stats["tiny_region_count"] / max(1, region_count)
+        radius_ratio = stats["max_visible_radius"] / canvas_side
+        area_ratio = stats["max_visible_area"] / canvas_area
+        if (
+            stats["visible_region_count"] == 0
+            or radius_ratio < 0.0125
+            or area_ratio < 0.0005
+            or hidden_ratio > 0.8
+            or tiny_ratio > 0.65
+        ):
+            return "hard"
+        if (
+            radius_ratio >= 0.025
+            and area_ratio >= 0.0025
+            and hidden_ratio <= 0.5
+            and tiny_ratio <= 0.35
+        ):
+            return "easy"
+        return "medium"
+
+    difficulty_band = {color: classify_difficulty(color) for color in ease_order}
+    difficulty_band_index = {"easy": 0, "medium": 1, "hard": 2}
+
+    def start_quality_tier(color):
+        stats = stats_by_color[color]
+        visible = stats["visible_region_count"] > 0
+        foreground = not stats["background_like"]
+        band = difficulty_band[color]
+        if visible and foreground and band == "easy":
+            return 6
+        if visible and foreground and band == "medium":
+            return 5
+        if visible and band == "easy":
+            return 4
+        if visible and band == "medium":
+            return 3
+        if visible and foreground:
+            return 2
+        if visible:
+            return 1
+        return 0
+
+    def spatial_distance_ratio(color_a, color_b):
+        anchors_a = stats_by_color[color_a]["anchors"]
+        anchors_b = stats_by_color[color_b]["anchors"]
+        if not anchors_a or not anchors_b:
+            return 1.0
+        return min(
+            math.hypot(ax - bx, ay - by)
+            for ax, ay in anchors_a
+            for bx, by in anchors_b
+        ) / canvas_side
+
+    start_color = max(
+        original_order,
+        key=lambda color: (
+            start_quality_tier(color),
+            ease_score_by_color[color],
+            stats_by_color[color]["max_visible_radius"],
+            stats_by_color[color]["max_visible_area"],
+            -stats_by_color[color]["tiny_region_count"],
+            -(
+                stats_by_color[color]["visible_region_count"]
+                + stats_by_color[color]["hidden_region_count"]
+            ),
+            -original_index[color],
+        ),
+        default=None,
+    )
+    adjacency_counts = build_palette_adjacency_counts(
+        region_infos,
+        color_mapping,
+        ink_gap_px=ink_gap_px,
+    )
+    ordered_colors = []
+    remaining_colors = list(original_order)
+    if start_color is not None:
+        ordered_colors.append(start_color)
+        remaining_colors.remove(start_color)
+    while remaining_colors:
+        previous_color = ordered_colors[-1]
+        completed_colors = set(ordered_colors)
+        next_band_index = min(
+            difficulty_band_index[difficulty_band[color]]
+            for color in remaining_colors
+        )
+        allowed_colors = [
+            color
+            for color in remaining_colors
+            if difficulty_band_index[difficulty_band[color]] == next_band_index
+        ]
+        easiest_available_score = max(ease_score_by_color[color] for color in allowed_colors)
+        allowed_colors = [
+            color
+            for color in allowed_colors
+            if ease_score_by_color[color] >= easiest_available_score - PALETTE_EASE_LINK_WINDOW
+        ]
+        next_color = max(
+            allowed_colors,
+            key=lambda color: (
+                adjacency_counts.get(palette_color_pair(previous_color, color), 0) > 0,
+                adjacency_counts.get(palette_color_pair(previous_color, color), 0),
+                max(
+                    (
+                        adjacency_counts.get(palette_color_pair(done, color), 0)
+                        for done in completed_colors
+                    ),
+                    default=0,
+                ),
+                -spatial_distance_ratio(previous_color, color),
+                -color_distance(previous_color, color),
+                -difficulty_rank[color],
+                -original_index[color],
+            ),
+        )
+        ordered_colors.append(next_color)
+        remaining_colors.remove(next_color)
+    entries = []
+    for number, color in enumerate(ordered_colors, start=1):
+        stats = stats_by_color[color]
+        entries.append(
+            {
+                "number": number,
+                "color": rgb_to_hex(color),
+                "original_number": original_index[color] + 1,
+                "difficulty_rank": difficulty_rank[color],
+                "difficulty_band": difficulty_band[color],
+                "ease_score": round(ease_score_by_color[color], 3),
+                "visible_region_count": stats["visible_region_count"],
+                "hidden_region_count": stats["hidden_region_count"],
+                "tiny_region_count": stats["tiny_region_count"],
+                "background_like": stats["background_like"],
+                "max_visible_radius_ratio": round(
+                    stats["max_visible_radius"] / canvas_side,
+                    6,
+                ),
+                "max_visible_area_ratio": round(
+                    stats["max_visible_area"] / canvas_area,
+                    6,
+                ),
+            }
+        )
+
+    transitions = []
+    for previous_color, next_color in zip(ordered_colors, ordered_colors[1:]):
+        shared_boundary_count = adjacency_counts.get(
+            palette_color_pair(previous_color, next_color),
+            0,
+        )
+        transitions.append(
+            {
+                "from_color": rgb_to_hex(previous_color),
+                "to_color": rgb_to_hex(next_color),
+                "connected": shared_boundary_count > 0,
+                "shared_boundary_count": shared_boundary_count,
+                "distance_ratio": round(
+                    spatial_distance_ratio(previous_color, next_color),
+                    6,
+                ),
+                "color_distance": round(color_distance(previous_color, next_color), 3),
+            }
+        )
+    connected_transition_count = sum(item["connected"] for item in transitions)
+    transition_count = len(transitions)
+    difficulty_inversion_count = sum(
+        difficulty_rank[next_color] < difficulty_rank[previous_color]
+        for previous_color, next_color in zip(ordered_colors, ordered_colors[1:])
+    )
+    band_counts = Counter(difficulty_band.values())
+    summary = {
+        "start_color": rgb_to_hex(start_color) if start_color is not None else None,
+        "start_reason": (
+            "readable_non_background"
+            if start_color is not None
+            and stats_by_color[start_color]["visible_region_count"] > 0
+            and not stats_by_color[start_color]["background_like"]
+            else "best_available"
+        ),
+        "connected_transition_count": connected_transition_count,
+        "transition_count": transition_count,
+        "connected_transition_pct": round(
+            connected_transition_count * 100.0 / max(1, transition_count),
+            2,
+        ),
+        "mean_transition_distance_ratio": round(
+            sum(item["distance_ratio"] for item in transitions) / max(1, transition_count),
+            6,
+        ),
+        "difficulty_inversion_count": difficulty_inversion_count,
+        "difficulty_band_counts": {
+            band: band_counts.get(band, 0)
+            for band in ("easy", "medium", "hard")
+        },
+    }
+
+    return {
+        "palette_colors": ordered_colors,
+        "report": {
+            "mode": "playability",
+            "entries": entries,
+            "transitions": transitions,
+            "summary": summary,
+        },
+    }
 
 
 def make_cluster_from_info(info):
@@ -3320,6 +3671,7 @@ def generate_level_assets(
     category_profile=None,
     quantize_method="mediancut",
     adaptive_palette=True,
+    palette_order_mode=DEFAULT_PALETTE_ORDER_MODE,
     preprocess_profile="standard",
     region_color_method="median",
     detail_alpha=0.85,
@@ -3336,6 +3688,10 @@ def generate_level_assets(
     if source_line_format not in SOURCE_LINE_FORMATS:
         raise ValueError(
             f"source_line_format phải là một trong: {', '.join(SOURCE_LINE_FORMATS)}."
+        )
+    if palette_order_mode not in PALETTE_ORDER_MODES:
+        raise ValueError(
+            f"palette_order_mode phải là một trong: {', '.join(PALETTE_ORDER_MODES)}."
         )
 
     original_line_art_path = line_art_path
@@ -3854,6 +4210,30 @@ def generate_level_assets(
     # hàng chục vùng cùng màu (build_palette_with_adaptive_merge cân nhắc theo số vùng và
     # diện tích, thêm bản sao sẽ làm màu đó có vẻ quan trọng hơn thực tế).
     palette_colors = palette_result["palette_colors"]
+    if palette_order_mode == "playability":
+        palette_order_result = order_palette_for_playability(
+            palette_colors=palette_colors,
+            color_mapping=palette_result["color_mapping"],
+            region_infos=region_infos,
+            width=width,
+            height=height,
+            ink_gap_px=ink_gap_attach_px,
+        )
+        palette_colors = palette_order_result["palette_colors"]
+        palette_order_report = palette_order_result["report"]
+    else:
+        palette_order_report = {
+            "mode": "luminance",
+            "entries": [
+                {
+                    "number": index + 1,
+                    "color": rgb_to_hex(color),
+                    "original_number": index + 1,
+                }
+                for index, color in enumerate(palette_colors)
+            ],
+            "transitions": [],
+        }
     color_to_number = {color: index + 1 for index, color in enumerate(palette_colors)}
 
     # Ghi asset vào thư mục staging trước; chỉ move đè lên output_dir thật khi asset đạt
@@ -4020,6 +4400,8 @@ def generate_level_assets(
         "tiny_merge_policy": tiny_merge_policy,
         **tiny_merge_stats,
         "adaptive_palette": adaptive_palette,
+        "palette_order_mode": palette_order_mode,
+        "palette_order_report": palette_order_report,
         "quantize_method": quantize_method,
         "region_color_method": region_color_method,
         "category_profile": resolved_profile,
@@ -4059,8 +4441,17 @@ def generate_level_assets(
         "detail_mode": "reference_lerp_rgba",
         "detail_alpha": detail_alpha,
     }
+    runtime_palette_order_report = {
+        "mode": palette_order_report["mode"],
+        **(
+            {"summary": palette_order_report["summary"]}
+            if palette_order_report.get("summary") is not None
+            else {}
+        ),
+    }
     runtime_generation_params = {
         **debug_generation_params,
+        "palette_order_report": runtime_palette_order_report,
         "selected_preprocessing": make_runtime_preprocessing_report(selected_preprocessing),
     }
 
@@ -4405,6 +4796,15 @@ def create_parser():
         help="Tắt adaptive palette để debug/fallback theo pipeline cũ.",
     )
     parser.add_argument(
+        "--palette-order-mode",
+        choices=PALETTE_ORDER_MODES,
+        default=DEFAULT_PALETTE_ORDER_MODE,
+        help=(
+            "Cách gán số palette: playability ưu tiên dễ trước và các màu liền kề; "
+            "luminance giữ thứ tự tối-sáng cũ để so sánh/rollback."
+        ),
+    )
+    parser.add_argument(
         "--preprocess-profile",
         choices=["standard", "thin-line", "manga", "mandala", "source-line", "poster", "auto"],
         default="auto",
@@ -4735,6 +5135,7 @@ def run_batch(args):
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
+            palette_order_mode=args.palette_order_mode,
             preprocess_profile=args.preprocess_profile,
             region_color_method=args.region_color_method,
             detail_alpha=args.detail_alpha,
@@ -4803,6 +5204,7 @@ def run_batch_single_category(args):
             category_profile=args.category_profile,
             quantize_method=args.quantize_method,
             adaptive_palette=not args.disable_adaptive_palette,
+            palette_order_mode=args.palette_order_mode,
             preprocess_profile=args.preprocess_profile,
             region_color_method=args.region_color_method,
             detail_alpha=args.detail_alpha,
@@ -4894,6 +5296,7 @@ def run_batch_source_category(args):
                 category_profile=args.category_profile,
                 quantize_method=args.quantize_method,
                 adaptive_palette=not args.disable_adaptive_palette,
+                palette_order_mode=args.palette_order_mode,
                 preprocess_profile=args.preprocess_profile,
                 region_color_method=args.region_color_method,
                 detail_alpha=args.detail_alpha,
@@ -4956,6 +5359,7 @@ def run_single(args):
         category_profile=args.category_profile,
         quantize_method=args.quantize_method,
         adaptive_palette=not args.disable_adaptive_palette,
+        palette_order_mode=args.palette_order_mode,
         preprocess_profile=args.preprocess_profile,
         region_color_method=args.region_color_method,
         detail_alpha=args.detail_alpha,
