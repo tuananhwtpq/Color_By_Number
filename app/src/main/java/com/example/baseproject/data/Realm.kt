@@ -5,6 +5,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import com.example.baseproject.R
+import com.example.baseproject.data.localization.ServerContentTextResolver
 
 /**
  * Một "cõi" (realm) hiển thị ở tab Color Realm. Nền là Lottie animation trong res/raw chứ
@@ -23,7 +24,9 @@ data class Realm(
     val isPremium: Boolean = false,
 ) {
     fun displayName(context: Context): String =
-        nameRes?.let(context::getString) ?: name.orEmpty()
+        ServerContentTextResolver.realmTitle(context, id, name)
+            ?: nameRes?.let(context::getString)
+            ?: name.orEmpty()
 }
 
 object RealmCatalog {

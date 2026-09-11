@@ -19,6 +19,7 @@ import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseFragment
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.localization.ServerContentTextResolver
 import com.example.baseproject.data.progressFraction
 import com.example.baseproject.databinding.FragmentLibraryBinding
 import com.example.baseproject.databinding.ItemLibraryCategoryTabBinding
@@ -125,7 +126,11 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         categories.forEachIndexed { index, category ->
             val tabBinding =
                 ItemLibraryCategoryTabBinding.inflate(inflater, binding.layoutCategories, false)
-            tabBinding.tvCategoryTab.text = categoryNames[category] ?: category
+            tabBinding.tvCategoryTab.text = ServerContentTextResolver.categoryTitle(
+                context = requireContext(),
+                categoryId = category,
+                serverEnglish = categoryNames[category] ?: category
+            )
             tabBinding.tvCategoryTab.tag = category
             tabBinding.tvCategoryTab.setOnSoundClickListener {
                 viewModel.selectCategory(category)

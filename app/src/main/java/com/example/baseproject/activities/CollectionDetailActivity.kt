@@ -13,6 +13,7 @@ import com.example.baseproject.adapters.LevelAdapter
 import com.example.baseproject.app.SimpleViewModelFactory
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.LevelConfig
+import com.example.baseproject.data.localization.ServerContentTextResolver
 import com.example.baseproject.data.progressFraction
 import com.example.baseproject.databinding.ActivityCollectionDetailBinding
 import com.example.baseproject.dialog.CurrentPictureDialog
@@ -99,13 +100,21 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
 
         val collection = state.collection
         if (collection != null) {
-            binding.tvTitle.text = collection.title
+            binding.tvTitle.text = ServerContentTextResolver.collectionTitle(
+                context = this,
+                collectionId = collection.id,
+                serverEnglish = collection.title
+            )
             binding.tvNumberCount.text = collection.imageCount.toString()
             Glide.with(binding.ivThumbnail)
                 .load(collection.thumbnailUrl)
                 .into(binding.ivThumbnail)
 
-            val description = collection.description
+            val description = ServerContentTextResolver.collectionDescription(
+                context = this,
+                collectionId = collection.id,
+                serverEnglish = collection.description
+            )
             binding.tvDescription.visibility =
                 if (description.isNullOrBlank()) View.GONE else View.VISIBLE
             binding.tvDescription.text = description.orEmpty()

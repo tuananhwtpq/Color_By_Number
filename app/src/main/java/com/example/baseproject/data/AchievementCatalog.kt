@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.example.baseproject.R
+import com.example.baseproject.data.localization.ServerContentTextResolver
 import com.example.baseproject.utils.Constants
 
 /**
@@ -62,10 +63,12 @@ data class AchievementDefinition(
     val isPremium: Boolean = false
 ) {
     fun titleText(context: Context): String =
-        title ?: titleRes?.let(context::getString) ?: id
+        ServerContentTextResolver.achievementTitle(context, id, title)
+            ?: title ?: titleRes?.let(context::getString) ?: id
 
     fun descriptionText(context: Context): String =
-        description ?: descriptionRes?.let(context::getString).orEmpty()
+        ServerContentTextResolver.achievementDescription(context, id, description)
+            ?: description ?: descriptionRes?.let(context::getString).orEmpty()
 }
 
 object AchievementCatalog {
