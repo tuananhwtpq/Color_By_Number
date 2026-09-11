@@ -14,10 +14,10 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.os.SystemClock
 import android.util.AttributeSet
-import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewConfiguration
 import com.caverock.androidsvg.SVG
 import com.pixlory.color.by.number.BuildConfig
 import com.pixlory.color.by.number.data.AnimatedFiller
@@ -60,6 +60,8 @@ class PaintCanvasView @JvmOverloads constructor(
         private const val DEFAULT_FRAME_DURATION_MS = 16.67f
         private const val FILL_TAP_EFFECT_DURATION_MS = 220L
         private const val HINT_TAP_EFFECT_DURATION_MS = 1_000L
+        private const val INVALID_POINTER_ID = -1
+        private const val FREE_PAN_VISIBLE_EDGE_DP = 48f
 
         // Vùng nhỏ hơn mức "thoải mái" vẫn phải hiện số (nếu đã qua ngưỡng ẩn/hiện ở trên),
         // nhưng chữ phải co lại theo đúng khoảng trống thật để không tràn ra ngoài — hệ số
@@ -115,11 +117,20 @@ class PaintCanvasView @JvmOverloads constructor(
     private val particlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
     private lateinit var scaleDetector: ScaleGestureDetector
-    private lateinit var gestureDetector: GestureDetector
 
     private var scaleFactor = 1.0f
     private var translateX = 0f
     private var translateY = 0f
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+    private val freePanVisibleEdgePx = FREE_PAN_VISIBLE_EDGE_DP * resources.displayMetrics.density
+    private var activePanPointerId = INVALID_POINTER_ID
+    private var panStartX = 0f
+    private var panStartY = 0f
+    private var lastPanX = 0f
+    private var lastPanY = 0f
+    private var isSingleFingerPanning = false
+    private var isScalingGesture = false
+    private var hasViewportGesture = false
 
     var onRegionFilledListener: ((maskColor: Int) -> Unit)? = null
 
@@ -164,14 +175,24 @@ class PaintCanvasView @JvmOverloads constructor(
     private var lastAnimationFrameUptimeMs = 0L
 
     init {
-        setupGestureDetectors()
+        setupScaleDetector()
     }
 
     //region SETUPSCALE
-    private fun setupGestureDetectors() {
+    private fun setupScaleDetector() {
         scaleDetector = ScaleGestureDetector(
             context,
             object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                    if (maskWidth == 0 || maskHeight == 0) return false
+
+                    isScalingGesture = true
+                    isSingleFingerPanning = false
+                    hasViewportGesture = true
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                    return true
+                }
+
                 override fun onScale(detector: ScaleGestureDetector): Boolean {
                     val fitScale = Math.min(
                         width.toFloat() / (maskWidth.takeIf { it > 0 } ?: 1),
@@ -187,25 +208,9 @@ class PaintCanvasView @JvmOverloads constructor(
                     updateMatrix()
                     return true
                 }
-            })
 
-        gestureDetector =
-            GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
-                override fun onScroll(
-                    e1: MotionEvent?,
-                    e2: MotionEvent,
-                    distanceX: Float,
-                    distanceY: Float
-                ): Boolean {
-                    translateX -= distanceX
-                    translateY -= distanceY
-                    updateMatrix()
-                    return true
-                }
-
-                override fun onSingleTapUp(e: MotionEvent): Boolean {
-                    handleTap(e.x, e.y)
-                    return true
+                override fun onScaleEnd(detector: ScaleGestureDetector) {
+                    isScalingGesture = false
                 }
             })
     }
@@ -716,17 +721,8 @@ class PaintCanvasView @JvmOverloads constructor(
         val scaledWidth = maskWidth * scaleFactor
         val scaledHeight = maskHeight * scaleFactor
 
-        if (scaledWidth < viewWidth) {
-            translateX = (viewWidth - scaledWidth) / 2f
-        } else {
-            translateX = Math.max(viewWidth - scaledWidth, Math.min(0f, translateX))
-        }
-
-        if (scaledHeight < viewHeight) {
-            translateY = (viewHeight - scaledHeight) / 2f
-        } else {
-            translateY = Math.max(viewHeight - scaledHeight, Math.min(0f, translateY))
-        }
+        translateX = clampFreePanTranslation(translateX, viewWidth, scaledWidth)
+        translateY = clampFreePanTranslation(translateY, viewHeight, scaledHeight)
 
         drawMatrix.reset()
         drawMatrix.postScale(scaleFactor, scaleFactor)
@@ -734,6 +730,22 @@ class PaintCanvasView @JvmOverloads constructor(
         drawMatrix.invert(inverseMatrix)
         applyHighlightOpacity()
         invalidate()
+    }
+
+    /**
+     * Matches the reference app's free-pan feel: users may move the artwork beyond every edge,
+     * including while it is smaller than the viewport. A narrow strip must remain visible so a
+     * picture cannot be lost completely off-screen.
+     */
+    private fun clampFreePanTranslation(
+        translation: Float,
+        viewportSize: Float,
+        scaledArtworkSize: Float,
+    ): Float {
+        val minimumVisibleArtwork = minOf(scaledArtworkSize, freePanVisibleEdgePx)
+        val minTranslation = minimumVisibleArtwork - scaledArtworkSize
+        val maxTranslation = viewportSize - minimumVisibleArtwork
+        return translation.coerceIn(minTranslation, maxTranslation)
     }
 
     /**
@@ -884,9 +896,98 @@ class PaintCanvasView @JvmOverloads constructor(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (isViewportAnimationLocked) return true
-        var handled = scaleDetector.onTouchEvent(event)
-        handled = gestureDetector.onTouchEvent(event) || handled
-        return handled || super.onTouchEvent(event)
+
+        scaleDetector.onTouchEvent(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> beginSingleFingerTouch(event)
+
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                hasViewportGesture = true
+                isSingleFingerPanning = false
+                parent?.requestDisallowInterceptTouchEvent(true)
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                if (event.pointerCount == 1 && !isScalingGesture) {
+                    panWithSingleFinger(event)
+                }
+            }
+
+            MotionEvent.ACTION_POINTER_UP -> continueAfterPointerUp(event)
+
+            MotionEvent.ACTION_UP -> {
+                if (!hasViewportGesture) {
+                    handleTap(event.x, event.y)
+                }
+                resetTouchTracking()
+            }
+
+            MotionEvent.ACTION_CANCEL -> resetTouchTracking()
+        }
+        return true
+    }
+
+    private fun beginSingleFingerTouch(event: MotionEvent) {
+        activePanPointerId = event.getPointerId(0)
+        panStartX = event.x
+        panStartY = event.y
+        lastPanX = event.x
+        lastPanY = event.y
+        isSingleFingerPanning = false
+        isScalingGesture = false
+        hasViewportGesture = false
+    }
+
+    private fun panWithSingleFinger(event: MotionEvent) {
+        val pointerIndex = event.findPointerIndex(activePanPointerId)
+        if (pointerIndex == -1) return
+
+        val x = event.getX(pointerIndex)
+        val y = event.getY(pointerIndex)
+        if (!isSingleFingerPanning) {
+            val totalDeltaX = x - panStartX
+            val totalDeltaY = y - panStartY
+            if (totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY >= touchSlop * touchSlop) {
+                isSingleFingerPanning = true
+                hasViewportGesture = true
+                parent?.requestDisallowInterceptTouchEvent(true)
+            }
+        }
+
+        if (isSingleFingerPanning) {
+            translateX += x - lastPanX
+            translateY += y - lastPanY
+            updateMatrix()
+        }
+        lastPanX = x
+        lastPanY = y
+    }
+
+    private fun continueAfterPointerUp(event: MotionEvent) {
+        hasViewportGesture = true
+        val liftedPointerIndex = event.actionIndex
+        val remainingPointerIndex = (0 until event.pointerCount).firstOrNull {
+            it != liftedPointerIndex
+        }
+        if (remainingPointerIndex == null) {
+            activePanPointerId = INVALID_POINTER_ID
+            return
+        }
+
+        activePanPointerId = event.getPointerId(remainingPointerIndex)
+        lastPanX = event.getX(remainingPointerIndex)
+        lastPanY = event.getY(remainingPointerIndex)
+        panStartX = lastPanX
+        panStartY = lastPanY
+        isSingleFingerPanning = event.pointerCount - 1 == 1
+    }
+
+    private fun resetTouchTracking() {
+        activePanPointerId = INVALID_POINTER_ID
+        isSingleFingerPanning = false
+        isScalingGesture = false
+        hasViewportGesture = false
+        parent?.requestDisallowInterceptTouchEvent(false)
     }
 
     override fun onAttachedToWindow() {
