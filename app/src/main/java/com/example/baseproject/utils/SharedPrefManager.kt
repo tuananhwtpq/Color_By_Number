@@ -18,7 +18,13 @@ object SharedPrefManager {
     private const val HAS_SEEN_LIBRARY_PREPARING = "has_seen_library_preparing"
     private const val IS_BACKGROUND_MUSIC_ENABLED = "is_background_music_enabled"
     private const val IS_SOUND_EFFECTS_ENABLED = "is_sound_effects_enabled"
+    private const val HINT_BALANCE = "hint_balance"
+    private const val CLAIMED_HINT_ACHIEVEMENT_REWARDS = "claimed_hint_achievement_rewards"
     private lateinit var preferences: SharedPreferences
+
+    const val DEFAULT_HINT_BALANCE = 2
+    const val REWARDED_AD_HINT_AMOUNT = 2
+    const val ACHIEVEMENT_HINT_REWARD_AMOUNT = 1
 
     var isShowGuide: Boolean
         get() {
@@ -78,6 +84,49 @@ object SharedPrefManager {
         set(value) {
             preferences.edit { putBoolean(IS_SOUND_EFFECTS_ENABLED, value) }
         }
+
+    /** The user starts with two hints on first install; the value persists afterwards. */
+    val hintBalance: Int
+        get() = preferences.getInt(HINT_BALANCE, DEFAULT_HINT_BALANCE).coerceAtLeast(0)
+
+    /** Returns false without changing storage when there is no usable hint. */
+    @Synchronized
+    fun consumeHint(): Boolean {
+        val currentBalance = hintBalance
+        if (currentBalance <= 0) return false
+
+        preferences.edit { putInt(HINT_BALANCE, currentBalance - 1) }
+        return true
+    }
+
+    @Synchronized
+    fun addHints(amount: Int): Int {
+        require(amount >= 0) { "Hint amount cannot be negative" }
+        val updatedBalance = hintBalance + amount
+        preferences.edit { putInt(HINT_BALANCE, updatedBalance) }
+        return updatedBalance
+    }
+
+    /**
+     * Grants an achievement reward exactly once, even when the claim screen is recreated before
+     * its achievement state has finished persisting.
+     */
+    @Synchronized
+    fun grantAchievementHintOnce(achievementId: String): Int {
+        if (achievementId.isBlank()) return hintBalance
+
+        val grantedAchievementIds = preferences
+            .getStringSet(CLAIMED_HINT_ACHIEVEMENT_REWARDS, emptySet())
+            .orEmpty()
+        if (achievementId in grantedAchievementIds) return hintBalance
+
+        val updatedBalance = hintBalance + ACHIEVEMENT_HINT_REWARD_AMOUNT
+        preferences.edit {
+            putInt(HINT_BALANCE, updatedBalance)
+            putStringSet(CLAIMED_HINT_ACHIEVEMENT_REWARDS, grantedAchievementIds + achievementId)
+        }
+        return updatedBalance
+    }
 
     fun init(context: Context) {
         preferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

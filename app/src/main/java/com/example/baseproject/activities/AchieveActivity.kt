@@ -10,11 +10,11 @@ import com.example.baseproject.R
 import com.example.baseproject.adapters.AchievementAdapter
 import com.example.baseproject.bases.BaseActivity
 import com.example.baseproject.data.Achievement
-import com.example.baseproject.data.repository.AchievementEvent
 import com.example.baseproject.databinding.ActivityAchieveBinding
 import com.example.baseproject.dialog.AchieveCompletedDialog
 import com.example.baseproject.dialog.AchieveDetailDialog
 import com.example.baseproject.utils.AppThemeManager
+import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -116,9 +116,11 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
                 AchieveCompletedDialog().apply {
                     this.achievement = achievement
                     onRewardClaimed = { claimedAchievement ->
-                        achievementRepository.track(AchievementEvent.HintUsed)
+                        val updatedHintBalance =
+                            SharedPrefManager.grantAchievementHintOnce(claimedAchievement.id)
                         achievementRepository.claimReward(claimedAchievement.id)
                         loadAchievements()
+                        updatedHintBalance
                     }
                 }
             }

@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
 }
 
+// val hintRewardedAdUnitId = providers.gradleProperty("HINT_REWARDED_AD_UNIT_ID").orNull.orEmpty()
+
 android {
     namespace = "com.example.baseproject"
     compileSdk = 36
@@ -28,6 +30,8 @@ android {
         buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
         buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "false")
         buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "false")
+        // Re-enable this when the rewarded hint flow is enabled again.
+        // buildConfigField("String", "HINT_REWARDED_AD_UNIT_ID", "\"$hintRewardedAdUnitId\"")
     }
 
     signingConfigs {

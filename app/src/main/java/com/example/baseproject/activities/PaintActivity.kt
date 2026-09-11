@@ -65,6 +65,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val PREPARATION_MIN_DURATION_MS = 350L
         private const val PREPARATION_FADE_OUT_MS = 160L
         private const val THUMBNAIL_SAVE_DEBOUNCE_MS = 450L
+        // private const val HINT_REWARDED_AD_TIMEOUT_MS = 30_000L
 
         const val EXTRA_CATEGORY = "CATEGORY"
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
@@ -104,11 +105,16 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var isFullColorPreviewVisible: Boolean = false
     private var isFillAllPreviewActive: Boolean = false
     private var isNavigatingToCompleted: Boolean = false
+    // private var isHintRewardAdInProgress: Boolean = false
     private var fullPreviewBitmap: Bitmap? = null
     private var fullPreviewRenderKey: String? = null
     private var lastRenderedSelectedPaletteIndex: Int = -1
     private var thumbnailSaveJob: Job? = null
+    // private var hintRewardedAdTimeoutJob: Job? = null
     private val guideRectBuffer = Rect()
+    // private val hintRewardedAdModel by lazy {
+    //     AdmobRewardedModel(BuildConfig.HINT_REWARDED_AD_UNIT_ID)
+    // }
 
     private val previewMultiplyPaint = Paint(Paint.FILTER_BITMAP_FLAG).apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
@@ -133,7 +139,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     override fun initActionView() {
         binding.btnBack.setOnSoundClickListener { finish() }
-        binding.btnHint.setOnSoundClickListener { showWatchAdsDialog() }
+        binding.btnHint.setOnSoundClickListener { onHintButtonClicked() }
         binding.btnPreviewFull.setOnSoundClickListener { toggleFullColorPreview() }
         binding.btnFillAll.setOnSoundClickListener { toggleFillAllOnCanvas() }
         binding.btnCloseFullPreview.setOnSoundClickListener { hideFullColorPreview() }
@@ -149,6 +155,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     private fun initViews() {
         syncPaintSettings()
+        renderHintBalance()
         showPreparationOverlay()
         binding.rvPalette.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -671,6 +678,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         when (event) {
             PaintUiEvent.FinishScreen -> finish()
             is PaintUiEvent.FocusOnMaskColor -> {
+                if (!SharedPrefManager.consumeHint()) {
+                    renderHintBalance()
+                    return
+                }
+                renderHintBalance()
                 achievementRepository.track(AchievementEvent.HintUsed)
                 soundManagerOrNull()?.play(SoundEffect.HINT)
                 binding.paintCanvas.focusOnRegionByMaskColor(event.maskColor)
@@ -768,11 +780,53 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun showWatchAdsDialog() {
         showDialogOnce(WatchAdsDialog.TAG) {
             WatchAdsDialog().apply {
-                onWatchAd = {
-                    viewModel.onHintRequested()
-                }
+                onWatchAd = ::showRewardedHintAd
             }
         }
+    }
+
+    private fun onHintButtonClicked() {
+        if (SharedPrefManager.hintBalance > 0) {
+            viewModel.onHintRequested()
+        } else {
+            showWatchAdsDialog()
+        }
+    }
+
+    private fun renderHintBalance() {
+        val hintBalance = SharedPrefManager.hintBalance
+        binding.tvHintCount.text = if (hintBalance > 0) hintBalance.toString() else "+"
+    }
+
+    private fun showRewardedHintAd() {
+        // Temporary reward flow: btnWatchAd represents a completed ad until AdMob is enabled.
+        // Keep the reward amount identical to the future rewarded-ad callback.
+        SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
+        renderHintBalance()
+
+        // Rewarded AdMob is intentionally disabled for now. Restore this block when the real
+        // rewarded-ad flow is enabled, and remove the temporary reward above at the same time.
+        //
+        // if (isHintRewardAdInProgress) return
+        // if (!BuildConfig.DEBUG && BuildConfig.HINT_REWARDED_AD_UNIT_ID.isBlank()) return
+        // isHintRewardAdInProgress = true
+        // hintRewardedAdTimeoutJob = lifecycleScope.launch {
+        //     delay(HINT_REWARDED_AD_TIMEOUT_MS)
+        //     isHintRewardAdInProgress = false
+        // }
+        // AdmobLib.loadAndShowRewarded(
+        //     activity = this,
+        //     admobRewardedModel = hintRewardedAdModel,
+        //     isShowOnTestDevice = BuildConfig.DEBUG,
+        //     onAdsCloseOrFailed = { earnedReward ->
+        //         isHintRewardAdInProgress = false
+        //         hintRewardedAdTimeoutJob?.cancel()
+        //         if (earnedReward) {
+        //             SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
+        //             renderHintBalance()
+        //         }
+        //     }
+        // )
     }
 
     override fun onPause() {
@@ -787,11 +841,14 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     override fun onResume() {
         super.onResume()
         syncPaintSettings()
+        renderHintBalance()
     }
 
     override fun onDestroy() {
         thumbnailSaveJob?.cancel()
         thumbnailSaveJob = null
+        // hintRewardedAdTimeoutJob?.cancel()
+        // hintRewardedAdTimeoutJob = null
         super.onDestroy()
         fullPreviewBitmap?.recycle()
         fullPreviewBitmap = null

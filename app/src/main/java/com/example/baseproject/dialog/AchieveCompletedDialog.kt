@@ -6,6 +6,7 @@ import com.example.baseproject.R
 import com.example.baseproject.bases.BaseDialog
 import com.example.baseproject.data.Achievement
 import com.example.baseproject.databinding.FragmentAchieveCompletedDialogBinding
+import com.example.baseproject.utils.SharedPrefManager
 import com.example.baseproject.utils.setOnUnDoubleClick
 import java.time.Instant
 import java.time.ZoneId
@@ -27,7 +28,7 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
     }
 
     var achievement: Achievement? = null
-    var onRewardClaimed: ((Achievement) -> Unit)? = null
+    var onRewardClaimed: ((Achievement) -> Int)? = null
 
     override fun initView() {
         val achievement = achievement ?: return
@@ -49,6 +50,8 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
         binding.tvAchieveName.text = definition.titleText(requireContext())
         binding.tvAchieveDetail.text = definition.descriptionText(requireContext())
         binding.tvDateTime.text = achievement.unlockedAtMillis?.let(::formatUnlockedDate).orEmpty()
+        binding.tvHintCount.text = SharedPrefManager.ACHIEVEMENT_HINT_REWARD_AMOUNT.toString()
+        binding.tvHintCountNew.text = SharedPrefManager.hintBalance.toString()
         renderRewardState(achievement.isRewardClaimed)
     }
 
@@ -62,8 +65,9 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
         val achievement = achievement ?: return
         if (achievement.isRewardClaimed) return
 
-        onRewardClaimed?.invoke(achievement)
+        val updatedHintBalance = onRewardClaimed?.invoke(achievement) ?: SharedPrefManager.hintBalance
         this.achievement = achievement.copy(isRewardClaimed = true)
+        binding.tvHintCountNew.text = updatedHintBalance.toString()
         renderRewardState(isRewardClaimed = true)
     }
 

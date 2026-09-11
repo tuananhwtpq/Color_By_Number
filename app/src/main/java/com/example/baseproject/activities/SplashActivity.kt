@@ -103,6 +103,7 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
 //    }
 
     private fun initAds() {
+        // Rewarded hint ads are disabled until a production ad unit is configured.
         AdmobLib.initialize(this, isDebug = true, isShowAds = false, onInitializedAds = {
             if (it) {
                 viewModel.onAdsInitialized()
