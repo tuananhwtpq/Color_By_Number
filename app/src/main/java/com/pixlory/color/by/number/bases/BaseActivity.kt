@@ -33,14 +33,21 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
     open val shouldMonitorNetwork: Boolean = false
     protected open val soundScene: SoundScene = SoundScene.HOME
     private var connectivityManager: ConnectivityManager? = null
+    private var isNetworkCallbackRegistered = false
+    private var isNetworkMonitoringActive = false
 
     private val loadingDialog by lazy { LoadingDialog(this) }
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onLost(network: Network) {
-            runOnUiThread {
-                if (!isFinishing && !isDestroyed) {
-                    showNoInternetDialog()
-                }
+            showNoInternetIfNeeded()
+        }
+
+        override fun onCapabilitiesChanged(
+            network: Network,
+            networkCapabilities: NetworkCapabilities
+        ) {
+            if (!networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                showNoInternetIfNeeded()
             }
         }
     }
@@ -99,15 +106,15 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
         super.onResume()
         (application as? MyApplication)?.soundManager?.onSceneResumed(soundScene)
         if (shouldMonitorNetwork) {
-            if (!isNetworkAvailable()) {
-                showNoInternetDialog()
-            }
+            isNetworkMonitoringActive = true
             registerNetworkCallback()
+            showNoInternetIfNeeded()
         }
     }
 
     override fun onPause() {
         (application as? MyApplication)?.soundManager?.onScenePaused(soundScene)
+        isNetworkMonitoringActive = false
         super.onPause()
         if (shouldMonitorNetwork) {
             unregisterNetworkCallback()
@@ -115,6 +122,8 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
     }
 
     private fun registerNetworkCallback() {
+        if (isNetworkCallbackRegistered) return
+
         connectivityManager = getSystemService(ConnectivityManager::class.java)
 
         val request = NetworkRequest.Builder()
@@ -122,15 +131,34 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
             .build()
         try {
             connectivityManager?.registerNetworkCallback(request, networkCallback)
+            isNetworkCallbackRegistered = connectivityManager != null
         } catch (e: Exception) {
-
+            isNetworkCallbackRegistered = false
         }
     }
 
     private fun unregisterNetworkCallback() {
+        if (!isNetworkCallbackRegistered) return
+
         try {
             connectivityManager?.unregisterNetworkCallback(networkCallback)
         } catch (e: Exception) {
+        } finally {
+            isNetworkCallbackRegistered = false
+        }
+    }
+
+    private fun showNoInternetIfNeeded() {
+        runOnUiThread {
+            if (
+                shouldMonitorNetwork &&
+                isNetworkMonitoringActive &&
+                !isFinishing &&
+                !isDestroyed &&
+                !isNetworkAvailable()
+            ) {
+                showNoInternetDialog()
+            }
         }
     }
 

@@ -52,6 +52,7 @@ import kotlin.coroutines.resume
 
 class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::inflate) {
 
+    override val shouldMonitorNetwork = true
     override val soundScene = SoundScene.DRAWING
 
     companion object {

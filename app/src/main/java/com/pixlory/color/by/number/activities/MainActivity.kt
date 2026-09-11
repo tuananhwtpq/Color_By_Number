@@ -35,6 +35,8 @@ import kotlinx.coroutines.launch
 
 class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::inflate) {
 
+    override val shouldMonitorNetwork = true
+
     companion object {
         const val EXTRA_SELECTED_TAB = "EXTRA_SELECTED_TAB"
         const val EXTRA_LIBRARY_CATEGORY = "EXTRA_LIBRARY_CATEGORY"

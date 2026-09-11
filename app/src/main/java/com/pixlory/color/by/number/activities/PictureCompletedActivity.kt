@@ -38,6 +38,8 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     ActivityPictureCompletedBinding::inflate
 ) {
 
+    override val shouldMonitorNetwork = true
+
     companion object {
         const val EXTRA_CATEGORY = "CATEGORY"
         const val EXTRA_LEVEL_ID = "LEVEL_ID"

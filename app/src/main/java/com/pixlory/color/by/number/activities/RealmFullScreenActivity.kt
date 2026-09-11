@@ -27,6 +27,8 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     ActivityRealmFullScreenBinding::inflate
 ) {
 
+    override val shouldMonitorNetwork = true
+
     companion object {
         private const val EXTRA_REALM_ID = "REALM_ID"
         private const val EXTRA_PROGRESS = "PROGRESS"

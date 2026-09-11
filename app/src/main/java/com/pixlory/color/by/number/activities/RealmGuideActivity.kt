@@ -14,6 +14,8 @@ import com.pixlory.color.by.number.utils.setOnUnDoubleClick
 
 class RealmGuideActivity : BaseActivity<ActivityRealmGuideBinding>(ActivityRealmGuideBinding::inflate) {
 
+    override val shouldMonitorNetwork = true
+
     private val onBackPressedCallback = object : OnBackPressedCallback(true){
         override fun handleOnBackPressed() {
             finish()

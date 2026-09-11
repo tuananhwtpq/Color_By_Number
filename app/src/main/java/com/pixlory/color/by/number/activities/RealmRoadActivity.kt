@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 
 class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRoadBinding::inflate) {
 
+    override val shouldMonitorNetwork = true
+
     private val appContainer by lazy {
         (application as MyApplication).appContainer
     }

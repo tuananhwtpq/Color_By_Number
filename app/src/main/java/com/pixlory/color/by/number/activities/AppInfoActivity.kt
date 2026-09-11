@@ -13,6 +13,8 @@ import com.pixlory.color.by.number.utils.setOnUnDoubleClick
 
 class AppInfoActivity : BaseActivity<ActivityAppInfoBinding>(ActivityAppInfoBinding::inflate) {
 
+    override val shouldMonitorNetwork = true
+
     private val onBackPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             finish()

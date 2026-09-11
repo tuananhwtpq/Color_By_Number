@@ -30,11 +30,14 @@ class NoInternetDialog : BaseDialog<FragmentNoInternetDialogBinding>(FragmentNoI
     }
 
     private var connectivityManager: ConnectivityManager? = null
+    private var isNetworkCallbackRegistered = false
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
             val hasInternet = caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             if (hasInternet) {
-                dismissAllowingStateLoss()
+                activity?.runOnUiThread {
+                    dismissAllowingStateLoss()
+                }
             }
         }
     }
@@ -61,14 +64,23 @@ class NoInternetDialog : BaseDialog<FragmentNoInternetDialogBinding>(FragmentNoI
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-        connectivityManager?.registerNetworkCallback(request, networkCallback)
+        try {
+            connectivityManager?.registerNetworkCallback(request, networkCallback)
+            isNetworkCallbackRegistered = connectivityManager != null
+        } catch (e: Exception) {
+            isNetworkCallbackRegistered = false
+        }
     }
 
     override fun onStop() {
         super.onStop()
+        if (!isNetworkCallbackRegistered) return
+
         try {
             connectivityManager?.unregisterNetworkCallback(networkCallback)
         } catch (e: Exception) {
+        } finally {
+            isNetworkCallbackRegistered = false
         }
     }
 

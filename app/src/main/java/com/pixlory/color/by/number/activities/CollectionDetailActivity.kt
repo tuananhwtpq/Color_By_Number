@@ -29,6 +29,8 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
     ActivityCollectionDetailBinding::inflate
 ) {
 
+    override val shouldMonitorNetwork = true
+
     companion object {
         const val EXTRA_COLLECTION_ID = "COLLECTION_ID"
 

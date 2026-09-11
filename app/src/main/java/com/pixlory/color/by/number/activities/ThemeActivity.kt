@@ -9,6 +9,8 @@ import com.pixlory.color.by.number.views.ThemeOptionView
 
 class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::inflate) {
 
+    override val shouldMonitorNetwork = true
+
     private lateinit var themeOptions: List<Pair<ThemeOptionView, String>>
     private var selectedThemeId = AppThemeManager.THEME_MIDNIGHT
 

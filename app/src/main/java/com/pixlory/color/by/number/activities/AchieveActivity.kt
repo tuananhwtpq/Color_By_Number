@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 
 class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBinding::inflate) {
 
+    override val shouldMonitorNetwork = true
+
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             finish()
