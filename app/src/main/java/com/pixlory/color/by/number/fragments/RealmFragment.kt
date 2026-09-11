@@ -29,6 +29,7 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     private var loadRemoteRealmJob: Job? = null
     private var lastRemoteRealmRequestId: String? = null
     private var loadedRemoteRealmRequestId: String? = null
+    private var isRealmVisualReady = false
     private val appContainer by lazy {
         (requireActivity().application as MyApplication).appContainer
     }
@@ -38,6 +39,7 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     }
 
     override fun initView() {
+        updateFullScreenEnabled(false)
         renderRealm()
     }
 
@@ -48,6 +50,7 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
 
     override fun initActionView() {
         binding.btnFullScreen.setOnUnDoubleClick {
+            if (!isRealmVisualReady) return@setOnUnDoubleClick
             startActivity(
                 RealmFullScreenActivity.newIntent(
                     requireContext(),
@@ -82,13 +85,7 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
         loadRemoteRealmJob?.cancel()
         loadRemoteRealmJob = viewLifecycleOwner.lifecycleScope.launch {
             val remoteRealm = try {
-                val remoteRealms = appContainer.realmRepository.loadRealms()
-                remoteRealms.firstOrNull { RealmCatalog.idsMatch(it.id, remoteRequestId) }
-                    ?: appContainer.realmRepository.loadRealm(remoteRequestId)
-                    ?: remoteRealms.firstOrNull {
-                        RealmCatalog.idsMatch(it.id, RealmCatalog.default.id)
-                    }
-                    ?: appContainer.realmRepository.loadRealm(RealmCatalog.default.id)
+                appContainer.realmContentPreloader.preload(remoteRequestId).await()
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -105,62 +102,71 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
         val displayName = realmToRender.displayName(requireContext())
         if (realmToRender == realm && binding.tvRealmName.text == displayName) return
 
-        val hasVisibleAnimation = binding.lavRealmBackground.visibility == View.VISIBLE
-
         realm = realmToRender
         binding.tvRealmName.text = displayName
+        binding.ivRealmPlaceholder.setImageResource(realmToRender.thumbnailRes)
         if (!realmToRender.previewImageUrl.isNullOrBlank()) {
             Glide.with(binding.ivRealmPlaceholder)
                 .load(realmToRender.previewImageUrl)
                 .into(binding.ivRealmPlaceholder)
-        } else {
-            binding.ivRealmPlaceholder.setImageResource(realmToRender.thumbnailRes)
         }
-        binding.ivRealmPlaceholder.visibility = if (hasVisibleAnimation) View.GONE else View.VISIBLE
-        binding.progressBar.visibility = if (hasVisibleAnimation) View.GONE else View.VISIBLE
-        if (!hasVisibleAnimation) {
-            binding.lavRealmBackground.visibility = View.GONE
-            binding.lavRealmBackground.cancelAnimation()
-        }
+        binding.ivRealmPlaceholder.visibility = View.VISIBLE
+        binding.progressBar.visibility = View.VISIBLE
+        binding.lavRealmBackground.visibility = View.GONE
+        binding.lavRealmBackground.cancelAnimation()
+        isRealmVisualReady = false
+        updateFullScreenEnabled(false)
 
         loadRealmAnimationJob?.cancel()
         loadRealmAnimationJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
-                if (!realmToRender.animationUrl.isNullOrBlank()) {
-                    binding.lavRealmBackground.apply {
-                        setAnimationFromUrl(realmToRender.animationUrl)
-                        repeatCount = LottieDrawable.INFINITE
-                        visibility = View.VISIBLE
-                        playAnimation()
-                    }
+                val composition = if (!realmToRender.animationUrl.isNullOrBlank()) {
+                    RealmAnimationCache.loadRemoteComposition(
+                        requireContext(),
+                        realmToRender.animationUrl
+                    )
                 } else {
-                    val composition = RealmAnimationCache.loadComposition(
+                    RealmAnimationCache.loadComposition(
                         requireContext(),
                         realmToRender.animationRes
                     )
-                    binding.lavRealmBackground.apply {
-                        setComposition(composition)
-                        repeatCount = LottieDrawable.INFINITE
-                        visibility = View.VISIBLE
-                        playAnimation()
-                    }
+                }
+                binding.lavRealmBackground.apply {
+                    setComposition(composition)
+                    repeatCount = LottieDrawable.INFINITE
+                    visibility = View.VISIBLE
+                    playAnimation()
                 }
                 binding.progressBar.visibility = View.GONE
                 binding.ivRealmPlaceholder.visibility = View.GONE
+                isRealmVisualReady = true
+                updateFullScreenEnabled(true)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (realmToRender.animationRes != 0) {
+                    val fallbackComposition = RealmAnimationCache.loadComposition(
+                        requireContext(),
+                        realmToRender.animationRes
+                    )
                     binding.lavRealmBackground.apply {
-                        setAnimation(realmToRender.animationRes)
+                        setComposition(fallbackComposition)
                         repeatCount = LottieDrawable.INFINITE
                         visibility = View.VISIBLE
                         playAnimation()
                     }
+                    binding.ivRealmPlaceholder.visibility = View.GONE
+                    isRealmVisualReady = true
+                    updateFullScreenEnabled(true)
                 }
                 binding.progressBar.visibility = View.GONE
             }
         }
+    }
+
+    private fun updateFullScreenEnabled(enabled: Boolean) {
+        binding.btnFullScreen.isEnabled = enabled
+        binding.btnFullScreen.alpha = if (enabled) 1f else 0.5f
     }
 
     override fun onDestroyView() {

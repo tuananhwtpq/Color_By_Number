@@ -16,6 +16,7 @@ import com.pixlory.color.by.number.dialog.SavePicSuccessDialog
 import com.pixlory.color.by.number.dialog.SavingDialog
 import com.pixlory.color.by.number.utils.ImageSaver
 import com.pixlory.color.by.number.utils.LottieFrameRenderer
+import com.pixlory.color.by.number.utils.RealmAnimationCache
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
 import com.pixlory.color.by.number.utils.showToast
@@ -48,6 +49,7 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     private var isSavingImage = false
     private var savingImageJob: Job? = null
     private var loadRealmJob: Job? = null
+    private var loadAnimationJob: Job? = null
     private var savingDialog: SavingDialog? = null
     private val requestedRealmId: String
         get() = intent.getStringExtra(EXTRA_REALM_ID) ?: RealmCatalog.default.id
@@ -62,38 +64,40 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     }
 
     override fun initView() {
-        binding.lavRealmBackground.addLottieOnCompositionLoadedListener {
-            updateDownloadButton(enabled = true)
-        }
         renderRealm()
         loadRealm()
     }
 
     private fun renderRealm() {
         updateDownloadButton(enabled = false)
-        val fallbackAnimationRes = realm.animationRes
-        binding.lavRealmBackground.apply {
-            if (!realm.animationUrl.isNullOrBlank()) {
-                setFailureListener { error ->
-                    Log.w(TAG, "Remote realm animation failed; using bundled fallback", error)
-                    if (fallbackAnimationRes != 0) {
-                        setFailureListener(null)
-                        updateDownloadButton(enabled = false)
-                        setAnimation(fallbackAnimationRes)
-                        progress = intent.getFloatExtra(EXTRA_PROGRESS, 0f).coerceIn(0f, 1f)
-                        repeatCount = LottieDrawable.INFINITE
-                        resumeAnimation()
-                    }
+        binding.ivRealmPlaceholder.setImageResource(realm.thumbnailRes)
+        binding.ivRealmPlaceholder.visibility = android.view.View.VISIBLE
+        binding.lavRealmBackground.cancelAnimation()
+        binding.lavRealmBackground.visibility = android.view.View.GONE
+        loadAnimationJob?.cancel()
+        loadAnimationJob = lifecycleScope.launch {
+            val animationUrl = realm.animationUrl
+            val composition = try {
+                if (!animationUrl.isNullOrBlank()) {
+                    RealmAnimationCache.loadRemoteComposition(this@RealmFullScreenActivity, animationUrl)
+                } else {
+                    RealmAnimationCache.loadComposition(this@RealmFullScreenActivity, realm.animationRes)
                 }
-                setAnimationFromUrl(realm.animationUrl)
-            } else {
-                setFailureListener(null)
-                setAnimation(realm.animationRes)
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                Log.w(TAG, "Remote realm animation failed; using bundled fallback", error)
+                RealmAnimationCache.loadComposition(this@RealmFullScreenActivity, realm.animationRes)
             }
-            progress = intent.getFloatExtra(EXTRA_PROGRESS, 0f).coerceIn(0f, 1f)
-            repeatCount = LottieDrawable.INFINITE
-            // resumeAnimation() chạy tiếp từ frame hiện tại; playAnimation() sẽ tua về đầu.
-            resumeAnimation()
+            binding.lavRealmBackground.apply {
+                setComposition(composition)
+                progress = intent.getFloatExtra(EXTRA_PROGRESS, 0f).coerceIn(0f, 1f)
+                repeatCount = LottieDrawable.INFINITE
+                // resumeAnimation() chạy tiếp từ frame hiện tại; playAnimation() sẽ tua về đầu.
+                resumeAnimation()
+                visibility = android.view.View.VISIBLE
+            }
+            binding.ivRealmPlaceholder.visibility = android.view.View.GONE
+            updateDownloadButton(enabled = true)
         }
         updateSelectButton()
     }
@@ -107,7 +111,7 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
         loadRealmJob?.cancel()
         loadRealmJob = lifecycleScope.launch {
             val loadedRealm = try {
-                appContainer.realmRepository.loadRealm(requestedRealmId)
+                appContainer.realmContentPreloader.preload(requestedRealmId).await()
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
@@ -230,8 +234,10 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
 
     override fun onDestroy() {
         loadRealmJob?.cancel()
+        loadAnimationJob?.cancel()
         savingImageJob?.cancel()
         loadRealmJob = null
+        loadAnimationJob = null
         savingImageJob = null
         super.onDestroy()
     }

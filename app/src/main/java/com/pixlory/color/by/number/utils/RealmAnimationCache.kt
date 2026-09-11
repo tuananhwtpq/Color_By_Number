@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap
 object RealmAnimationCache {
 
     private val compositions = ConcurrentHashMap<Int, LottieComposition>()
+    private val remoteCompositions = ConcurrentHashMap<String, LottieComposition>()
 
     suspend fun loadComposition(
         context: Context,
@@ -22,5 +23,15 @@ object RealmAnimationCache {
             .fromRawResSync(appContext, animationRes)
             .value ?: throw IOException("Cannot load realm animation $animationRes")
         compositions.putIfAbsent(animationRes, composition) ?: composition
+    }
+
+    suspend fun loadRemoteComposition(
+        context: Context,
+        animationUrl: String,
+    ): LottieComposition = remoteCompositions[animationUrl] ?: withContext(Dispatchers.IO) {
+        val composition = LottieCompositionFactory
+            .fromUrlSync(context.applicationContext, animationUrl)
+            .value ?: throw IOException("Cannot load realm animation from $animationUrl")
+        remoteCompositions.putIfAbsent(animationUrl, composition) ?: composition
     }
 }

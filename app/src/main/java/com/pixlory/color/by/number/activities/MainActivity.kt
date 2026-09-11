@@ -19,7 +19,6 @@ import com.pixlory.color.by.number.databinding.ActivityMainBinding
 import com.pixlory.color.by.number.ui.main.MainViewModel
 import com.pixlory.color.by.number.ui.main.MainRevealCoordinator
 import com.pixlory.color.by.number.utils.AppThemeManager
-import com.pixlory.color.by.number.utils.RealmAnimationCache
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.animateBottomNavPress
 import com.pixlory.color.by.number.utils.animateBottomNavSelection
@@ -27,7 +26,6 @@ import com.pixlory.color.by.number.utils.enableMarquee
 import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.setBottomNavLabelSelected
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -50,7 +48,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         private const val PREPARING_MIN_DURATION_MS = 900L
         private const val PREPARING_MAX_DURATION_MS = 5_500L
         private const val PREPARING_FADE_DURATION_MS = 260L
-        private const val REALM_WARM_UP_DELAY_MS = 350L
     }
 
     private val viewModel: MainViewModel by viewModels {
@@ -64,8 +61,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private var preparingTimeoutJob: Job? = null
     private var preparingRevealJob: Job? = null
     private var mainContentInitialized = false
-    private var realmWarmUpJob: Job? = null
-    private var realmWarmUpStarted = false
     private var pendingLibraryCategory: String? = null
     private val revealCoordinator = MainRevealCoordinator(PREPARING_MIN_DURATION_MS)
     private val appContainer by lazy {
@@ -76,9 +71,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         val initialTab = intent.getIntExtra(EXTRA_SELECTED_TAB, 0)
         viewModel.onTabSelected(initialTab)
         pendingLibraryCategory = intent.getStringExtra(EXTRA_LIBRARY_CATEGORY)
-        if (initialTab == TAB_COLOR_REALM) {
-            scheduleRealmWarmUp(delayMillis = 0L)
-        }
+        preloadRequestedRealm()
     }
 
     override fun initView() {
@@ -147,7 +140,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     }
 
     fun notifyInitialLibraryContentDrawn() {
-        scheduleRealmWarmUp()
         SharedPrefManager.hasSeenLibraryPreparing = true
         if (!shouldShowPreparingOverlay) return
 
@@ -220,9 +212,7 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         setIntent(intent)
         viewModel.onTabSelected(intent.getIntExtra(EXTRA_SELECTED_TAB, 0))
         pendingLibraryCategory = intent.getStringExtra(EXTRA_LIBRARY_CATEGORY)
-        realmWarmUpJob?.cancel()
-        realmWarmUpStarted = false
-        scheduleRealmWarmUp(delayMillis = 0L)
+        preloadRequestedRealm()
     }
 
     fun consumeLibraryCategoryRequest(): String? {
@@ -237,33 +227,11 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
         AppThemeManager.applyFullBackground(binding.main)
     }
 
-    private fun scheduleRealmWarmUp(delayMillis: Long = REALM_WARM_UP_DELAY_MS) {
-        if (realmWarmUpStarted) return
-        if (realmWarmUpJob?.isActive == true) return
-
-        realmWarmUpStarted = true
-        realmWarmUpJob = lifecycleScope.launch {
-            delay(delayMillis)
-            warmUpRealmContent()
-        }
-    }
-
-    private suspend fun warmUpRealmContent() {
-        val realm = RealmCatalog.findById(intent.getStringExtra(EXTRA_REALM_ID))
-            ?: RealmCatalog.default
-
-        try {
-            RealmAnimationCache.loadComposition(this@MainActivity, realm.animationRes)
-            val remoteRealms = appContainer.realmRepository.loadRealms()
-            val selectedRealmId = SharedPrefManager.selectedRealmId ?: realm.id
-            if (remoteRealms.none { it.id == selectedRealmId }) {
-                appContainer.realmRepository.loadRealm(selectedRealmId)
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // Warm up is only an optimisation; RealmFragment still has local fallbacks.
-        }
+    private fun preloadRequestedRealm() {
+        val realmId = SharedPrefManager.selectedRealmId
+            ?: intent.getStringExtra(EXTRA_REALM_ID)
+            ?: RealmCatalog.default.id
+        appContainer.realmContentPreloader.preload(realmId)
     }
 
     private fun resetItemSelector() {

@@ -2,6 +2,7 @@ package com.pixlory.color.by.number.app
 
 import android.content.Context
 import com.pixlory.color.by.number.BuildConfig
+import com.pixlory.color.by.number.data.RealmCatalog
 import com.pixlory.color.by.number.data.TimelapseVideoCache
 import com.pixlory.color.by.number.data.remote.PixcolorApiClient
 import com.pixlory.color.by.number.data.remote.RemoteAssetLoader
@@ -25,6 +26,7 @@ import com.pixlory.color.by.number.data.repository.SettingsRepository
 import com.pixlory.color.by.number.data.repository.SettingsRepositoryImpl
 import com.pixlory.color.by.number.data.repository.ThumbnailRepository
 import com.pixlory.color.by.number.data.repository.ThumbnailRepositoryImpl
+import com.pixlory.color.by.number.utils.RealmAnimationCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +41,7 @@ interface AppContainer {
     val achievementRepository: AchievementRepository
     val paintDropRepository: PaintDropRepository
     val realmRepository: RealmRepository
+    val realmContentPreloader: RealmContentPreloader
     val timelapseVideoCache: TimelapseVideoCache
     val startupContentPreloader: StartupContentPreloader
 }
@@ -114,6 +117,24 @@ class DefaultAppContainer(context: Context) : AppContainer {
             api = pixcolorApi,
             assetLoader = remoteAssetLoader,
             fallback = localRealmRepository
+        )
+    }
+
+    override val realmContentPreloader: RealmContentPreloader by lazy {
+        RealmContentPreloader(
+            realmRepository = realmRepository,
+            scope = startupScope,
+            fallbackRealm = RealmCatalog::findById,
+            prepareFallbackAnimation = { realm ->
+                if (realm.animationRes != 0) {
+                    RealmAnimationCache.loadComposition(appContext, realm.animationRes)
+                }
+            },
+            prepareRemoteAnimation = { realm ->
+                realm.animationUrl?.takeIf(String::isNotBlank)?.let { animationUrl ->
+                    RealmAnimationCache.loadRemoteComposition(appContext, animationUrl)
+                }
+            },
         )
     }
 
