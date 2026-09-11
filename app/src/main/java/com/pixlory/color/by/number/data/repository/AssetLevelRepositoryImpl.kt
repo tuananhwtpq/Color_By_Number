@@ -1,0 +1,224 @@
+package com.pixlory.color.by.number.data.repository
+
+import android.content.Context
+import android.content.res.AssetManager
+import android.graphics.BitmapFactory
+import com.caverock.androidsvg.SVG
+import com.pixlory.color.by.number.data.CentroidCalculator
+import com.pixlory.color.by.number.data.LevelConfig
+import com.pixlory.color.by.number.data.progressRegionCount
+import com.pixlory.color.by.number.utils.AssetImageResolver
+import com.pixlory.color.by.number.utils.Constants
+import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.InputStreamReader
+
+class AssetLevelRepositoryImpl(
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+) : AssetLevelRepository {
+    private val gson = Gson()
+
+    private fun decodeOptionalConfiguredBitmap(
+        assetManager: AssetManager,
+        levelPath: String,
+        configuredFileName: String?,
+        fallbackBasePath: String
+    ): android.graphics.Bitmap? {
+        fun decodeFallback() =
+            AssetImageResolver.openResolvedAssetOrNull(assetManager, fallbackBasePath)?.use {
+                BitmapFactory.decodeStream(
+                    it,
+                    null,
+                    BitmapFactory.Options().apply {
+                        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                    }
+                )
+            }
+
+        if (!configuredFileName.isNullOrBlank()) {
+            try {
+                assetManager.open("$levelPath/$configuredFileName").use {
+                    return BitmapFactory.decodeStream(
+                        it,
+                        null,
+                        BitmapFactory.Options().apply {
+                            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                        }
+                    )
+                }
+            } catch (_: Exception) {
+                return decodeFallback()
+            }
+        }
+        return decodeFallback()
+    }
+
+    private fun loadOptionalConfiguredSvg(
+        assetManager: AssetManager,
+        levelPath: String,
+        configuredFileName: String?
+    ): SVG? {
+        if (configuredFileName.isNullOrBlank() || !configuredFileName.endsWith(".svg", ignoreCase = true)) {
+            return null
+        }
+
+        return try {
+            assetManager.open("$levelPath/$configuredFileName").use { input ->
+                SVG.getFromInputStream(input)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    override suspend fun loadAllLevels(): List<LevelConfig> = withContext(ioDispatcher) {
+        val levels = mutableListOf<LevelConfig>()
+        val assetManager = context.assets
+
+        try {
+            val categories = assetManager.list("") ?: return@withContext emptyList()
+            for (category in categories) {
+                if (category == "images" ||
+                    category == "webkit" ||
+                    category == Constants.ASSET_COLLECTION_ROOT ||
+                    category.contains(".")
+                ) continue
+
+                val levelIds = assetManager.list(category) ?: continue
+                for (levelId in levelIds) {
+                    val configPath = "$category/$levelId/config.json"
+                    try {
+                        assetManager.open(configPath).use { inputStream ->
+                            InputStreamReader(inputStream).use { reader ->
+                                levels.add(gson.fromJson(reader, LevelConfig::class.java))
+                            }
+                        }
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        levels
+    }
+
+    override suspend fun resolveProgressMetadata(level: LevelConfig): LevelConfig =
+        withContext(ioDispatcher) {
+            runCatching {
+                context.assets.open("${level.category}/${level.id}/config.json").use { inputStream ->
+                    InputStreamReader(inputStream).use { reader ->
+                        gson.fromJson(reader, LevelConfig::class.java)
+                    }
+                }
+            }.map { config ->
+                config.progressRegionCount().takeIf { it > 0 }
+                    ?.let { regionCount -> level.copy(totalRegions = regionCount) }
+                    ?: level
+            }.getOrDefault(level)
+        }
+
+    override suspend fun loadLevelBundle(category: String, levelId: String): LevelBundle =
+        withContext(ioDispatcher) {
+            val assetManager = context.assets
+            val config = assetManager.open("$category/$levelId/config.json").use { inputStream ->
+                InputStreamReader(inputStream).use { reader ->
+                    gson.fromJson(reader, LevelConfig::class.java)
+                }
+            }
+
+            val lineBitmap = AssetImageResolver.openResolvedAsset(
+                assetManager,
+                "$category/$levelId/line"
+            ).use { BitmapFactory.decodeStream(it) }
+                ?: error("Failed to decode line bitmap for $category/$levelId")
+
+            val levelPath = "$category/$levelId"
+            // Ảnh nét dùng để NHÂN lên khi vẽ. Có thể khác resolution với mask: canvas sẽ
+            // fit nó vào toạ độ mask để hỗ trợ display_line_2x/4x khi zoom sâu.
+            val displayLineBitmap = listOfNotNull(
+                config.assets?.displayLine4x,
+                config.assets?.displayLine2x,
+                config.assets?.displayLine,
+            ).firstNotNullOfOrNull { fileName ->
+                decodeOptionalConfiguredBitmap(
+                    assetManager = assetManager,
+                    levelPath = levelPath,
+                    configuredFileName = fileName,
+                    fallbackBasePath = "$levelPath/$fileName"
+                )
+            } ?: decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = null,
+                fallbackBasePath = "$levelPath/display_line"
+            ) ?: decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.lineRender ?: config.assets?.legacyLineRender,
+                fallbackBasePath = "$levelPath/line_render"
+            ) ?: decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.debugSourceLine,
+                fallbackBasePath = "$levelPath/line"
+            ) ?: lineBitmap
+
+            val displayLineSvg = loadOptionalConfiguredSvg(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.displayLine
+            )
+
+            val maskBitmap = AssetImageResolver.openResolvedAsset(
+                assetManager,
+                "$category/$levelId/mask"
+            ).use {
+                BitmapFactory.decodeStream(
+                    it,
+                    null,
+                    BitmapFactory.Options().apply {
+                        inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                    }
+                )
+            } ?: error("Failed to decode mask bitmap for $category/$levelId")
+
+            val fillCoverageBitmap = decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.fillCoverage,
+                fallbackBasePath = "$levelPath/fill_coverage"
+            )
+
+            val detailBitmap = decodeOptionalConfiguredBitmap(
+                assetManager = assetManager,
+                levelPath = levelPath,
+                configuredFileName = config.assets?.detail,
+                fallbackBasePath = "$levelPath/detail"
+            )
+
+            val regions = if (config.hasRegionMetadata()) {
+                config.toRegionDataList()
+            } else {
+                withContext(defaultDispatcher) {
+                    CentroidCalculator.calculateCentroids(maskBitmap, config.palette)
+                }
+            }
+
+            LevelBundle(
+                config = config,
+                lineBitmap = lineBitmap,
+                displayLineBitmap = displayLineBitmap,
+                displayLineSvg = displayLineSvg,
+                maskBitmap = maskBitmap,
+                detailBitmap = detailBitmap,
+                fillCoverageBitmap = fillCoverageBitmap,
+                regions = regions
+            )
+        }
+}

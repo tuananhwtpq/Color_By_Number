@@ -79,7 +79,7 @@
         tools:visibility="visible" />
 
     <!-- Canvas -->
-    <com.example.baseproject.activities.PaintCanvasView
+    <com.pixlory.color.by.number.activities.PaintCanvasView
         android:id="@+id/paintCanvas"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -135,7 +135,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.example.baseproject.views.LevelProgressBarView
+    <com.pixlory.color.by.number.views.LevelProgressBarView
         android:id="@+id/progressBarLevel"
         android:layout_width="0dp"
         android:layout_height="10dp"
@@ -245,7 +245,7 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="gone">
 
-        <com.example.baseproject.activities.GuideOverlayView
+        <com.pixlory.color.by.number.activities.GuideOverlayView
             android:id="@+id/guideOverlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

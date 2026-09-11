@@ -40,7 +40,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle">
 
-        <com.example.baseproject.views.HighlightOptionView
+        <com.pixlory.color.by.number.views.HighlightOptionView
             android:id="@+id/btnGrayChecker"
             android:layout_width="66dp"
             android:layout_height="66dp"
@@ -55,9 +55,9 @@
                 android:layout_gravity="center"
                 android:src="@drawable/iv_white_grey" />
 
-        </com.example.baseproject.views.HighlightOptionView>
+        </com.pixlory.color.by.number.views.HighlightOptionView>
 
-        <com.example.baseproject.views.HighlightOptionView
+        <com.pixlory.color.by.number.views.HighlightOptionView
             android:id="@+id/btnOrangeChecker"
             android:layout_width="66dp"
             android:layout_height="66dp"
@@ -71,9 +71,9 @@
                 android:layout_gravity="center"
                 android:src="@drawable/iv_orange" />
 
-        </com.example.baseproject.views.HighlightOptionView>
+        </com.pixlory.color.by.number.views.HighlightOptionView>
 
-        <com.example.baseproject.views.HighlightOptionView
+        <com.pixlory.color.by.number.views.HighlightOptionView
             android:id="@+id/btnBlueChecker"
             android:layout_width="66dp"
             android:layout_height="66dp"
@@ -87,9 +87,9 @@
                 android:layout_gravity="center"
                 android:src="@drawable/iv_grey_blue" />
 
-        </com.example.baseproject.views.HighlightOptionView>
+        </com.pixlory.color.by.number.views.HighlightOptionView>
 
-        <com.example.baseproject.views.HighlightOptionView
+        <com.pixlory.color.by.number.views.HighlightOptionView
             android:id="@+id/btnSolidGray"
             android:layout_width="66dp"
             android:layout_height="66dp"
@@ -103,7 +103,7 @@
                 android:layout_gravity="center"
                 android:src="@drawable/iv_grey" />
 
-        </com.example.baseproject.views.HighlightOptionView>
+        </com.pixlory.color.by.number.views.HighlightOptionView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

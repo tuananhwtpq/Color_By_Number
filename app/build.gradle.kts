@@ -9,11 +9,11 @@ plugins {
 // val hintRewardedAdUnitId = providers.gradleProperty("HINT_REWARDED_AD_UNIT_ID").orNull.orEmpty()
 
 android {
-    namespace = "com.example.baseproject"
+    namespace = "com.pixlory.color.by.number"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.baseproject"
+        applicationId = "com.pixlory.color.by.number"
         minSdk = 29
         targetSdk = 36
 //        versionCode = 100

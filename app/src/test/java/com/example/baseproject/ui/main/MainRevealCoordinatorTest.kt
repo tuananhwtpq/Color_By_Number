@@ -1,4 +1,4 @@
-package com.example.baseproject.ui.main
+package com.pixlory.color.by.number.ui.main
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

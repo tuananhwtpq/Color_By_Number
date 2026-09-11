@@ -1,8 +1,8 @@
-package com.example.baseproject.data.repository
+package com.pixlory.color.by.number.data.repository
 
-import com.example.baseproject.data.LevelConfig
-import com.example.baseproject.data.LevelStats
-import com.example.baseproject.data.progressFraction
+import com.pixlory.color.by.number.data.LevelConfig
+import com.pixlory.color.by.number.data.LevelStats
+import com.pixlory.color.by.number.data.progressFraction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

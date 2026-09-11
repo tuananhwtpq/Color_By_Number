@@ -1,4 +1,4 @@
-package com.example.baseproject
+package com.pixlory.color.by.number
 
 import org.junit.Test
 

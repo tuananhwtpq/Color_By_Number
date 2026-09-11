@@ -1,8 +1,8 @@
-package com.example.baseproject.app
+package com.pixlory.color.by.number.app
 
-import com.example.baseproject.data.LevelConfig
-import com.example.baseproject.data.repository.AssetLevelRepository
-import com.example.baseproject.data.repository.LevelBundle
+import com.pixlory.color.by.number.data.LevelConfig
+import com.pixlory.color.by.number.data.repository.AssetLevelRepository
+import com.pixlory.color.by.number.data.repository.LevelBundle
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -1,11 +1,11 @@
-package com.example.baseproject.data.progress
+package com.pixlory.color.by.number.data.progress
 
-import com.example.baseproject.data.LevelConfig
-import com.example.baseproject.data.progressFraction
-import com.example.baseproject.data.progressRegionCount
-import com.example.baseproject.data.repository.AssetLevelRepository
-import com.example.baseproject.data.repository.LevelBundle
-import com.example.baseproject.data.repository.PaintingProgressRepository
+import com.pixlory.color.by.number.data.LevelConfig
+import com.pixlory.color.by.number.data.progressFraction
+import com.pixlory.color.by.number.data.progressRegionCount
+import com.pixlory.color.by.number.data.repository.AssetLevelRepository
+import com.pixlory.color.by.number.data.repository.LevelBundle
+import com.pixlory.color.by.number.data.repository.PaintingProgressRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -1,4 +1,4 @@
-package com.example.baseproject.data
+package com.pixlory.color.by.number.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

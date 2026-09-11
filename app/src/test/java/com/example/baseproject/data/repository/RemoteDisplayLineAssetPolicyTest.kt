@@ -1,6 +1,6 @@
-package com.example.baseproject.data.repository
+package com.pixlory.color.by.number.data.repository
 
-import com.example.baseproject.data.remote.RemoteLevelAssetDto
+import com.pixlory.color.by.number.data.remote.RemoteLevelAssetDto
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

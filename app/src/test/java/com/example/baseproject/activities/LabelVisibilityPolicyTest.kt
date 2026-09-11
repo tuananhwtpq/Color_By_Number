@@ -1,4 +1,4 @@
-package com.example.baseproject.activities
+package com.pixlory.color.by.number.activities
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

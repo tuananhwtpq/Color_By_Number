@@ -45,7 +45,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/btnBack" />
 
-    <com.example.baseproject.views.ThemeOptionView
+    <com.pixlory.color.by.number.views.ThemeOptionView
         android:id="@+id/viewThemeMidnight"
         android:layout_width="0dp"
         android:layout_height="222dp"
@@ -60,7 +60,7 @@
         app:themeOptionTitle="@string/theme_midnight"
         app:themeOptionType="midnight" />
 
-    <com.example.baseproject.views.ThemeOptionView
+    <com.pixlory.color.by.number.views.ThemeOptionView
         android:id="@+id/viewThemeSunset"
         android:layout_width="0dp"
         android:layout_height="222dp"
@@ -73,7 +73,7 @@
         app:themeOptionTitle="@string/theme_sunset"
         app:themeOptionType="sunset" />
 
-    <com.example.baseproject.views.ThemeOptionView
+    <com.pixlory.color.by.number.views.ThemeOptionView
         android:id="@+id/viewThemeSunrise"
         android:layout_width="0dp"
         android:layout_height="222dp"

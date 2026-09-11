@@ -1,4 +1,4 @@
-package com.example.baseproject.highlight
+package com.pixlory.color.by.number.highlight
 
 import android.view.animation.Interpolator
 import org.junit.Assert.assertEquals
