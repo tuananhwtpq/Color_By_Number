@@ -23,8 +23,11 @@ import com.pixlory.color.by.number.BuildConfig
 import com.pixlory.color.by.number.data.AnimatedFiller
 import com.pixlory.color.by.number.data.DetailRevealEngine
 import com.pixlory.color.by.number.data.EdgeUnderpaintEngine
+import com.pixlory.color.by.number.data.FillAssetPrewarmPolicy
+import com.pixlory.color.by.number.data.FillAnimationAssetFactory
 import com.pixlory.color.by.number.data.MaskColorPixelIndex
 import com.pixlory.color.by.number.data.MaskColorPixelRegion
+import com.pixlory.color.by.number.data.PreparedFillAsset
 import com.pixlory.color.by.number.data.RegionData
 import com.pixlory.color.by.number.highlight.HighlightRenderer
 import com.pixlory.color.by.number.highlight.HighlightTheme
@@ -60,6 +63,7 @@ class PaintCanvasView @JvmOverloads constructor(
         private const val DEFAULT_FRAME_DURATION_MS = 16.67f
         private const val FILL_TAP_EFFECT_DURATION_MS = 220L
         private const val HINT_TAP_EFFECT_DURATION_MS = 1_000L
+        private const val FILL_ASSET_PREWARM_BUDGET_BYTES = 16 * 1024 * 1024
         private const val INVALID_POINTER_ID = -1
         private const val FREE_PAN_VISIBLE_EDGE_DP = 48f
 
@@ -163,6 +167,9 @@ class PaintCanvasView @JvmOverloads constructor(
     private var highlightFadeAnimator: ValueAnimator? = null
     private var highlightFadeAlpha = 255
     private val preparingFillColors = mutableSetOf<Int>()
+    private val preparedFillAssets = mutableMapOf<Int, PreparedFillAsset>()
+    private var fillAssetPrewarmJob: Job? = null
+    private var fillAssetPrewarmGeneration = 0
 
     private data class TapEffect(
         val x: Float,
@@ -285,6 +292,8 @@ class PaintCanvasView @JvmOverloads constructor(
                 activeFillers.forEach { it.recycle() }
                 activeFillers.clear()
                 preparingFillColors.clear()
+                clearPreparedFillAssets()
+                currentValidMaskColors = emptyMap()
                 cancelHighlightRendering()
                 renderedHighlightTargets = IntArray(0)
 
@@ -465,7 +474,13 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     fun setFillInAnimationEnabled(enabled: Boolean) {
+        if (fillInAnimationEnabled == enabled) return
         fillInAnimationEnabled = enabled
+        if (enabled) {
+            scheduleFillAssetPrewarm()
+        } else {
+            clearPreparedFillAssets()
+        }
     }
 
     fun resetProgress() {
@@ -486,11 +501,85 @@ class PaintCanvasView @JvmOverloads constructor(
         if (detailBmp != null && detailArr != null) {
             detailBmp.setPixels(detailArr, 0, maskWidth, 0, 0, maskWidth, maskHeight)
         }
+        scheduleFillAssetPrewarm()
         invalidate()
     }
 
     fun setActiveColors(maskToTargetColors: Map<Int, Int>) {
+        if (currentValidMaskColors == maskToTargetColors) return
         currentValidMaskColors = maskToTargetColors
+        scheduleFillAssetPrewarm()
+    }
+
+    private fun scheduleFillAssetPrewarm() {
+        fillAssetPrewarmGeneration++
+        val generation = fillAssetPrewarmGeneration
+        fillAssetPrewarmJob?.cancel()
+        fillAssetPrewarmJob = null
+        preparedFillAssets.values.forEach { it.recycle() }
+        preparedFillAssets.clear()
+
+        if (!fillInAnimationEnabled || currentValidMaskColors.isEmpty()) return
+        val maskPx = maskPixelsArray ?: return
+        val colPx = coloredPixelsArray ?: return
+        val widthSnapshot = maskWidth
+        val heightSnapshot = maskHeight
+        val detailPx = detailSourcePixelsArray
+        val coveragePx = fillCoveragePixelsArray
+        val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) displayLineLumaPixelsArray else null
+        val colorsToPrepare = FillAssetPrewarmPolicy.selectMaskColors(
+            activeMaskColors = currentValidMaskColors.keys - completedMaskColors,
+            regions = maskColorPixelRegions,
+            bitmapBudgetBytes = FILL_ASSET_PREWARM_BUDGET_BYTES,
+        )
+        val targetColors = currentValidMaskColors.toMap()
+
+        fillAssetPrewarmJob = scope.launch {
+            for (maskColor in colorsToPrepare) {
+                val region = maskColorPixelRegions[maskColor] ?: continue
+                val targetColor = targetColors[maskColor] ?: continue
+                val asset = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    val built = FillAnimationAssetFactory.create(
+                        region = region,
+                        maskPixels = maskPx,
+                        coloredPixels = colPx,
+                        detailPixels = detailPx,
+                        fillCoveragePixels = coveragePx,
+                        lineLumaPixels = lineLumaPx,
+                        imageWidth = widthSnapshot,
+                        imageHeight = heightSnapshot,
+                        maskColor = maskColor,
+                        targetColor = targetColor,
+                    )
+                    if (!isActive) {
+                        built.recycle()
+                        null
+                    } else {
+                        built
+                    }
+                } ?: return@launch
+
+                if (
+                    generation != fillAssetPrewarmGeneration ||
+                    maskPixelsArray !== maskPx ||
+                    coloredPixelsArray !== colPx ||
+                    completedMaskColors.contains(maskColor) ||
+                    currentValidMaskColors[maskColor] != targetColor
+                ) {
+                    asset.recycle()
+                    return@launch
+                }
+                preparedFillAssets.put(maskColor, asset)?.recycle()
+            }
+        }
+    }
+
+    private fun clearPreparedFillAssets() {
+        fillAssetPrewarmGeneration++
+        fillAssetPrewarmJob?.cancel()
+        fillAssetPrewarmJob = null
+        preparedFillAssets.values.forEach { it.recycle() }
+        preparedFillAssets.clear()
     }
 
     fun setHighlightTheme(theme: HighlightTheme) {
@@ -509,6 +598,9 @@ class PaintCanvasView @JvmOverloads constructor(
 
     fun setCompletedRegions(completed: Set<Int>) {
         this.completedMaskColors = completed
+        completed.forEach { maskColor ->
+            preparedFillAssets.remove(maskColor)?.recycle()
+        }
         invalidate()
     }
 
@@ -1065,6 +1157,7 @@ class PaintCanvasView @JvmOverloads constructor(
             scope =
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.SupervisorJob())
         }
+        scheduleFillAssetPrewarm()
     }
 
     override fun onDetachedFromWindow() {
@@ -1078,6 +1171,7 @@ class PaintCanvasView @JvmOverloads constructor(
         activeFillers.clear()
         activeEffects.clear()
         preparingFillColors.clear()
+        clearPreparedFillAssets()
         isAnimatingLoop = false
         lastAnimationFrameUptimeMs = 0L
         isViewportAnimationLocked = false
@@ -1112,16 +1206,16 @@ class PaintCanvasView @JvmOverloads constructor(
             return
         }
 
-        val region = regions.find { it.maskColorInt == clickedColor }
-        val maxQueueSize = (region?.area ?: (maskWidth * maskHeight / 10)) + 1000
+        val indexedRegion = maskColorPixelRegions[clickedColor] ?: return
         val widthSnapshot = maskWidth
         val heightSnapshot = maskHeight
         val detailPx = detailSourcePixelsArray
         val coveragePx = fillCoveragePixelsArray
         val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) displayLineLumaPixelsArray else null
         val animationScale = scaleFactor
+        val maxVisibleRevealRadius = Math.hypot(width.toDouble(), height.toDouble()).toFloat() /
+            animationScale.coerceAtLeast(0.0001f)
 
-        preparingFillColors.add(clickedColor)
         activeEffects.add(
             TapEffect(
                 x = startX.toFloat(),
@@ -1131,29 +1225,49 @@ class PaintCanvasView @JvmOverloads constructor(
             )
         )
         startAnimationLoop()
+
+        val cachedAsset = preparedFillAssets.remove(clickedColor)
+        if (cachedAsset != null && cachedAsset.targetColor == targetColor) {
+            activeFillers.add(
+                AnimatedFiller(
+                    preparedAsset = cachedAsset,
+                    startX = startX,
+                    startY = startY,
+                    animationScale = animationScale,
+                    maxVisibleRevealRadius = maxVisibleRevealRadius,
+                    onFinished = { onRegionFilledListener?.invoke(it) },
+                )
+            )
+            clearHighlightForMaskColor(clickedColor)
+            startAnimationLoop()
+            return
+        }
+        cachedAsset?.recycle()
+
+        preparingFillColors.add(clickedColor)
         scope.launch {
-            var filler: AnimatedFiller? = null
+            var preparedAsset: PreparedFillAsset? = null
             try {
-                filler = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                    AnimatedFiller(
+                preparedAsset = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    val built = FillAnimationAssetFactory.create(
+                        region = indexedRegion,
                         maskPixels = maskPx,
                         coloredPixels = colPx,
-                        width = widthSnapshot,
-                        height = heightSnapshot,
-                        maskColor = clickedColor,
-                        targetColor = targetColor,
-                        startX = startX,
-                        startY = startY,
-                        animationScale = animationScale,
-                        maxQueueSize = maxQueueSize,
-                        onFinished = {
-                            onRegionFilledListener?.invoke(it)
-                        },
                         detailPixels = detailPx,
                         fillCoveragePixels = coveragePx,
-                        lineLumaPixels = lineLumaPx
+                        lineLumaPixels = lineLumaPx,
+                        imageWidth = widthSnapshot,
+                        imageHeight = heightSnapshot,
+                        maskColor = clickedColor,
+                        targetColor = targetColor,
                     )
-                }
+                    if (!isActive) {
+                        built.recycle()
+                        null
+                    } else {
+                        built
+                    }
+                } ?: return@launch
 
                 if (
                     maskPixelsArray !== maskPx ||
@@ -1164,16 +1278,25 @@ class PaintCanvasView @JvmOverloads constructor(
                     currentValidMaskColors[clickedColor] != targetColor ||
                     activeFillers.any { it.maskColor == clickedColor }
                 ) {
-                    filler.recycle()
                     return@launch
                 }
 
+                val filler = AnimatedFiller(
+                    preparedAsset = preparedAsset,
+                    startX = startX,
+                    startY = startY,
+                    animationScale = animationScale,
+                    maxVisibleRevealRadius = maxVisibleRevealRadius,
+                    onFinished = { onRegionFilledListener?.invoke(it) },
+                )
+                preparedAsset = null
                 activeFillers.add(filler)
 
                 // Cập nhật ngay lập tức: Xóa highlight của mảng màu này để animation hiện rõ
                 clearHighlightForMaskColor(clickedColor)
                 startAnimationLoop()
             } finally {
+                preparedAsset?.recycle()
                 preparingFillColors.remove(clickedColor)
             }
         }
@@ -1247,6 +1370,7 @@ class PaintCanvasView @JvmOverloads constructor(
                     // cùng mã màu và đồng bộ lớp detail/coverage với buffer chính.
                     completeRegionForMaskColor(filler.maskColor, filler.targetColor)
                     completedMaskColors = completedMaskColors + filler.maskColor
+                    preparedFillAssets.remove(filler.maskColor)?.recycle()
                     filler.dispatchFinished()
                     filler.recycle()
                 }

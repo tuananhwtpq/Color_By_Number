@@ -5,6 +5,39 @@ import org.junit.Test
 
 class AnimationFillFrameComposerTest {
     @Test
+    fun indexedLogicalRegionAnimatesDisconnectedMaskAndCoveragePixelsTogether() {
+        val width = 5
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFF6E5362.toInt()
+        val maskPixels = intArrayOf(maskColor, 0, 0, 0, maskColor)
+        val coveragePixels = intArrayOf(0, maskColor, 0, maskColor, 0)
+        val indexedRegion = requireNotNull(
+            MaskColorPixelIndex.build(
+                maskPixels = maskPixels,
+                fillCoveragePixels = coveragePixels,
+                width = width,
+                height = 1,
+                targetMaskColors = setOf(maskColor),
+            )[maskColor]
+        )
+
+        val frame = AnimationFillFrameComposer.compose(
+            region = indexedRegion,
+            maskPixels = maskPixels,
+            coloredPixels = IntArray(width),
+            detailPixels = null,
+            fillCoveragePixels = coveragePixels,
+            lineLumaPixels = null,
+            imageWidth = width,
+            imageHeight = 1,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+
+        assertEquals(listOf(targetColor, targetColor, 0, targetColor, targetColor), frame.pixels.toList())
+    }
+
+    @Test
     fun includesLineCoveredUnderpaintPixelInAnimationFrame() {
         val width = 5
         val height = 3

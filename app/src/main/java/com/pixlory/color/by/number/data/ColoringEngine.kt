@@ -338,6 +338,44 @@ internal data class AnimationFillFrame(
 
 internal object AnimationFillFrameComposer {
     fun compose(
+        region: MaskColorPixelRegion,
+        maskPixels: IntArray,
+        coloredPixels: IntArray,
+        detailPixels: IntArray?,
+        fillCoveragePixels: IntArray?,
+        lineLumaPixels: IntArray?,
+        imageWidth: Int,
+        imageHeight: Int,
+        maskColor: Int,
+        targetColor: Int,
+        underpaintRadius: Int = 1,
+        edgeDetailSuppressionRadius: Int = 2,
+        inkThreshold: Int = 245,
+        linePixelThreshold: Int = 252
+    ): AnimationFillFrame = compose(
+        region = FillRegionPixels(
+            indices = region.indices,
+            minX = region.minX,
+            maxX = region.maxX,
+            minY = region.minY,
+            maxY = region.maxY,
+        ),
+        maskPixels = maskPixels,
+        coloredPixels = coloredPixels,
+        detailPixels = detailPixels,
+        fillCoveragePixels = fillCoveragePixels,
+        lineLumaPixels = lineLumaPixels,
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+        maskColor = maskColor,
+        targetColor = targetColor,
+        underpaintRadius = underpaintRadius,
+        edgeDetailSuppressionRadius = edgeDetailSuppressionRadius,
+        inkThreshold = inkThreshold,
+        linePixelThreshold = linePixelThreshold,
+    )
+
+    fun compose(
         region: FillRegionPixels,
         maskPixels: IntArray,
         coloredPixels: IntArray,
@@ -527,9 +565,9 @@ internal class GrowingIntArray(initialCapacity: Int) {
 }
 
 internal object FillAnimationTiming {
-    private const val MIN_DURATION_MS = 120f
-    private const val MAX_DURATION_MS = 260f
-    private const val MS_PER_SCREEN_RADIUS_PX = 0.12f
+    private const val MIN_DURATION_MS = 220f
+    private const val REVEAL_SPEED_SCREEN_PX_PER_MS = 2f
+    private const val MAX_ANIMATION_STEP_MS = 34f
 
     /**
      * Tính thời lượng từ bán kính reveal sau khi đã được transform lên màn hình.
@@ -538,66 +576,72 @@ internal object FillAnimationTiming {
      * gốc (vốn không phản ánh kích thước mà mắt người dùng đang thấy).
      */
     fun durationMs(screenRevealRadiusPx: Float): Float {
-        return (MIN_DURATION_MS + screenRevealRadiusPx.coerceAtLeast(0f) * MS_PER_SCREEN_RADIUS_PX)
-            .coerceIn(MIN_DURATION_MS, MAX_DURATION_MS)
+        return MIN_DURATION_MS +
+            screenRevealRadiusPx.coerceAtLeast(0f) / REVEAL_SPEED_SCREEN_PX_PER_MS
     }
 
     fun easedProgress(elapsedMs: Float, durationMs: Float): Float {
         if (durationMs <= 0f) return 1f
-        val linear = (elapsedMs / durationMs).coerceIn(0f, 1f)
-        val remaining = 1f - linear
-        return 1f - remaining * remaining * remaining
+        return (elapsedMs / durationMs).coerceIn(0f, 1f)
+    }
+
+    fun animationStepMs(frameDeltaMs: Float): Float =
+        frameDeltaMs.coerceIn(0f, MAX_ANIMATION_STEP_MS)
+}
+
+internal class PreparedFillAsset(
+    val maskColor: Int,
+    val targetColor: Int,
+    val region: MaskColorPixelRegion,
+    val localBitmap: Bitmap,
+    val left: Int,
+    val top: Int,
+) {
+    val byteCount: Int get() = localBitmap.allocationByteCount
+
+    fun recycle() {
+        if (!localBitmap.isRecycled) localBitmap.recycle()
     }
 }
 
-class AnimatedFiller(
-    private val maskPixels: IntArray,
-    private val coloredPixels: IntArray,
-    private val width: Int,
-    private val height: Int,
-    val maskColor: Int,
-    val targetColor: Int,
-    val startX: Int,
-    val startY: Int,
-    animationScale: Float,
-    maxQueueSize: Int,
-    val onFinished: (Int) -> Unit,
-    // Lớp detail (RGBA) kéo màu phẳng của bảng màu về gần màu ảnh gốc. Không truyền vào thì
-    // lúc loang chỉ thấy màu phẳng rồi mới "nhảy" sang màu đúng khi animation kết thúc — đo
-    // trên data: lệch so với màu gốc 24.1 lúc đang loang so với 4.9 sau khi xong (Art/09).
-    private val detailPixels: IntArray? = null,
-    private val fillCoveragePixels: IntArray? = null,
-    private val lineLumaPixels: IntArray? = null
-) {
-    val localBitmap: Bitmap
-    val left: Int
-    val top: Int
-    var currentRadius = 0f
-    val maxRadius: Float
-    private var elapsedMs = 0f
-    private val durationMs: Float
-    private val indices: IntArray
+internal object FillAssetPrewarmPolicy {
+    fun selectMaskColors(
+        activeMaskColors: Set<Int>,
+        regions: Map<Int, MaskColorPixelRegion>,
+        bitmapBudgetBytes: Int,
+    ): List<Int> {
+        val candidates = activeMaskColors.mapNotNull { maskColor ->
+            regions[maskColor]?.let { region ->
+                maskColor to region.width.toLong() * region.height.toLong() * Int.SIZE_BYTES
+            }
+        }.sortedByDescending { (_, estimatedBytes) -> estimatedBytes }
 
-    init {
-        val maskRegion = FillRegionCollector.collect(
-            maskPixels = maskPixels,
-            width = width,
-            height = height,
-            maskColor = maskColor,
-            startX = startX,
-            startY = startY,
-            expectedRegionArea = maxQueueSize
-        )
-        val region = FillCoverageCollector.includeConnectedCoverage(
-            region = maskRegion,
-            maskPixels = maskPixels,
-            fillCoveragePixels = fillCoveragePixels,
-            width = width,
-            height = height,
-            maskColor = maskColor
-        )
-        indices = region.indices
+        val selected = ArrayList<Int>(candidates.size)
+        var usedBytes = 0L
+        val budget = bitmapBudgetBytes.coerceAtLeast(0).toLong()
+        for ((maskColor, estimatedBytes) in candidates) {
+            if (selected.isEmpty() || usedBytes + estimatedBytes <= budget) {
+                selected += maskColor
+                usedBytes += estimatedBytes
+            }
+        }
+        return selected
+    }
+}
 
+internal object FillAnimationAssetFactory {
+    fun create(
+        region: MaskColorPixelRegion,
+        maskPixels: IntArray,
+        coloredPixels: IntArray,
+        detailPixels: IntArray?,
+        fillCoveragePixels: IntArray?,
+        lineLumaPixels: IntArray?,
+        imageWidth: Int,
+        imageHeight: Int,
+        maskColor: Int,
+        targetColor: Int,
+    ): PreparedFillAsset {
         val frame = AnimationFillFrameComposer.compose(
             region = region,
             maskPixels = maskPixels,
@@ -605,14 +649,44 @@ class AnimatedFiller(
             detailPixels = detailPixels,
             fillCoveragePixels = fillCoveragePixels,
             lineLumaPixels = lineLumaPixels,
-            imageWidth = width,
-            imageHeight = height,
+            imageWidth = imageWidth,
+            imageHeight = imageHeight,
             maskColor = maskColor,
-            targetColor = targetColor
+            targetColor = targetColor,
         )
+        val bitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(frame.pixels, 0, frame.width, 0, 0, frame.width, frame.height)
+        return PreparedFillAsset(
+            maskColor = maskColor,
+            targetColor = targetColor,
+            region = region,
+            localBitmap = bitmap,
+            left = frame.left,
+            top = frame.top,
+        )
+    }
+}
 
-        left = frame.left
-        top = frame.top
+internal class AnimatedFiller(
+    private val preparedAsset: PreparedFillAsset,
+    val startX: Int,
+    val startY: Int,
+    animationScale: Float,
+    maxVisibleRevealRadius: Float,
+    val onFinished: (Int) -> Unit,
+) {
+    val maskColor: Int get() = preparedAsset.maskColor
+    val targetColor: Int get() = preparedAsset.targetColor
+    val localBitmap: Bitmap get() = preparedAsset.localBitmap
+    val left: Int get() = preparedAsset.left
+    val top: Int get() = preparedAsset.top
+    var currentRadius = 0f
+    val maxRadius: Float
+    private var elapsedMs = 0f
+    private val durationMs: Float
+
+    init {
+        val region = preparedAsset.region
         // Tính toán bán kính tối đa cần để loang hết bounding box
         val dx1 = (region.minX - startX).toDouble()
         val dx2 = (region.maxX - startX).toDouble()
@@ -622,41 +696,18 @@ class AnimatedFiller(
         val d2 = Math.sqrt(dx2 * dx2 + dy1 * dy1)
         val d3 = Math.sqrt(dx1 * dx1 + dy2 * dy2)
         val d4 = Math.sqrt(dx2 * dx2 + dy2 * dy2)
-        maxRadius = Math.max(Math.max(d1, d2), Math.max(d3, d4)).toFloat() + 5f
+        val regionRadius = Math.max(Math.max(d1, d2), Math.max(d3, d4)).toFloat() + 5f
+        maxRadius = minOf(regionRadius, maxVisibleRevealRadius.coerceAtLeast(1f))
         durationMs = FillAnimationTiming.durationMs(maxRadius * animationScale.coerceAtLeast(0f))
-
-        localBitmap = Bitmap.createBitmap(frame.width, frame.height, Bitmap.Config.ARGB_8888)
-        localBitmap.setPixels(frame.pixels, 0, frame.width, 0, 0, frame.width, frame.height)
-    }
-
-    /**
-     * Màu hiển thị khi đang loang.
-     *
-     * Pixel thuộc mask thật dùng cùng công thức alpha-over với revealedDetailBitmap.
-     */
-    private fun colorWithDetail(index: Int): Int {
-        return FillColorComposer.colorWithOptionalDetail(
-            isMaskPixel = maskPixels[index] == maskColor,
-            targetColor = targetColor,
-            detailColor = detailPixels?.getOrNull(index),
-        )
     }
 
     /**
      * Cập nhật bán kính loang màu
      */
     fun tick(deltaMs: Float): Boolean {
-        elapsedMs += deltaMs.coerceAtLeast(0f)
+        elapsedMs += FillAnimationTiming.animationStepMs(deltaMs)
         currentRadius = maxRadius * FillAnimationTiming.easedProgress(elapsedMs, durationMs)
-        val isFinished = elapsedMs >= durationMs
-        if (isFinished) {
-            // Giữ frame cuối giống hệt màu đang animation: pixel mask thật có detail,
-            // pixel coverage quanh line chỉ lấy màu nền để không tạo "flash" màu phẳng.
-            for (idx in indices) {
-                coloredPixels[idx] = colorWithDetail(idx)
-            }
-        }
-        return !isFinished
+        return elapsedMs < durationMs
     }
 
     fun dispatchFinished() {
@@ -664,6 +715,6 @@ class AnimatedFiller(
     }
 
     fun recycle() {
-        localBitmap.recycle()
+        preparedAsset.recycle()
     }
 }
