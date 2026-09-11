@@ -47,6 +47,7 @@ class ExportBackendContentTest(unittest.TestCase):
             "line_render": "line_render.png",
             "line": "line.png",
             "mask": "mask.png",
+            "fill_coverage": "fill_coverage.png",
             "preview": "preview_colored.png",
             "debug_regions": "debug_regions.png",
         }
@@ -85,6 +86,7 @@ class ExportBackendContentTest(unittest.TestCase):
         write_png(level_dir / "display_line.png", (252, 252, 252))
         write_png(level_dir / "line_render.png", (250, 250, 250))
         write_png(level_dir / "mask.png", (0, 0, 1))
+        write_png(level_dir / "fill_coverage.png", (0, 0, 1))
         write_png(level_dir / "debug_regions.png", (255, 0, 0))
         if with_detail:
             write_png(level_dir / "detail.png", (30, 40, 50))
@@ -154,15 +156,34 @@ class ExportBackendContentTest(unittest.TestCase):
                 "line": "line.png",
                 "mask": "mask.png",
                 "display_line": "display_line.png",
+                "fill_coverage": "fill_coverage.png",
                 "detail": "detail.png",
             },
         )
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line.png").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "mask.png").exists())
+        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "fill_coverage.png").exists())
         self.assertFalse((self.out / "files" / "levels" / "travel-06" / "debug_regions.png").exists())
 
     def test_detail_is_required(self):
         self.make_level(with_detail=False)
+
+        with self.assertRaises(FileNotFoundError):
+            build_package(
+                assets_path=str(self.assets),
+                res_path=str(self.res),
+                src_path=str(self.src),
+                output_dir=str(self.out),
+                use_webp=False,
+                webp_quality=85,
+                thumbnail_size=512,
+                min_app_version=None,
+                min_supported_app_version=None,
+            )
+
+    def test_fill_coverage_is_required(self):
+        level_dir = self.make_level()
+        (level_dir / "fill_coverage.png").unlink()
 
         with self.assertRaises(FileNotFoundError):
             build_package(
@@ -306,11 +327,13 @@ class ExportBackendContentTest(unittest.TestCase):
                 "line": "line.png",
                 "mask": "mask.png",
                 "display_line": "display_line.webp",
+                "fill_coverage": "fill_coverage.png",
                 "detail": "detail.webp",
             },
         )
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "line.png").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "mask.png").exists())
+        self.assertTrue((self.out / "files" / "levels" / "travel-06" / "fill_coverage.png").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "display_line.webp").exists())
         self.assertTrue((self.out / "files" / "levels" / "travel-06" / "detail.webp").exists())
 
@@ -381,6 +404,7 @@ class ExportBackendContentTest(unittest.TestCase):
                     "config.json",
                     "detail.png",
                     "display_line.png",
+                    "fill_coverage.png",
                     "line.png",
                     "mask.png",
                     "thumbnail.png",

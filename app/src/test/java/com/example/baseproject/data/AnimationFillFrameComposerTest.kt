@@ -155,6 +155,66 @@ class AnimationFillFrameComposerTest {
     }
 
     @Test
+    fun generatedCoverageIsAuthoritativeAndIsNotExpandedAgainAtRuntime() {
+        val width = 4
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFFFFC443.toInt()
+        val maskPixels = intArrayOf(maskColor, 0, 0, 0)
+        val coveragePixels = intArrayOf(maskColor, maskColor, 0, 0)
+        val lineLumaPixels = intArrayOf(255, 255, 20, 255)
+        val indexedRegion = requireNotNull(
+            MaskColorPixelIndex.build(
+                maskPixels = maskPixels,
+                fillCoveragePixels = coveragePixels,
+                width = width,
+                height = 1,
+                targetMaskColors = setOf(maskColor),
+            )[maskColor]
+        )
+
+        val frame = AnimationFillFrameComposer.compose(
+            region = indexedRegion,
+            maskPixels = maskPixels,
+            coloredPixels = IntArray(width),
+            detailPixels = null,
+            fillCoveragePixels = coveragePixels,
+            lineLumaPixels = lineLumaPixels,
+            imageWidth = width,
+            imageHeight = 1,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+
+        assertEquals(targetColor, frame.pixels[1 - frame.left])
+        assertEquals(2, frame.width)
+    }
+
+    @Test
+    fun nearlyWhiteLineAntialiasStaysSoftDuringFillAnimation() {
+        val width = 4
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFFFFC443.toInt()
+        val maskPixels = intArrayOf(maskColor, 0, 0, 0)
+        val lineLumaPixels = intArrayOf(255, 251, 20, 255)
+
+        val frame = AnimationFillFrameComposer.compose(
+            region = FillRegionPixels(intArrayOf(0), 0, 0, 0, 0),
+            maskPixels = maskPixels,
+            coloredPixels = IntArray(width),
+            detailPixels = null,
+            fillCoveragePixels = null,
+            lineLumaPixels = lineLumaPixels,
+            imageWidth = width,
+            imageHeight = 1,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+
+        val underpaintAlpha = (frame.pixels[1 - frame.left] ushr 24) and 0xFF
+        assertTrue(underpaintAlpha in 1..3)
+    }
+
+    @Test
     fun suppressesBrightDetailNearInkInAnimationFrame() {
         val width = 5
         val height = 3

@@ -32,8 +32,11 @@ object RemoteLevelMapper {
         config: LevelConfig,
         detail: RemoteLevelDetailDto,
         assetLoader: RemoteAssetLoader
-    ): LevelConfig =
-        config.copy(
+    ): LevelConfig {
+        val remoteFillCoverage = assetUrl(detail.assets, "FILL_COVERAGE", assetLoader)
+            ?: config.assets?.fillCoverage?.let(assetLoader::resolveUrl)
+
+        return config.copy(
             id = detail.id,
             name = config.name.takeIf { it.isNotBlank() } ?: detail.id,
             category = categoryKey(detail.groupType, detail.groupId),
@@ -52,10 +55,12 @@ object RemoteLevelMapper {
                 line = assetUrl(detail.assets, "LINE", assetLoader),
                 lineRender = assetUrl(detail.assets, "DISPLAY_LINE", assetLoader),
                 mask = assetUrl(detail.assets, "MASK", assetLoader),
+                fillCoverage = remoteFillCoverage,
                 preview = assetUrl(detail.assets, "THUMBNAIL", assetLoader),
                 detail = assetUrl(detail.assets, "DETAIL", assetLoader)
             )
         )
+    }
 
     fun collectionFromGroup(group: RemoteGroupDto, assetLoader: RemoteAssetLoader): AlbumCollection =
         AlbumCollection(

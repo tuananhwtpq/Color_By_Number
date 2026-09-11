@@ -132,6 +132,8 @@ class RemoteLevelRepositoryImpl(
             val displayLineUrl = displayLineAsset?.path ?: lineUrl
             val displayLineIsSvg = RemoteDisplayLineAssetPolicy.isSvg(displayLineAsset)
             val detailUrl = assetPath(detail, "DETAIL")
+            val fillCoverageUrl = assetPath(detail, "FILL_COVERAGE")
+                ?: config.assets?.fillCoverage
 
             val bitmaps = coroutineScope {
                 val lineDeferred = async { assetLoader.downloadBitmap(lineUrl, "LINE") }
@@ -149,13 +151,17 @@ class RemoteLevelRepositoryImpl(
                 }
                 val maskDeferred = async { assetLoader.downloadBitmap(maskUrl, "MASK") }
                 val detailDeferred = detailUrl?.let { async { assetLoader.downloadBitmap(it, "DETAIL") } }
+                val fillCoverageDeferred = fillCoverageUrl?.let {
+                    async { assetLoader.downloadBitmap(it, "FILL_COVERAGE") }
+                }
 
                 LevelBitmaps(
                     line = lineDeferred.await(),
                     displayLine = displayLineDeferred.await(),
                     displayLineSvg = displayLineSvgDeferred?.await(),
                     mask = maskDeferred.await(),
-                    detail = detailDeferred?.await()
+                    detail = detailDeferred?.await(),
+                    fillCoverage = fillCoverageDeferred?.await(),
                 )
             }
 
@@ -174,6 +180,7 @@ class RemoteLevelRepositoryImpl(
                 displayLineSvg = bitmaps.displayLineSvg,
                 maskBitmap = bitmaps.mask,
                 detailBitmap = bitmaps.detail,
+                fillCoverageBitmap = bitmaps.fillCoverage,
                 regions = regions
             )
         }
@@ -212,7 +219,8 @@ class RemoteLevelRepositoryImpl(
         val displayLine: android.graphics.Bitmap,
         val displayLineSvg: com.caverock.androidsvg.SVG?,
         val mask: android.graphics.Bitmap,
-        val detail: android.graphics.Bitmap?
+        val detail: android.graphics.Bitmap?,
+        val fillCoverage: android.graphics.Bitmap?,
     )
 
     private fun requireAsset(detail: RemoteLevelDetailDto, role: String): String =

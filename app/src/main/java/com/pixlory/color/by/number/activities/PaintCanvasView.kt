@@ -653,7 +653,16 @@ class PaintCanvasView @JvmOverloads constructor(
         }
         if (indexedRegion != null) {
             val dirtyBounds = if (BuildConfig.USE_EDGE_UNDERPAINT) {
-                EdgeUnderpaintEngine.dirtyBounds(indexedRegion, maskWidth, maskHeight)
+                EdgeUnderpaintEngine.dirtyBounds(
+                    region = indexedRegion,
+                    imageWidth = maskWidth,
+                    imageHeight = maskHeight,
+                    padding = if (fillCoveragePixelsArray == null) {
+                        EdgeUnderpaintEngine.UNDERPAINT_RADIUS
+                    } else {
+                        0
+                    },
+                )
             } else {
                 com.pixlory.color.by.number.data.PixelBounds(
                     left = indexedRegion.minX,

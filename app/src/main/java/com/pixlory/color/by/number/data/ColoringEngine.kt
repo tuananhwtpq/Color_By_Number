@@ -57,16 +57,19 @@ internal object FillColorComposer {
 
 object EdgeUnderpaintEngine {
     const val UNDERPAINT_RADIUS = 1
+    const val OPAQUE_LINE_LUMA_THRESHOLD = 160
+    const val MAX_LINE_LUMA_THRESHOLD = 252
 
     internal fun dirtyBounds(
         region: MaskColorPixelRegion,
         imageWidth: Int,
         imageHeight: Int,
+        padding: Int = UNDERPAINT_RADIUS,
     ): PixelBounds = PixelBounds(
-        left = (region.minX - UNDERPAINT_RADIUS).coerceAtLeast(0),
-        top = (region.minY - UNDERPAINT_RADIUS).coerceAtLeast(0),
-        right = (region.maxX + UNDERPAINT_RADIUS).coerceAtMost(imageWidth - 1),
-        bottom = (region.maxY + UNDERPAINT_RADIUS).coerceAtMost(imageHeight - 1),
+        left = (region.minX - padding.coerceAtLeast(0)).coerceAtLeast(0),
+        top = (region.minY - padding.coerceAtLeast(0)).coerceAtLeast(0),
+        right = (region.maxX + padding.coerceAtLeast(0)).coerceAtMost(imageWidth - 1),
+        bottom = (region.maxY + padding.coerceAtLeast(0)).coerceAtMost(imageHeight - 1),
     )
 
     fun applyForMaskColor(
@@ -84,28 +87,32 @@ object EdgeUnderpaintEngine {
         lineProximityRadius: Int = 1,
         edgeDetailSuppressionRadius: Int = 2,
         inkThreshold: Int = 245,
-        linePixelThreshold: Int = 252
+        linePixelThreshold: Int = MAX_LINE_LUMA_THRESHOLD
     ) {
         if (lineLumaPixels == null || width <= 0 || height <= 0) return
         if (maskPixels.size != coloredPixels.size || lineLumaPixels.size != maskPixels.size) return
 
         val additions = GrowingIntArray(256)
-        for (idx in maskPixels.indices) {
-            if (!isRegionPixel(idx, maskPixels, fillCoveragePixels, maskColor)) continue
-            val x = idx % width
-            val y = idx / width
-            for (dy in -radius..radius) {
-                val ny = y + dy
-                if (ny !in 0 until height) continue
-                for (dx in -radius..radius) {
-                    val nx = x + dx
-                    if (nx !in 0 until width) continue
-                    val nIdx = ny * width + nx
-                    if (coloredPixels[nIdx] != 0) continue
-                    if (isRegionPixel(nIdx, maskPixels, fillCoveragePixels, maskColor)) continue
-                    if (lineLumaPixels[nIdx] >= linePixelThreshold) continue
-                    if (!isNearInk(nIdx, lineLumaPixels, width, height, lineProximityRadius, inkThreshold)) continue
-                    additions.add(nIdx)
+        // fill_coverage is generated from the exact mask/display-line pair and already owns
+        // every extra display pixel. Expanding it again at runtime creates a second halo.
+        if (fillCoveragePixels == null) {
+            for (idx in maskPixels.indices) {
+                if (maskPixels[idx] != maskColor) continue
+                val x = idx % width
+                val y = idx / width
+                for (dy in -radius..radius) {
+                    val ny = y + dy
+                    if (ny !in 0 until height) continue
+                    for (dx in -radius..radius) {
+                        val nx = x + dx
+                        if (nx !in 0 until width) continue
+                        val nIdx = ny * width + nx
+                        if (coloredPixels[nIdx] != 0) continue
+                        if (maskPixels[nIdx] == maskColor) continue
+                        if (lineLumaPixels[nIdx] >= linePixelThreshold) continue
+                        if (!isNearInk(nIdx, lineLumaPixels, width, height, lineProximityRadius, inkThreshold)) continue
+                        additions.add(nIdx)
+                    }
                 }
             }
         }
@@ -125,7 +132,11 @@ object EdgeUnderpaintEngine {
 
         for (i in 0 until additions.size) {
             val idx = additions[i]
-            coloredPixels[idx] = targetColor
+            coloredPixels[idx] = colorForLineLuma(
+                targetColor = targetColor,
+                lineLuma = lineLumaPixels[idx],
+                maximumLuma = linePixelThreshold,
+            )
             if (detailSourcePixels != null &&
                 revealedDetailPixels != null &&
                 idx in detailSourcePixels.indices &&
@@ -135,6 +146,26 @@ object EdgeUnderpaintEngine {
                 revealedDetailPixels[idx] = if (isBrightDetail(detailColor)) 0 else detailColor
             }
         }
+    }
+
+    internal fun colorForLineLuma(
+        targetColor: Int,
+        lineLuma: Int,
+        maximumLuma: Int = MAX_LINE_LUMA_THRESHOLD,
+    ): Int {
+        val safeMaximum = maximumLuma.coerceIn(1, 255)
+        val safeLuma = lineLuma.coerceIn(0, 255)
+        if (safeLuma >= safeMaximum) return 0
+
+        val underpaintAlpha = if (safeLuma <= OPAQUE_LINE_LUMA_THRESHOLD) {
+            255
+        } else {
+            val softRange = (safeMaximum - OPAQUE_LINE_LUMA_THRESHOLD).coerceAtLeast(1)
+            ((safeMaximum - safeLuma) * 255 / softRange).coerceIn(0, 255)
+        }
+        val targetAlpha = (targetColor ushr 24) and 0xFF
+        val composedAlpha = targetAlpha * underpaintAlpha / 255
+        return (targetColor and 0x00FFFFFF) or (composedAlpha shl 24)
     }
 
     private fun isRegionPixel(
@@ -374,7 +405,7 @@ internal object AnimationFillFrameComposer {
         underpaintRadius: Int = EdgeUnderpaintEngine.UNDERPAINT_RADIUS,
         edgeDetailSuppressionRadius: Int = 2,
         inkThreshold: Int = 245,
-        linePixelThreshold: Int = 252
+        linePixelThreshold: Int = EdgeUnderpaintEngine.MAX_LINE_LUMA_THRESHOLD
     ): AnimationFillFrame = compose(
         region = FillRegionPixels(
             indices = region.indices,
@@ -412,9 +443,13 @@ internal object AnimationFillFrameComposer {
         underpaintRadius: Int = EdgeUnderpaintEngine.UNDERPAINT_RADIUS,
         edgeDetailSuppressionRadius: Int = 2,
         inkThreshold: Int = 245,
-        linePixelThreshold: Int = 252
+        linePixelThreshold: Int = EdgeUnderpaintEngine.MAX_LINE_LUMA_THRESHOLD
     ): AnimationFillFrame {
-        val pad = if (lineLumaPixels != null) underpaintRadius.coerceAtLeast(0) else 0
+        val pad = if (lineLumaPixels != null && fillCoveragePixels == null) {
+            underpaintRadius.coerceAtLeast(0)
+        } else {
+            0
+        }
         val left = (region.minX - pad).coerceAtLeast(0)
         val top = (region.minY - pad).coerceAtLeast(0)
         val right = (region.maxX + pad).coerceAtMost(imageWidth - 1)
@@ -440,7 +475,7 @@ internal object AnimationFillFrameComposer {
             )
         }
 
-        if (lineLumaPixels != null) {
+        if (lineLumaPixels != null && fillCoveragePixels == null) {
             applyLineUnderpaint(
                 region = region,
                 maskPixels = maskPixels,
@@ -523,7 +558,12 @@ internal object AnimationFillFrameComposer {
                     if (coloredPixels[nIdx] != 0) continue
                     if (isRegionPixel(nIdx, maskPixels, fillCoveragePixels, maskColor)) continue
                     if (lineLumaPixels[nIdx] >= linePixelThreshold) continue
-                    localPixels[(ny - localTop) * localWidth + (nx - localLeft)] = targetColor
+                    localPixels[(ny - localTop) * localWidth + (nx - localLeft)] =
+                        EdgeUnderpaintEngine.colorForLineLuma(
+                            targetColor = targetColor,
+                            lineLuma = lineLumaPixels[nIdx],
+                            maximumLuma = linePixelThreshold,
+                        )
                 }
             }
         }

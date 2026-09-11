@@ -1,6 +1,7 @@
 package com.pixlory.color.by.number.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EdgeUnderpaintEngineTest {
@@ -81,6 +82,62 @@ class EdgeUnderpaintEngineTest {
         )
 
         assertEquals(0, coloredPixels[outsideIndex])
+    }
+
+    @Test
+    fun softensNearlyWhiteAntialiasInsteadOfCreatingAnOpaqueColorHalo() {
+        val width = 4
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFFFFC443.toInt()
+        val maskPixels = IntArray(width)
+        val coloredPixels = IntArray(width)
+        val lineLumaPixels = IntArray(width) { 255 }
+        val filledIndex = 0
+        val antialiasIndex = 1
+        val inkIndex = 2
+
+        maskPixels[filledIndex] = maskColor
+        coloredPixels[filledIndex] = targetColor
+        lineLumaPixels[antialiasIndex] = 251
+        lineLumaPixels[inkIndex] = 20
+
+        EdgeUnderpaintEngine.applyForMaskColor(
+            maskPixels = maskPixels,
+            coloredPixels = coloredPixels,
+            lineLumaPixels = lineLumaPixels,
+            width = width,
+            height = 1,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+
+        val underpaintAlpha = (coloredPixels[antialiasIndex] ushr 24) and 0xFF
+        assertTrue(underpaintAlpha in 1..3)
+        assertTrue(underpaintAlpha < 255)
+    }
+
+    @Test
+    fun generatedCoverageIsNotExpandedAgainWhenCompletingARegion() {
+        val width = 4
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFFFFC443.toInt()
+        val maskPixels = intArrayOf(maskColor, 0, 0, 0)
+        val coveragePixels = intArrayOf(maskColor, maskColor, 0, 0)
+        val coloredPixels = intArrayOf(targetColor, targetColor, 0, 0)
+        val lineLumaPixels = intArrayOf(255, 255, 20, 255)
+
+        EdgeUnderpaintEngine.applyForMaskColor(
+            maskPixels = maskPixels,
+            coloredPixels = coloredPixels,
+            lineLumaPixels = lineLumaPixels,
+            width = width,
+            height = 1,
+            maskColor = maskColor,
+            targetColor = targetColor,
+            fillCoveragePixels = coveragePixels,
+        )
+
+        assertEquals(0, coloredPixels[2])
     }
 
     @Test

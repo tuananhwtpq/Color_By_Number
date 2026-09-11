@@ -54,11 +54,12 @@ SKIP_DIRS = {"images", "webkit"}
 
 # role -> (tên file mặc định, khoá trong config["assets"], cho phép nén lossy)
 #
-# MASK và LINE phải giữ nguyên PNG không mất dữ liệu: mỗi pixel là một mã vùng, nén lossy
-# sẽ làm sai logic tô màu.
+# MASK, LINE và FILL_COVERAGE phải giữ nguyên PNG không mất dữ liệu: mỗi pixel là dữ liệu
+# phân loại vùng, nén lossy sẽ làm sai logic tô màu.
 RUNTIME_ASSETS = (
     ("LINE", "line.png", "line", False),
     ("MASK", "mask.png", "mask", False),
+    ("FILL_COVERAGE", "fill_coverage.png", "fill_coverage", False),
     ("DISPLAY_LINE", "display_line.png", "display_line", True),
     ("DETAIL", "detail.png", "detail", True),
 )
