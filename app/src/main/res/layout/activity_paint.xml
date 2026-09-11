@@ -135,6 +135,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <ImageView
+        android:id="@+id/btnZoomNormal"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="20dp"
+        android:elevation="4dp"
+        android:src="@drawable/iv_zoom_in_out"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/progressBarLevel"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible" />
+
     <com.pixlory.color.by.number.views.LevelProgressBarView
         android:id="@+id/progressBarLevel"
         android:layout_width="0dp"

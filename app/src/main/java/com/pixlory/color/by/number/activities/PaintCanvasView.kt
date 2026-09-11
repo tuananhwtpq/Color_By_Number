@@ -133,6 +133,13 @@ class PaintCanvasView @JvmOverloads constructor(
     private var hasViewportGesture = false
 
     var onRegionFilledListener: ((maskColor: Int) -> Unit)? = null
+    var onViewportInitialStateChangedListener: ((isAtInitialViewport: Boolean) -> Unit)? = null
+        set(value) {
+            field = value
+            lastReportedInitialViewportState = null
+            notifyViewportInitialStateIfChanged()
+        }
+    private var lastReportedInitialViewportState: Boolean? = null
 
     private var regions: List<RegionData> = emptyList()
     private val labelPointBuffer = FloatArray(2)
@@ -294,20 +301,23 @@ class PaintCanvasView @JvmOverloads constructor(
                 revealedDetailPixelsArray = if (detailPx != null) IntArray(w * h) else null
                 maskColorPixelRegions = pixelRegions
 
+                viewportAnimator?.cancel()
                 scaleFactor = 1.0f
                 translateX = 0f
                 translateY = 0f
 
-                val viewWidth = width.toFloat()
-                val viewHeight = height.toFloat()
-                if (viewWidth > 0 && viewHeight > 0) {
-                    val scaleX = viewWidth / w
-                    val scaleY = viewHeight / h
-                    scaleFactor = Math.min(scaleX, scaleY)
-                    translateX = (viewWidth - w * scaleFactor) / 2f
-                    translateY = (viewHeight - h * scaleFactor) / 2f
+                ViewportTransformPolicy.fitCenter(
+                    viewportWidth = width.toFloat(),
+                    viewportHeight = height.toFloat(),
+                    artworkWidth = w,
+                    artworkHeight = h,
+                )?.let { fitTransform ->
+                    scaleFactor = fitTransform.scale
+                    translateX = fitTransform.translationX
+                    translateY = fitTransform.translationY
                     updateMatrix()
                 }
+                notifyViewportInitialStateIfChanged()
                 invalidate()
             }
         }
@@ -316,14 +326,29 @@ class PaintCanvasView @JvmOverloads constructor(
         super.onSizeChanged(w, h, oldw, oldh)
         val lw = maskWidth
         val lh = maskHeight
-        if (lw > 0 && lh > 0 && w > 0 && h > 0 && scaleFactor == 1.0f) {
-            val scaleX = w.toFloat() / lw
-            val scaleY = h.toFloat() / lh
-            scaleFactor = Math.min(scaleX, scaleY)
-            translateX = (w.toFloat() - lw * scaleFactor) / 2f
-            translateY = (h.toFloat() - lh * scaleFactor) / 2f
-            updateMatrix()
+        val wasAtInitialViewport = ViewportTransformPolicy.isAtFitCenter(
+            scale = scaleFactor,
+            translationX = translateX,
+            translationY = translateY,
+            viewportWidth = oldw.toFloat(),
+            viewportHeight = oldh.toFloat(),
+            artworkWidth = lw,
+            artworkHeight = lh,
+        )
+        if (lw > 0 && lh > 0 && w > 0 && h > 0 && wasAtInitialViewport) {
+            ViewportTransformPolicy.fitCenter(
+                viewportWidth = w.toFloat(),
+                viewportHeight = h.toFloat(),
+                artworkWidth = lw,
+                artworkHeight = lh,
+            )?.let { fitTransform ->
+                scaleFactor = fitTransform.scale
+                translateX = fitTransform.translationX
+                translateY = fitTransform.translationY
+                updateMatrix()
+            }
         }
+        notifyViewportInitialStateIfChanged()
     }
 
     suspend fun restoreProgressSuspend(completedMap: Map<Int, Int>) =
@@ -714,7 +739,7 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     private fun updateMatrix() {
-        val viewWidth = width.toFloat();
+        val viewWidth = width.toFloat()
         val viewHeight = height.toFloat()
         if (viewWidth == 0f || viewHeight == 0f || maskWidth == 0 || maskHeight == 0) return
 
@@ -729,7 +754,24 @@ class PaintCanvasView @JvmOverloads constructor(
         drawMatrix.postTranslate(translateX, translateY)
         drawMatrix.invert(inverseMatrix)
         applyHighlightOpacity()
+        notifyViewportInitialStateIfChanged()
         invalidate()
+    }
+
+    private fun notifyViewportInitialStateIfChanged() {
+        val isAtInitialViewport = ViewportTransformPolicy.isAtFitCenter(
+            scale = scaleFactor,
+            translationX = translateX,
+            translationY = translateY,
+            viewportWidth = width.toFloat(),
+            viewportHeight = height.toFloat(),
+            artworkWidth = maskWidth,
+            artworkHeight = maskHeight,
+        )
+        if (lastReportedInitialViewportState == isAtInitialViewport) return
+
+        lastReportedInitialViewportState = isAtInitialViewport
+        onViewportInitialStateChangedListener?.invoke(isAtInitialViewport)
     }
 
     /**
@@ -779,23 +821,27 @@ class PaintCanvasView @JvmOverloads constructor(
     }
 
     suspend fun animateToFitScreen() {
-        val viewWidth = width.toFloat()
-        val viewHeight = height.toFloat()
-        if (viewWidth == 0f || viewHeight == 0f || maskWidth == 0 || maskHeight == 0) return
+        val target = ViewportTransformPolicy.fitCenter(
+            viewportWidth = width.toFloat(),
+            viewportHeight = height.toFloat(),
+            artworkWidth = maskWidth,
+            artworkHeight = maskHeight,
+        ) ?: return
 
-        val targetScale = Math.min(viewWidth / maskWidth, viewHeight / maskHeight)
-        val targetTranslateX = (viewWidth - maskWidth * targetScale) / 2f
-        val targetTranslateY = (viewHeight - maskHeight * targetScale) / 2f
-
-        val scaleDelta = Math.abs(scaleFactor - targetScale)
-        val translateDelta = Math.max(
-            Math.abs(translateX - targetTranslateX),
-            Math.abs(translateY - targetTranslateY)
-        )
-        if (scaleDelta < 0.001f && translateDelta < 0.5f) {
-            scaleFactor = targetScale
-            translateX = targetTranslateX
-            translateY = targetTranslateY
+        if (
+            ViewportTransformPolicy.isAtFitCenter(
+                scale = scaleFactor,
+                translationX = translateX,
+                translationY = translateY,
+                viewportWidth = width.toFloat(),
+                viewportHeight = height.toFloat(),
+                artworkWidth = maskWidth,
+                artworkHeight = maskHeight,
+            )
+        ) {
+            scaleFactor = target.scale
+            translateX = target.translationX
+            translateY = target.translationY
             updateMatrix()
             return
         }
@@ -819,8 +865,10 @@ class PaintCanvasView @JvmOverloads constructor(
                 }
 
                 private fun finish() {
-                    if (viewportAnimator === animator) viewportAnimator = null
-                    isViewportAnimationLocked = false
+                    if (viewportAnimator === animator) {
+                        viewportAnimator = null
+                        isViewportAnimationLocked = false
+                    }
                     if (continuation.isActive) continuation.resume(Unit)
                 }
             }
@@ -828,17 +876,19 @@ class PaintCanvasView @JvmOverloads constructor(
             continuation.invokeOnCancellation {
                 animator.removeAllListeners()
                 animator.cancel()
-                if (viewportAnimator === animator) viewportAnimator = null
-                isViewportAnimationLocked = false
+                if (viewportAnimator === animator) {
+                    viewportAnimator = null
+                    isViewportAnimationLocked = false
+                }
             }
 
             animator.duration = COMPLETION_FIT_ANIMATION_DURATION_MS
             animator.interpolator = android.view.animation.DecelerateInterpolator()
             animator.addUpdateListener { anim ->
                 val p = anim.animatedValue as Float
-                scaleFactor = startScale + (targetScale - startScale) * p
-                translateX = startTranslateX + (targetTranslateX - startTranslateX) * p
-                translateY = startTranslateY + (targetTranslateY - startTranslateY) * p
+                scaleFactor = startScale + (target.scale - startScale) * p
+                translateX = startTranslateX + (target.translationX - startTranslateX) * p
+                translateY = startTranslateY + (target.translationY - startTranslateY) * p
                 updateMatrix()
             }
             animator.addListener(listener)
@@ -866,7 +916,10 @@ class PaintCanvasView @JvmOverloads constructor(
         val startTranslateX = translateX
         val startTranslateY = translateY
 
+        viewportAnimator?.cancel()
+        isViewportAnimationLocked = true
         val animator = ValueAnimator.ofFloat(0f, 1f)
+        viewportAnimator = animator
         animator.duration = 400
         animator.interpolator = android.view.animation.DecelerateInterpolator()
         animator.addUpdateListener { anim ->
@@ -876,6 +929,22 @@ class PaintCanvasView @JvmOverloads constructor(
             translateY = startTranslateY + (targetTranslateY - startTranslateY) * p
             updateMatrix()
         }
+        animator.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                finishViewportAnimation()
+            }
+
+            override fun onAnimationCancel(animation: Animator) {
+                finishViewportAnimation()
+            }
+
+            private fun finishViewportAnimation() {
+                if (viewportAnimator === animator) {
+                    viewportAnimator = null
+                    isViewportAnimationLocked = false
+                }
+            }
+        })
         animator.start()
 
         // Thêm hiệu ứng chớp nhá/ripple tại vùng hint để thu hút chú ý

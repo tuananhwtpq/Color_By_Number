@@ -106,6 +106,8 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var isFullColorPreviewVisible: Boolean = false
     private var isFillAllPreviewActive: Boolean = false
     private var isNavigatingToCompleted: Boolean = false
+    private var isCanvasAtInitialViewport: Boolean = true
+    private var isResettingViewport: Boolean = false
     // private var isHintRewardAdInProgress: Boolean = false
     private var fullPreviewBitmap: Bitmap? = null
     private var fullPreviewRenderKey: String? = null
@@ -146,6 +148,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.btnCloseFullPreview.setOnSoundClickListener { hideFullColorPreview() }
         binding.fullPreviewOverlay.setOnSoundClickListener { hideFullColorPreview() }
         binding.ivFullPreview.setOnClickListener { }
+        binding.btnZoomNormal.setOnSoundClickListener { resetCanvasViewport() }
 //        binding.btnReset.setOnClickListener { viewModel.requestResetConfirmation() }
 
         viewModel.loadLevel(
@@ -164,6 +167,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             soundManagerOrNull()?.play(SoundEffect.CLICK)
             viewModel.onRegionFilled(maskInt)
             scheduleThumbnailSave()
+        }
+        binding.paintCanvas.onViewportInitialStateChangedListener = { isAtInitialViewport ->
+            isCanvasAtInitialViewport = isAtInitialViewport
+            updateZoomNormalButtonVisibility()
         }
         binding.fullPreviewOverlay.visibility = View.GONE
         binding.completionAnimationOverlay.visibility = View.GONE
@@ -295,6 +302,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.tvGuide03.visibility = if (step == GUIDE_STEP_03) View.VISIBLE else View.GONE
         binding.iv03.visibility = if (step == GUIDE_STEP_03) View.VISIBLE else View.GONE
 
+        updateZoomNormalButtonVisibility()
         binding.root.post { updateGuideOverlayForCurrentStep() }
     }
 
@@ -608,6 +616,35 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.paintCanvas.isEnabled = !shouldShow
         binding.paintCanvas.isClickable = !shouldShow
         binding.ivFullPreview.setImageBitmap(if (shouldShow) fullPreviewBitmap else null)
+        updateZoomNormalButtonVisibility()
+    }
+
+    private fun resetCanvasViewport() {
+        if (isCanvasAtInitialViewport || isResettingViewport) return
+
+        isResettingViewport = true
+        updateZoomNormalButtonVisibility()
+        lifecycleScope.launch {
+            try {
+                binding.paintCanvas.animateToFitScreen()
+            } finally {
+                isResettingViewport = false
+                updateZoomNormalButtonVisibility()
+            }
+        }
+    }
+
+    private fun updateZoomNormalButtonVisibility() {
+        val shouldShow = !isCanvasAtInitialViewport &&
+            !isPreparationVisible &&
+            !isGuideVisible &&
+            !isLoadingVisible &&
+            !isFullColorPreviewVisible &&
+            !isNavigatingToCompleted &&
+            binding.paintCanvas.visibility == View.VISIBLE
+
+        binding.btnZoomNormal.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        binding.btnZoomNormal.isEnabled = shouldShow && !isResettingViewport
     }
 
     private fun resetFullPreviewCache(renderKey: String) {
@@ -706,6 +743,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
         if (isNavigatingToCompleted) return
         isNavigatingToCompleted = true
+        updateZoomNormalButtonVisibility()
 
         lifecycleScope.launch {
             kotlinx.coroutines.delay(COMPLETED_NAVIGATION_DELAY_MS)
