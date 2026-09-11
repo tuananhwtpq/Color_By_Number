@@ -4,6 +4,8 @@ import java.text.SimpleDateFormat
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 // val hintRewardedAdUnitId = providers.gradleProperty("HINT_REWARDED_AD_UNIT_ID").orNull.orEmpty()
@@ -101,6 +103,10 @@ dependencies {
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.config)
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.messaging)
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.fragment.ktx)
