@@ -5,6 +5,26 @@ import org.junit.Test
 
 class EdgeUnderpaintEngineTest {
     @Test
+    fun dirtyBoundsIncludeOnePixelOfUnderpaintWithoutEscapingTheBitmap() {
+        val region = MaskColorPixelRegion(
+            indices = intArrayOf(8, 9, 14, 15),
+            minX = 2,
+            minY = 1,
+            maxX = 3,
+            maxY = 2,
+        )
+
+        val bounds = EdgeUnderpaintEngine.dirtyBounds(region, imageWidth = 6, imageHeight = 4)
+
+        assertEquals(1, bounds.left)
+        assertEquals(0, bounds.top)
+        assertEquals(4, bounds.right)
+        assertEquals(3, bounds.bottom)
+        assertEquals(4, bounds.width)
+        assertEquals(4, bounds.height)
+    }
+
+    @Test
     fun underpaintsTransparentLineBackgroundPixelNearFilledRegionAndInk() {
         val width = 5
         val height = 3

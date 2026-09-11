@@ -245,7 +245,7 @@ class PaintCanvasView @JvmOverloads constructor(
             val coloredBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val highlightBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val detailRevealBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            val displayLineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+            val displayLineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT) {
                 createDisplayLineLumaPixels(displayLineSvg, displayLine, w, h)
             } else {
                 null
@@ -422,7 +422,7 @@ class PaintCanvasView @JvmOverloads constructor(
                     }
                 }
             }
-            if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+            if (BuildConfig.USE_EDGE_UNDERPAINT) {
                 for ((maskColor, targetColor) in completedMap) {
                     EdgeUnderpaintEngine.applyForMaskColor(
                         maskPixels = maskPx,
@@ -526,7 +526,7 @@ class PaintCanvasView @JvmOverloads constructor(
         val heightSnapshot = maskHeight
         val detailPx = detailSourcePixelsArray
         val coveragePx = fillCoveragePixelsArray
-        val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) displayLineLumaPixelsArray else null
+        val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT) displayLineLumaPixelsArray else null
         val colorsToPrepare = FillAssetPrewarmPolicy.selectMaskColors(
             activeMaskColors = currentValidMaskColors.keys - completedMaskColors,
             regions = maskColorPixelRegions,
@@ -635,7 +635,7 @@ class PaintCanvasView @JvmOverloads constructor(
                 fillCoveragePixels = fillCoveragePixelsArray,
             )
         }
-        if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+        if (BuildConfig.USE_EDGE_UNDERPAINT) {
             EdgeUnderpaintEngine.applyForMaskColor(
                 maskPixels = maskPx,
                 coloredPixels = colArr,
@@ -649,25 +649,35 @@ class PaintCanvasView @JvmOverloads constructor(
                 revealedDetailPixels = detailOutPx,
             )
         }
-        if (indexedRegion != null && !BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) {
+        if (indexedRegion != null) {
+            val dirtyBounds = if (BuildConfig.USE_EDGE_UNDERPAINT) {
+                EdgeUnderpaintEngine.dirtyBounds(indexedRegion, maskWidth, maskHeight)
+            } else {
+                com.pixlory.color.by.number.data.PixelBounds(
+                    left = indexedRegion.minX,
+                    top = indexedRegion.minY,
+                    right = indexedRegion.maxX,
+                    bottom = indexedRegion.maxY,
+                )
+            }
             colBmp.setPixels(
                 colArr,
-                indexedRegion.minY * maskWidth + indexedRegion.minX,
+                dirtyBounds.top * maskWidth + dirtyBounds.left,
                 maskWidth,
-                indexedRegion.minX,
-                indexedRegion.minY,
-                indexedRegion.width,
-                indexedRegion.height,
+                dirtyBounds.left,
+                dirtyBounds.top,
+                dirtyBounds.width,
+                dirtyBounds.height,
             )
             if (detailBmp != null && detailOutPx != null) {
                 detailBmp.setPixels(
                     detailOutPx,
-                    indexedRegion.minY * maskWidth + indexedRegion.minX,
+                    dirtyBounds.top * maskWidth + dirtyBounds.left,
                     maskWidth,
-                    indexedRegion.minX,
-                    indexedRegion.minY,
-                    indexedRegion.width,
-                    indexedRegion.height,
+                    dirtyBounds.left,
+                    dirtyBounds.top,
+                    dirtyBounds.width,
+                    dirtyBounds.height,
                 )
             }
         } else {
@@ -1211,7 +1221,7 @@ class PaintCanvasView @JvmOverloads constructor(
         val heightSnapshot = maskHeight
         val detailPx = detailSourcePixelsArray
         val coveragePx = fillCoveragePixelsArray
-        val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT_DEBUG) displayLineLumaPixelsArray else null
+        val lineLumaPx = if (BuildConfig.USE_EDGE_UNDERPAINT) displayLineLumaPixelsArray else null
         val animationScale = scaleFactor
         val maxVisibleRevealRadius = Math.hypot(width.toDouble(), height.toDouble()).toFloat() /
             animationScale.coerceAtLeast(0.0001f)

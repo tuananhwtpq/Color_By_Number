@@ -1,9 +1,50 @@
 package com.pixlory.color.by.number.data
 
+import com.pixlory.color.by.number.BuildConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AnimationFillFrameComposerTest {
+    @Test
+    fun productionUnderpaintCoversTheSameAntialiasedEdgeDuringAndAfterFill() {
+        assertTrue(BuildConfig.USE_EDGE_UNDERPAINT)
+
+        val width = 3
+        val maskColor = 0xFF000003.toInt()
+        val targetColor = 0xFF6E5362.toInt()
+        val filledIndex = 1
+        val edgeIndex = 2
+        val maskPixels = intArrayOf(0, maskColor, 0)
+        val lineLumaPixels = intArrayOf(255, 255, 20)
+
+        val frame = AnimationFillFrameComposer.compose(
+            region = FillRegionPixels(intArrayOf(filledIndex), 1, 1, 0, 0),
+            maskPixels = maskPixels,
+            coloredPixels = IntArray(width),
+            detailPixels = null,
+            fillCoveragePixels = null,
+            lineLumaPixels = lineLumaPixels,
+            imageWidth = width,
+            imageHeight = 1,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+        assertEquals(targetColor, frame.pixels[edgeIndex - frame.left])
+
+        val finalPixels = IntArray(width)
+        EdgeUnderpaintEngine.applyForMaskColor(
+            maskPixels = maskPixels,
+            coloredPixels = finalPixels,
+            lineLumaPixels = lineLumaPixels,
+            width = width,
+            height = 1,
+            maskColor = maskColor,
+            targetColor = targetColor,
+        )
+        assertEquals(targetColor, finalPixels[edgeIndex])
+    }
+
     @Test
     fun indexedLogicalRegionAnimatesDisconnectedMaskAndCoveragePixelsTogether() {
         val width = 5

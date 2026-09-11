@@ -2,6 +2,16 @@ package com.pixlory.color.by.number.data
 
 import android.graphics.Bitmap
 
+internal data class PixelBounds(
+    val left: Int,
+    val top: Int,
+    val right: Int,
+    val bottom: Int,
+) {
+    val width: Int get() = right - left + 1
+    val height: Int get() = bottom - top + 1
+}
+
 object MaskRegionHitTester {
     fun maskColorAt(
         maskPixels: IntArray,
@@ -46,6 +56,19 @@ internal object FillColorComposer {
 }
 
 object EdgeUnderpaintEngine {
+    const val UNDERPAINT_RADIUS = 1
+
+    internal fun dirtyBounds(
+        region: MaskColorPixelRegion,
+        imageWidth: Int,
+        imageHeight: Int,
+    ): PixelBounds = PixelBounds(
+        left = (region.minX - UNDERPAINT_RADIUS).coerceAtLeast(0),
+        top = (region.minY - UNDERPAINT_RADIUS).coerceAtLeast(0),
+        right = (region.maxX + UNDERPAINT_RADIUS).coerceAtMost(imageWidth - 1),
+        bottom = (region.maxY + UNDERPAINT_RADIUS).coerceAtMost(imageHeight - 1),
+    )
+
     fun applyForMaskColor(
         maskPixels: IntArray,
         coloredPixels: IntArray,
@@ -57,7 +80,7 @@ object EdgeUnderpaintEngine {
         fillCoveragePixels: IntArray? = null,
         detailSourcePixels: IntArray? = null,
         revealedDetailPixels: IntArray? = null,
-        radius: Int = 1,
+        radius: Int = UNDERPAINT_RADIUS,
         lineProximityRadius: Int = 1,
         edgeDetailSuppressionRadius: Int = 2,
         inkThreshold: Int = 245,
@@ -348,7 +371,7 @@ internal object AnimationFillFrameComposer {
         imageHeight: Int,
         maskColor: Int,
         targetColor: Int,
-        underpaintRadius: Int = 1,
+        underpaintRadius: Int = EdgeUnderpaintEngine.UNDERPAINT_RADIUS,
         edgeDetailSuppressionRadius: Int = 2,
         inkThreshold: Int = 245,
         linePixelThreshold: Int = 252
@@ -386,7 +409,7 @@ internal object AnimationFillFrameComposer {
         imageHeight: Int,
         maskColor: Int,
         targetColor: Int,
-        underpaintRadius: Int = 1,
+        underpaintRadius: Int = EdgeUnderpaintEngine.UNDERPAINT_RADIUS,
         edgeDetailSuppressionRadius: Int = 2,
         inkThreshold: Int = 245,
         linePixelThreshold: Int = 252

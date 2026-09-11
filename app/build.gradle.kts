@@ -31,7 +31,7 @@ android {
         buildConfigField("String", "PIXCOLOR_BASE_URL", "\"https://pixlory.dktechgroup.com/\"")
         buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
         buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "false")
-        buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "false")
+        buildConfigField("Boolean", "USE_EDGE_UNDERPAINT", "true")
         // Re-enable this when the rewarded hint flow is enabled again.
         // buildConfigField("String", "HINT_REWARDED_AD_UNIT_ID", "\"$hintRewardedAdUnitId\"")
     }
@@ -60,14 +60,14 @@ android {
         debug {
             buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
             buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "false")
-            buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "false")
+            buildConfigField("Boolean", "USE_EDGE_UNDERPAINT", "true")
         }
 
         release {
             isMinifyEnabled = false
             buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
             buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "false")
-            buildConfigField("Boolean", "USE_EDGE_UNDERPAINT_DEBUG", "false")
+            buildConfigField("Boolean", "USE_EDGE_UNDERPAINT", "true")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
