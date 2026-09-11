@@ -138,7 +138,7 @@
     <com.pixlory.color.by.number.views.LevelProgressBarView
         android:id="@+id/progressBarLevel"
         android:layout_width="0dp"
-        android:layout_height="10dp"
+        android:layout_height="4dp"
         app:layout_constraintBottom_toTopOf="@id/paletteContainer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
@@ -229,7 +229,7 @@
                 android:layout_marginTop="30dp"
                 android:gravity="center"
                 android:text="@string/preparing_picture"
-                android:textColor="@color/grey_600" />
+                android:textColor="@color/white" />
         </LinearLayout>
     </FrameLayout>
 
