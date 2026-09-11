@@ -83,9 +83,11 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
         loadRemoteRealmJob = viewLifecycleOwner.lifecycleScope.launch {
             val remoteRealm = try {
                 val remoteRealms = appContainer.realmRepository.loadRealms()
-                remoteRealms.findByIdVariant(remoteRequestId)
+                remoteRealms.firstOrNull { RealmCatalog.idsMatch(it.id, remoteRequestId) }
                     ?: appContainer.realmRepository.loadRealm(remoteRequestId)
-                    ?: remoteRealms.findByIdVariant(RealmCatalog.default.id)
+                    ?: remoteRealms.firstOrNull {
+                        RealmCatalog.idsMatch(it.id, RealmCatalog.default.id)
+                    }
                     ?: appContainer.realmRepository.loadRealm(RealmCatalog.default.id)
             } catch (e: CancellationException) {
                 throw e
@@ -159,15 +161,6 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
                 binding.progressBar.visibility = View.GONE
             }
         }
-    }
-
-    private fun List<Realm>.findByIdVariant(realmId: String): Realm? {
-        val variants = listOf(
-            realmId,
-            realmId.replace('_', '-'),
-            realmId.replace('-', '_')
-        )
-        return firstOrNull { realm -> realm.id in variants }
     }
 
     override fun onDestroyView() {

@@ -187,13 +187,10 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
     }
 
     private fun Realm.idMatches(otherId: String?): Boolean =
-        otherId != null && idVariants(id).contains(otherId)
+        RealmCatalog.idsMatch(id, otherId)
 
     private fun Realm.idMatchesAny(otherIds: Set<String>): Boolean =
-        idVariants(id).any { it in otherIds }
-
-    private fun idVariants(id: String): Set<String> =
-        setOf(id, id.replace('_', '-'), id.replace('-', '_'))
+        otherIds.any { RealmCatalog.idsMatch(id, it) }
 
     override fun onDestroy() {
         loadRealmsJob?.cancel()

@@ -84,5 +84,12 @@ object RealmCatalog {
 
     val default: Realm get() = realms.first()
 
-    fun findById(id: String?): Realm? = realms.firstOrNull { it.id == id }
+    fun normalizeId(id: String): String = id.replace('-', '_')
+
+    fun idsMatch(firstId: String?, secondId: String?): Boolean =
+        firstId != null && secondId != null && normalizeId(firstId) == normalizeId(secondId)
+
+    fun findById(id: String?): Realm? = id?.let(::normalizeId)?.let { normalizedId ->
+        realms.firstOrNull { normalizeId(it.id) == normalizedId }
+    }
 }

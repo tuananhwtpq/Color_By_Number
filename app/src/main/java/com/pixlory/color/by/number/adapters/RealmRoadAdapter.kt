@@ -41,6 +41,9 @@ class RealmRoadAdapter(
             binding.tvViewUnlock.setOnUnDoubleClick {
                 handleUnlockedViewClick()
             }
+            binding.ivRealmThumbnail.setOnUnDoubleClick {
+                handleThumbnailClick()
+            }
             binding.tvViewLock.setOnUnDoubleClick {
                 handlePrimaryClick()
             }
@@ -82,6 +85,17 @@ class RealmRoadAdapter(
                 R.string.realm_more_to_unlock_format,
                 item.remainingPaintDrops,
             )
+        }
+
+        private fun handleThumbnailClick() {
+            val position = bindingAdapterPosition
+            if (position == RecyclerView.NO_POSITION) return
+
+            if (getItem(position).isUnlocked) {
+                handleUnlockedViewClick()
+            } else {
+                handlePrimaryClick()
+            }
         }
 
         private fun handlePrimaryClick() {

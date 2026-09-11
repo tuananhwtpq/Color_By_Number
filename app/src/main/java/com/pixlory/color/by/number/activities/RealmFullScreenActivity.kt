@@ -2,6 +2,7 @@ package com.pixlory.color.by.number.activities
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieDrawable
@@ -29,6 +30,7 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     companion object {
         private const val EXTRA_REALM_ID = "REALM_ID"
         private const val EXTRA_PROGRESS = "PROGRESS"
+        private const val TAG = "RealmFullScreen"
 
         /**
          * [progress] là vị trí animation đang chạy ở màn trước (0..1) để mở full screen không
@@ -54,20 +56,36 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     override fun initData() {
         val realmId = requestedRealmId
         realm = RealmCatalog.findById(realmId)
-            ?: RealmCatalog.findById(realmId.replace('-', '_'))
             ?: RealmCatalog.default
     }
 
     override fun initView() {
+        binding.lavRealmBackground.addLottieOnCompositionLoadedListener {
+            updateDownloadButton(enabled = true)
+        }
         renderRealm()
         loadRealm()
     }
 
     private fun renderRealm() {
+        updateDownloadButton(enabled = false)
+        val fallbackAnimationRes = realm.animationRes
         binding.lavRealmBackground.apply {
             if (!realm.animationUrl.isNullOrBlank()) {
+                setFailureListener { error ->
+                    Log.w(TAG, "Remote realm animation failed; using bundled fallback", error)
+                    if (fallbackAnimationRes != 0) {
+                        setFailureListener(null)
+                        updateDownloadButton(enabled = false)
+                        setAnimation(fallbackAnimationRes)
+                        progress = intent.getFloatExtra(EXTRA_PROGRESS, 0f).coerceIn(0f, 1f)
+                        repeatCount = LottieDrawable.INFINITE
+                        resumeAnimation()
+                    }
+                }
                 setAnimationFromUrl(realm.animationUrl)
             } else {
+                setFailureListener(null)
                 setAnimation(realm.animationRes)
             }
             progress = intent.getFloatExtra(EXTRA_PROGRESS, 0f).coerceIn(0f, 1f)
@@ -76,6 +94,11 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
             resumeAnimation()
         }
         updateSelectButton()
+    }
+
+    private fun updateDownloadButton(enabled: Boolean) = with(binding.btnDownload) {
+        isEnabled = enabled
+        alpha = if (enabled) 1f else 0.5f
     }
 
     private fun loadRealm() {
@@ -99,13 +122,13 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
         binding.btnBack.setOnUnDoubleClick { finish() }
         binding.btnDownload.setOnUnDoubleClick { saveCurrentFrame() }
         binding.btnSelect.setOnUnDoubleClick {
-            SharedPrefManager.selectedRealmId = realm.id
+            SharedPrefManager.selectedRealmId = RealmCatalog.normalizeId(realm.id)
             updateSelectButton()
         }
     }
 
     private fun updateSelectButton() = with(binding.btnSelect) {
-        val isSelectedRealm = SharedPrefManager.selectedRealmId == realm.id
+        val isSelectedRealm = RealmCatalog.idsMatch(SharedPrefManager.selectedRealmId, realm.id)
         if (isSelectedRealm) {
             text = getString(R.string.selected)
             setTextColor(ContextCompat.getColor(this@RealmFullScreenActivity, R.color.green_500))
@@ -122,6 +145,10 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     private fun saveCurrentFrame() {
         // Render + nén PNG mất vài trăm ms, chặn bấm chồng để không ghi ra nhiều file trùng.
         if (isSavingImage) return
+        val composition = binding.lavRealmBackground.composition ?: run {
+            showToast(getString(R.string.please_wait))
+            return
+        }
         isSavingImage = true
         showSavingDialog()
 
@@ -133,23 +160,27 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
         savingImageJob = lifecycleScope.launch {
             var wasCancelledByUser = false
             val saved = try {
-                val bitmap = if (realm.animationRes != 0) {
-                    LottieFrameRenderer.renderFrame(
-                        context = applicationContext,
-                        animationRes = realm.animationRes,
-                        progress = progress,
-                        targetAspectRatio = aspectRatio
-                    ).getOrNull()
-                } else {
-                    null
-                }
+                val renderResult = LottieFrameRenderer.renderFrame(
+                    composition = composition,
+                    progress = progress,
+                    targetAspectRatio = aspectRatio
+                )
+                val bitmap = renderResult.getOrNull()
 
                 if (bitmap == null) {
+                    Log.e(TAG, "Could not render the displayed realm frame", renderResult.exceptionOrNull())
                     false
                 } else {
                     try {
-                        ImageSaver.saveBitmapToGallery(applicationContext, bitmap, displayName)
-                            .isSuccess
+                        val saveResult = ImageSaver.saveBitmapToGallery(
+                            applicationContext,
+                            bitmap,
+                            displayName
+                        )
+                        saveResult.exceptionOrNull()?.let { error ->
+                            Log.e(TAG, "Could not save the rendered realm frame", error)
+                        }
+                        saveResult.isSuccess
                     } finally {
                         bitmap.recycle()
                     }

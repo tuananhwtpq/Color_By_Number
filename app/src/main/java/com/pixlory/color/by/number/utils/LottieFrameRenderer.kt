@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.annotation.RawRes
 import androidx.core.graphics.createBitmap
+import com.airbnb.lottie.LottieComposition
 import com.airbnb.lottie.LottieCompositionFactory
 import com.airbnb.lottie.LottieDrawable
 import kotlinx.coroutines.CancellationException
@@ -36,39 +37,66 @@ object LottieFrameRenderer {
         progress: Float,
         targetAspectRatio: Float
     ): Result<Bitmap> = withContext(Dispatchers.Default) {
-        try {
+        renderCatching {
             // Composition được LottieCompositionFactory cache theo rawRes, nên màn hình thứ hai
             // (và lần lưu thứ hai) không phải parse lại file JSON.
             val composition = LottieCompositionFactory
                 .fromRawResSync(context, animationRes)
                 .value ?: throw IOException("Cannot load animation $animationRes")
 
-            val compositionWidth = composition.bounds.width().toFloat()
-            val compositionHeight = composition.bounds.height().toFloat()
-            if (compositionWidth <= 0f || compositionHeight <= 0f) {
-                throw IOException("Animation has empty bounds")
-            }
+            renderBitmap(composition, progress, targetAspectRatio)
+        }
+    }
 
-            val height = (compositionHeight * RENDER_SCALE).roundToInt()
-            val width = (height * targetAspectRatio).roundToInt().coerceAtLeast(1)
+    /**
+     * Vẽ một composition đã được Lottie view tải sẵn. Đường này dùng được cho cả animation
+     * bundled trong raw resource và animation tải từ server.
+     */
+    suspend fun renderFrame(
+        composition: LottieComposition,
+        progress: Float,
+        targetAspectRatio: Float
+    ): Result<Bitmap> = withContext(Dispatchers.Default) {
+        renderCatching {
+            renderBitmap(composition, progress, targetAspectRatio)
+        }
+    }
 
-            val drawable = LottieDrawable().apply {
-                setComposition(composition)
-                this.progress = progress.coerceIn(0f, 1f)
-            }
+    private fun renderBitmap(
+        composition: LottieComposition,
+        progress: Float,
+        targetAspectRatio: Float
+    ): Bitmap {
+        val compositionWidth = composition.bounds.width().toFloat()
+        val compositionHeight = composition.bounds.height().toFloat()
+        if (compositionWidth <= 0f || compositionHeight <= 0f) {
+            throw IOException("Animation has empty bounds")
+        }
 
-            // centerCrop: phóng composition tới mức phủ kín khung rồi canh giữa phần thừa.
-            val scale = max(width / compositionWidth, height / compositionHeight)
-            val scaledWidth = (compositionWidth * scale).roundToInt()
-            val scaledHeight = (compositionHeight * scale).roundToInt()
-            drawable.setBounds(0, 0, scaledWidth, scaledHeight)
+        val height = (compositionHeight * RENDER_SCALE).roundToInt()
+        val width = (height * targetAspectRatio).roundToInt().coerceAtLeast(1)
 
-            val bitmap = createBitmap(width, height)
+        val drawable = LottieDrawable().apply {
+            setComposition(composition)
+            this.progress = progress.coerceIn(0f, 1f)
+        }
+
+        // centerCrop: phóng composition tới mức phủ kín khung rồi canh giữa phần thừa.
+        val scale = max(width / compositionWidth, height / compositionHeight)
+        val scaledWidth = (compositionWidth * scale).roundToInt()
+        val scaledHeight = (compositionHeight * scale).roundToInt()
+        drawable.setBounds(0, 0, scaledWidth, scaledHeight)
+
+        return createBitmap(width, height).also { bitmap ->
             val canvas = Canvas(bitmap)
             canvas.translate((width - scaledWidth) / 2f, (height - scaledHeight) / 2f)
             drawable.draw(canvas)
+        }
+    }
 
-            Result.success(bitmap)
+    private inline fun renderCatching(block: () -> Bitmap): Result<Bitmap> =
+        try {
+            Result.success(block())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -76,5 +104,4 @@ object LottieFrameRenderer {
         } catch (e: OutOfMemoryError) {
             Result.failure(IOException("Out of memory while rendering animation frame", e))
         }
-    }
 }

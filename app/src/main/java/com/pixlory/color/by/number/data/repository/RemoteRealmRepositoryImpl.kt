@@ -2,6 +2,7 @@ package com.pixlory.color.by.number.data.repository
 
 import android.util.Log
 import com.pixlory.color.by.number.data.Realm
+import com.pixlory.color.by.number.data.RealmCatalog
 import com.pixlory.color.by.number.data.remote.PixcolorApi
 import com.pixlory.color.by.number.data.remote.RemoteApiException
 import com.pixlory.color.by.number.data.remote.RemoteAssetLoader
@@ -76,9 +77,8 @@ class RemoteRealmRepositoryImpl(
         } ?: throw RemoteApiException("Realm $realmId is missing")
 
     private fun realmIdVariants(realmId: String): List<String> {
-        val dashedId = realmId.replace('_', '-')
-        val underscoredId = realmId.replace('-', '_')
-        return listOf(realmId, dashedId, underscoredId).distinct()
+        val normalizedId = RealmCatalog.normalizeId(realmId)
+        return listOf(realmId, normalizedId, normalizedId.replace('_', '-')).distinct()
     }
 
     private fun cachedRealmFor(realmId: String): Realm? =
