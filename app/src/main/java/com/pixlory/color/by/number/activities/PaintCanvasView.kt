@@ -31,6 +31,7 @@ import com.pixlory.color.by.number.data.PreparedFillAsset
 import com.pixlory.color.by.number.data.RegionData
 import com.pixlory.color.by.number.highlight.HighlightRenderer
 import com.pixlory.color.by.number.highlight.HighlightTheme
+import com.pixlory.color.by.number.highlight.HighlightTargetResolver
 import com.pixlory.color.by.number.highlight.HighlightThemes
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
@@ -166,6 +167,7 @@ class PaintCanvasView @JvmOverloads constructor(
     private var highlightRenderGeneration = 0
     private var highlightFadeAnimator: ValueAnimator? = null
     private var highlightFadeAlpha = 255
+    private val highlightTargetsRetainedDuringFill = mutableSetOf<Int>()
     private val preparingFillColors = mutableSetOf<Int>()
     private val preparedFillAssets = mutableMapOf<Int, PreparedFillAsset>()
     private var fillAssetPrewarmJob: Job? = null
@@ -725,10 +727,11 @@ class PaintCanvasView @JvmOverloads constructor(
             return
         }
 
-        val animatingColors = activeFillers.map { it.maskColor }.toSet()
-        val activeTargets = targetMaskColors.filter {
-            !completedMaskColors.contains(it) && !animatingColors.contains(it)
-        }.distinct().sorted().toIntArray()
+        val activeTargets = HighlightTargetResolver.resolve(
+            requestedTargets = targetMaskColors.toIntArray(),
+            retainedDuringFill = highlightTargetsRetainedDuringFill,
+            completedTargets = completedMaskColors,
+        )
         currentHighlightTargets = activeTargets
 
         if (activeTargets.isEmpty()) {
@@ -744,6 +747,7 @@ class PaintCanvasView @JvmOverloads constructor(
         currentHighlightTargets = IntArray(0)
         renderedHighlightTargets = IntArray(0)
         scheduledHighlightTargets = IntArray(0)
+        highlightTargetsRetainedDuringFill.clear()
         highlightFadeAnimator?.cancel()
         highlightFadeAlpha = 255
         applyHighlightOpacity()
@@ -1216,6 +1220,8 @@ class PaintCanvasView @JvmOverloads constructor(
             return
         }
 
+        retainHighlightDuringFill(clickedColor)
+
         val indexedRegion = maskColorPixelRegions[clickedColor] ?: return
         val widthSnapshot = maskWidth
         val heightSnapshot = maskHeight
@@ -1248,7 +1254,6 @@ class PaintCanvasView @JvmOverloads constructor(
                     onFinished = { onRegionFilledListener?.invoke(it) },
                 )
             )
-            clearHighlightForMaskColor(clickedColor)
             startAnimationLoop()
             return
         }
@@ -1288,6 +1293,9 @@ class PaintCanvasView @JvmOverloads constructor(
                     currentValidMaskColors[clickedColor] != targetColor ||
                     activeFillers.any { it.maskColor == clickedColor }
                 ) {
+                    // The fill was invalidated before it could start (for example, a palette
+                    // change). Do not leave a retained highlight behind.
+                    clearHighlightForMaskColor(clickedColor)
                     return@launch
                 }
 
@@ -1302,8 +1310,6 @@ class PaintCanvasView @JvmOverloads constructor(
                 preparedAsset = null
                 activeFillers.add(filler)
 
-                // Cập nhật ngay lập tức: Xóa highlight của mảng màu này để animation hiện rõ
-                clearHighlightForMaskColor(clickedColor)
                 startAnimationLoop()
             } finally {
                 preparedAsset?.recycle()
@@ -1380,6 +1386,7 @@ class PaintCanvasView @JvmOverloads constructor(
                     // cùng mã màu và đồng bộ lớp detail/coverage với buffer chính.
                     completeRegionForMaskColor(filler.maskColor, filler.targetColor)
                     completedMaskColors = completedMaskColors + filler.maskColor
+                    clearHighlightForMaskColor(filler.maskColor)
                     preparedFillAssets.remove(filler.maskColor)?.recycle()
                     filler.dispatchFinished()
                     filler.recycle()
@@ -1455,12 +1462,23 @@ class PaintCanvasView @JvmOverloads constructor(
         }
         currentHighlightTargets =
             currentHighlightTargets.filter { it != maskColor }.toIntArray()
+        highlightTargetsRetainedDuringFill.remove(maskColor)
         renderedHighlightTargets =
             renderedHighlightTargets.filter { it != maskColor }.toIntArray()
         if (currentHighlightTargets.isEmpty() && renderedHighlightTargets.isNotEmpty()) {
             clearHighlightImmediately()
         } else if (!currentHighlightTargets.contentEquals(renderedHighlightTargets)) {
             rerenderHighlight()
+        }
+    }
+
+    private fun retainHighlightDuringFill(maskColor: Int) {
+        if (
+            currentHighlightTargets.contains(maskColor) ||
+            renderedHighlightTargets.contains(maskColor) ||
+            scheduledHighlightTargets.contains(maskColor)
+        ) {
+            highlightTargetsRetainedDuringFill += maskColor
         }
     }
 
@@ -1482,6 +1500,11 @@ class PaintCanvasView @JvmOverloads constructor(
 
         canvas.drawBitmap(colored, drawMatrix, normalPaint)
 
+        revealedDetailBitmap?.let { canvas.drawBitmap(it, drawMatrix, normalPaint) }
+        // Keep the highlight on pixels that have not been reached by the fill yet.
+        // The expanding fill is drawn afterwards, so it visibly paints over the highlight.
+        canvas.drawBitmap(hl, drawMatrix, highlightPaint)
+
         // Vẽ các mảng màu đang được animation loang ra (Hardware Accelerated)
         for (filler in activeFillers) {
             canvas.save()
@@ -1501,8 +1524,6 @@ class PaintCanvasView @JvmOverloads constructor(
             canvas.drawBitmap(filler.localBitmap, filler.left.toFloat(), filler.top.toFloat(), normalPaint)
             canvas.restore()
         }
-        revealedDetailBitmap?.let { canvas.drawBitmap(it, drawMatrix, normalPaint) }
-        canvas.drawBitmap(hl, drawMatrix, highlightPaint)
         canvas.save()
         canvas.concat(drawMatrix)
         for (effect in activeEffects) {
