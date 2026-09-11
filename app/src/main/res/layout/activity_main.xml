@@ -207,12 +207,12 @@
         android:id="@+id/contentPreparingOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/preparing_content_background"
+        android:background="@drawable/bg_full_main_theme_01"
         android:clickable="true"
         android:elevation="20dp"
         android:focusable="true"
         android:visibility="gone"
-        tools:visibility="gone"
+        tools:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -245,7 +245,7 @@
                 android:layout_marginTop="18dp"
                 android:gravity="center"
                 android:text="@string/preparing_library"
-                android:textColor="@color/grey_600" />
+                android:textColor="@color/white" />
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 

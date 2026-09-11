@@ -153,7 +153,7 @@ class PaintCanvasView @JvmOverloads constructor(
     private var fillInAnimationEnabled: Boolean = true
 
     private var currentValidMaskColors: Map<Int, Int> = emptyMap()
-    private var highlightTheme: HighlightTheme = HighlightThemes.defaultChecker()
+    private var highlightTheme: HighlightTheme = HighlightThemes.defaultChecker(context)
     private var highlightEnabled: Boolean = true
     private var currentHighlightTargets: IntArray = IntArray(0)
     private var renderedHighlightTargets: IntArray = IntArray(0)

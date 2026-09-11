@@ -523,7 +523,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         viewModel.setAutoSwitchColorEnabled(SharedPrefManager.isAutoSwitchColor)
         binding.paintCanvas.setFillInAnimationEnabled(SharedPrefManager.isFillInAnimation)
         binding.paintCanvas.setHighlightTheme(
-            HighlightThemes.fromId(SharedPrefManager.highlightThemeId)
+            HighlightThemes.fromId(this, SharedPrefManager.highlightThemeId)
         )
     }
 

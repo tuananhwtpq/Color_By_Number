@@ -67,7 +67,7 @@ class HighlightAreaDialog : BaseDialog<FragmentHighlightAreaDialogBinding>(
     private fun renderOptionPreviews() {
         binding.btnGrayChecker.setCheckerPreview(
             color(R.color.grey_100),
-            color(R.color.grey_400)
+            color(R.color.grey_600)
         )
         binding.btnOrangeChecker.setCheckerPreview(
             color(R.color.grey_200),

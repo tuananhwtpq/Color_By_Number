@@ -1,9 +1,13 @@
 package com.pixlory.color.by.number.highlight
 
+import android.content.Context
 import android.graphics.Color
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
+import androidx.annotation.ColorRes
+import androidx.core.content.ContextCompat
+import com.pixlory.color.by.number.R
 
 enum class HighlightStyle {
     CHECKER,
@@ -32,21 +36,21 @@ object HighlightThemes {
     const val ID_BLUE_CHECKER = "blue_checker"
     const val ID_SOLID_GRAY = "solid_gray"
 
-    fun fromId(id: String): HighlightTheme {
+    fun fromId(context: Context, id: String): HighlightTheme {
         return when (id) {
-            ID_ORANGE_CHECKER -> orangeChecker()
-            ID_BLUE_CHECKER -> blueChecker()
-            ID_SOLID_GRAY -> solidGray()
-            else -> defaultChecker()
+            ID_ORANGE_CHECKER -> orangeChecker(context)
+            ID_BLUE_CHECKER -> blueChecker(context)
+            ID_SOLID_GRAY -> solidGray(context)
+            else -> defaultChecker(context)
         }
     }
 
-    fun defaultChecker(): HighlightTheme {
+    fun defaultChecker(context: Context): HighlightTheme {
         return HighlightTheme(
             id = ID_GRAY_CHECKER,
             style = HighlightStyle.CHECKER,
-            primaryColor = Color.parseColor("#E7E4E7"),
-            secondaryColor = Color.parseColor("#9E92A0"),
+            primaryColor = color(context, R.color.grey_100),
+            secondaryColor = color(context, R.color.grey_600),
             cellSizePx = 10,
             baseAlpha = 215,
             fadeInDurationMs = 140L,
@@ -55,28 +59,28 @@ object HighlightThemes {
         )
     }
 
-    private fun orangeChecker(): HighlightTheme {
+    private fun orangeChecker(context: Context): HighlightTheme {
         return checkerTheme(
             id = ID_ORANGE_CHECKER,
-            primaryColor = Color.parseColor("#CFC9CF"),
-            secondaryColor = Color.parseColor("#E9752F"),
+            primaryColor = color(context, R.color.grey_200),
+            secondaryColor = color(context, R.color.orange450),
         )
     }
 
-    private fun blueChecker(): HighlightTheme {
+    private fun blueChecker(context: Context): HighlightTheme {
         return checkerTheme(
             id = ID_BLUE_CHECKER,
-            primaryColor = Color.parseColor("#CFC9CF"),
-            secondaryColor = Color.parseColor("#336BCC"),
+            primaryColor = color(context, R.color.grey_200),
+            secondaryColor = color(context, R.color.baby_blue_500),
         )
     }
 
-    private fun solidGray(): HighlightTheme {
+    private fun solidGray(context: Context): HighlightTheme {
         return HighlightTheme(
             id = ID_SOLID_GRAY,
             style = HighlightStyle.SOLID,
-            primaryColor = Color.parseColor("#9E92A0"),
-            secondaryColor = Color.parseColor("#9E92A0"),
+            primaryColor = color(context, R.color.grey_400),
+            secondaryColor = color(context, R.color.grey_400),
             cellSizePx = 10,
             baseAlpha = 255,
             fadeInDurationMs = 200L,
@@ -101,5 +105,9 @@ object HighlightThemes {
             interpolator = AccelerateInterpolator(),
             tinyTargetHaloAlpha = 0
         )
+    }
+
+    private fun color(context: Context, @ColorRes colorRes: Int): Int {
+        return ContextCompat.getColor(context, colorRes)
     }
 }
