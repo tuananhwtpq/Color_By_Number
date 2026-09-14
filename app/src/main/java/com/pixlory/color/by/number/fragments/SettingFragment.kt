@@ -6,6 +6,7 @@ import com.pixlory.color.by.number.activities.AppInfoActivity
 import com.pixlory.color.by.number.activities.LanguageActivity
 import com.pixlory.color.by.number.activities.ThemeActivity
 import com.pixlory.color.by.number.bases.BaseFragment
+import com.pixlory.color.by.number.bases.BaseActivity
 import com.pixlory.color.by.number.databinding.ActivitySettingBinding
 import com.pixlory.color.by.number.dialog.HighlightAreaDialog
 import com.pixlory.color.by.number.utils.AppThemeManager
@@ -28,6 +29,7 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
         renderPaintSettings()
+//        (activity as? BaseActivity<*>)?.renderSettingNative(binding.frNative)
     }
 
     override fun initActionView() {

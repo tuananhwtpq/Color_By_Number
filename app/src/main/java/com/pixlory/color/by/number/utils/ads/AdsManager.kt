@@ -100,7 +100,7 @@ object AdsManager {
             "Count Inter Play: ${countInterDone} - Remote Inter Play: ${RemoteConfig.remoteInterDone} - ${isShowInter()} - Remote Time Show Inter: ${RemoteConfig.remoteTimeShowInter}"
         )
 
-        return (countInterDone % RemoteConfig.remoteInterDone == 0L)
+        return isShowInter() && (countInterDone % RemoteConfig.remoteInterDone == 0L)
     }
 
     fun isReloadingCollapsibleHome(): Boolean {

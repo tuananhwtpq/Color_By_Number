@@ -12,6 +12,8 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.view.View
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
@@ -41,6 +43,8 @@ import com.pixlory.color.by.number.utils.SoundEffect
 import com.pixlory.color.by.number.utils.SoundScene
 import com.pixlory.color.by.number.utils.setOnSoundClickListener
 import com.pixlory.color.by.number.utils.soundManagerOrNull
+import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -113,6 +117,42 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var fullPreviewRenderKey: String? = null
     private var lastRenderedSelectedPaletteIndex: Int = -1
     private var thumbnailSaveJob: Job? = null
+    private val nativeDrawHandler = Handler(Looper.getMainLooper())
+    private var isLoadingCollapsibleDraw = false
+    private val nativeDrawReloadRunnable = object : Runnable {
+        override fun run() {
+            if (
+                RemoteConfig.remoteNativeCollapsibleDraw != 0L &&
+                !isLoadingCollapsibleDraw &&
+                AdsManager.isReloadingCollapsiblePlay()
+            ) {
+                isLoadingCollapsibleDraw = true
+                renderConfiguredCollapsibleNative(
+                    mode = RemoteConfig.remoteNativeCollapsibleDraw,
+                    model = AdsManager.NATIVE_COLLAPSIBLE_DRAW,
+                    host = CollapsibleNativeHost(
+                        binding.frNativeSmall,
+                        binding.frNativeExpand,
+                        binding.whiteLine
+                    )
+                ) {
+                    AdsManager.updateCollapsiblePlay()
+                    isLoadingCollapsibleDraw = false
+                }
+            } else if (RemoteConfig.remoteNativeCollapsibleDraw == 0L) {
+                renderConfiguredCollapsibleNative(
+                    mode = 0L,
+                    model = AdsManager.NATIVE_COLLAPSIBLE_DRAW,
+                    host = CollapsibleNativeHost(
+                        binding.frNativeSmall,
+                        binding.frNativeExpand,
+                        binding.whiteLine
+                    )
+                )
+            }
+            nativeDrawHandler.postDelayed(this, 5_000L)
+        }
+    }
     // private var hintRewardedAdTimeoutJob: Job? = null
     private val guideRectBuffer = Rect()
     // private val hintRewardedAdModel by lazy {
@@ -164,7 +204,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.rvPalette.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.paintCanvas.onRegionFilledListener = { maskInt ->
-            soundManagerOrNull()?.play(SoundEffect.CLICK)
             viewModel.onRegionFilled(maskInt)
             scheduleThumbnailSave()
         }
@@ -755,14 +794,16 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             }
             playCompletionAnimation()
 
-            startActivity(
-                Intent(this@PaintActivity, PictureCompletedActivity::class.java).apply {
-                    putExtra(PictureCompletedActivity.EXTRA_CATEGORY, event.category)
-                    putExtra(PictureCompletedActivity.EXTRA_LEVEL_ID, event.levelId)
-                    putExtra(PictureCompletedActivity.EXTRA_COLLECTED_COUNT, collectedPaintDrops)
-                }
-            )
-            finish()
+            showInterDone(binding.vShowInterAds) {
+                startActivity(
+                    Intent(this@PaintActivity, PictureCompletedActivity::class.java).apply {
+                        putExtra(PictureCompletedActivity.EXTRA_CATEGORY, event.category)
+                        putExtra(PictureCompletedActivity.EXTRA_LEVEL_ID, event.levelId)
+                        putExtra(PictureCompletedActivity.EXTRA_COLLECTED_COUNT, collectedPaintDrops)
+                    }
+                )
+                finish()
+            }
         }
     }
 
@@ -838,37 +879,14 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun showRewardedHintAd() {
-        // Temporary reward flow: btnWatchAd represents a completed ad until AdMob is enabled.
-        // Keep the reward amount identical to the future rewarded-ad callback.
-        SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
-        renderHintBalance()
-
-        // Rewarded AdMob is intentionally disabled for now. Restore this block when the real
-        // rewarded-ad flow is enabled, and remove the temporary reward above at the same time.
-        //
-        // if (isHintRewardAdInProgress) return
-        // if (!BuildConfig.DEBUG && BuildConfig.HINT_REWARDED_AD_UNIT_ID.isBlank()) return
-        // isHintRewardAdInProgress = true
-        // hintRewardedAdTimeoutJob = lifecycleScope.launch {
-        //     delay(HINT_REWARDED_AD_TIMEOUT_MS)
-        //     isHintRewardAdInProgress = false
-        // }
-        // AdmobLib.loadAndShowRewarded(
-        //     activity = this,
-        //     admobRewardedModel = hintRewardedAdModel,
-        //     isShowOnTestDevice = BuildConfig.DEBUG,
-        //     onAdsCloseOrFailed = { earnedReward ->
-        //         isHintRewardAdInProgress = false
-        //         hintRewardedAdTimeoutJob?.cancel()
-        //         if (earnedReward) {
-        //             SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
-        //             renderHintBalance()
-        //         }
-        //     }
-        // )
+        showRewardUnlock {
+            SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
+            renderHintBalance()
+        }
     }
 
     override fun onPause() {
+        nativeDrawHandler.removeCallbacks(nativeDrawReloadRunnable)
         super.onPause()
         if (isFillAllPreviewActive) return
         if (isNavigatingToCompleted) return
@@ -881,6 +899,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         super.onResume()
         syncPaintSettings()
         renderHintBalance()
+        AdsManager.lastCollapsiblePlayShow = 0L
+        nativeDrawHandler.removeCallbacks(nativeDrawReloadRunnable)
+        nativeDrawHandler.post(nativeDrawReloadRunnable)
     }
 
     override fun onDestroy() {

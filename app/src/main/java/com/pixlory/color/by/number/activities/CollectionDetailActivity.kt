@@ -23,6 +23,8 @@ import com.pixlory.color.by.number.utils.setOnSoundClickListener
 import com.pixlory.color.by.number.utils.CompletedPictureActions
 import com.pixlory.color.by.number.ui.collection.CollectionDetailUiState
 import com.pixlory.color.by.number.ui.collection.CollectionDetailViewModel
+import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import kotlinx.coroutines.flow.collectLatest
 
 class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
@@ -86,7 +88,7 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnSoundClickListener { finish() }
+        binding.btnBack.setOnSoundClickListener { showInterBackToHome(binding.vShowInterAds) { finish() } }
     }
 
     override fun onResume() {
@@ -95,6 +97,11 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
         // Quay lại từ màn tô: cập nhật lại % của từng tranh và số "đã xong / tổng".
         viewModel.refreshProgress()
         binding.rvLevels.adapter?.notifyDataSetChanged()
+        renderCollapsibleNative(
+            RemoteConfig.remoteNativeOther == 1L,
+            AdsManager.NATIVE_OTHER,
+            CollapsibleNativeHost(binding.frNativeSmall, binding.frNativeExpand, binding.whiteLine)
+        )
     }
 
     private fun renderState(state: CollectionDetailUiState) {

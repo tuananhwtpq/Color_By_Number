@@ -33,6 +33,7 @@ class SettingActivity : BaseActivity<ActivitySettingBinding>(ActivitySettingBind
     override fun onResume() {
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
+        renderSettingNative(binding.frNative)
     }
 
     override fun initActionView() {

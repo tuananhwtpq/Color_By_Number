@@ -6,6 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieDrawable
 import com.bumptech.glide.Glide
 import com.pixlory.color.by.number.MyApplication
+import com.pixlory.color.by.number.activities.MainActivity
 import com.pixlory.color.by.number.activities.RealmFullScreenActivity
 import com.pixlory.color.by.number.activities.RealmGuideActivity
 import com.pixlory.color.by.number.activities.RealmRoadActivity
@@ -51,21 +52,28 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     override fun initActionView() {
         binding.btnFullScreen.setOnUnDoubleClick {
             if (!isRealmVisualReady) return@setOnUnDoubleClick
-            startActivity(
-                RealmFullScreenActivity.newIntent(
-                    requireContext(),
-                    realm.id,
-                    binding.lavRealmBackground.progress
-                )
+            val intent = RealmFullScreenActivity.newIntent(
+                requireContext(),
+                realm.id,
+                binding.lavRealmBackground.progress
             )
+            (activity as? MainActivity)?.showInterHomeForNavigation {
+                startActivity(intent)
+            } ?: startActivity(intent)
         }
 
         binding.btnNewRealm.setOnUnDoubleClick {
-            startActivity(Intent(requireContext(), RealmRoadActivity::class.java))
+            val intent = Intent(requireContext(), RealmRoadActivity::class.java)
+            (activity as? MainActivity)?.showInterHomeForNavigation {
+                startActivity(intent)
+            } ?: startActivity(intent)
         }
 
         binding.btnGuide.setOnUnDoubleClick {
-            startActivity(Intent(requireActivity(), RealmGuideActivity::class.java))
+            val intent = Intent(requireActivity(), RealmGuideActivity::class.java)
+            (activity as? MainActivity)?.showInterHomeForNavigation {
+                startActivity(intent)
+            } ?: startActivity(intent)
         }
     }
 

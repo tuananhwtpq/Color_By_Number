@@ -58,7 +58,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
 
     override fun initActionView() {
         binding.btnBack.setOnUnDoubleClick {
-            finish()
+            showInterBackToHome(null) { finish() }
         }
 
         binding.btnPaintDropCount.setOnUnDoubleClick {

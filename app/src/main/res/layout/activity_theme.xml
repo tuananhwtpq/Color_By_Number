@@ -85,4 +85,7 @@
         app:themeOptionTitle="@string/theme_sunrise"
         app:themeOptionType="sunrise" />
 
+    <View android:id="@+id/whiteLine" android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/white" android:visibility="gone" app:layout_constraintBottom_toTopOf="@id/frNativeSmall" />
+    <FrameLayout android:id="@+id/frNativeSmall" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" app:layout_constraintBottom_toBottomOf="parent" />
+    <FrameLayout android:id="@+id/frNativeExpand" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone" app:layout_constraintBottom_toBottomOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

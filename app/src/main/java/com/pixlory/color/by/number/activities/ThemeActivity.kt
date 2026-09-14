@@ -5,6 +5,8 @@ import com.pixlory.color.by.number.databinding.ActivityThemeBinding
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import com.pixlory.color.by.number.views.ThemeOptionView
 
 class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::inflate) {
@@ -28,7 +30,7 @@ class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::i
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnUnDoubleClick { finish() }
+        binding.btnBack.setOnUnDoubleClick { showInterBackToHome(null) { finish() } }
         themeOptions.forEach { (view, themeId) ->
             view.setOnUnDoubleClick {
                 selectedThemeId = themeId
@@ -44,5 +46,14 @@ class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::i
         themeOptions.forEach { (view, themeId) ->
             view.isSelected = themeId == selectedThemeId
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderCollapsibleNative(
+            RemoteConfig.remoteNativeOther == 1L,
+            AdsManager.NATIVE_OTHER,
+            CollapsibleNativeHost(binding.frNativeSmall, binding.frNativeExpand, binding.whiteLine)
+        )
     }
 }
