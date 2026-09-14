@@ -19,6 +19,8 @@ object SharedPrefManager {
     private const val IS_BACKGROUND_MUSIC_ENABLED = "is_background_music_enabled"
     private const val IS_SOUND_EFFECTS_ENABLED = "is_sound_effects_enabled"
     private const val HINT_BALANCE = "hint_balance"
+    private const val FIRST_INTER_COUNT = "first_inter_count"
+    private const val FIRST_AOA_COUNT = "first_aoa_count"
     private const val CLAIMED_HINT_ACHIEVEMENT_REWARDS = "claimed_hint_achievement_rewards"
     private lateinit var preferences: SharedPreferences
 
@@ -88,6 +90,27 @@ object SharedPrefManager {
     /** The user starts with two hints on first install; the value persists afterwards. */
     val hintBalance: Int
         get() = preferences.getInt(HINT_BALANCE, DEFAULT_HINT_BALANCE).coerceAtLeast(0)
+
+    var firstInterCount: Int
+        get() = preferences.getInt(FIRST_INTER_COUNT, 0).coerceAtLeast(0)
+        set(value) {
+            preferences.edit { putInt(FIRST_INTER_COUNT, value.coerceAtLeast(0)) }
+        }
+
+    var firstAoaCount: Int
+        get() = preferences.getInt(FIRST_AOA_COUNT, 0).coerceAtLeast(0)
+        set(value) {
+            preferences.edit { putInt(FIRST_AOA_COUNT, value.coerceAtLeast(0)) }
+        }
+
+    /** Sets the first-install balance from Remote Config without overwriting an existing user. */
+    @Synchronized
+    fun initializeHintBalanceIfNeeded(initialBalance: Int) {
+        require(initialBalance >= 0) { "Initial hint balance cannot be negative" }
+        if (!preferences.contains(HINT_BALANCE)) {
+            preferences.edit { putInt(HINT_BALANCE, initialBalance) }
+        }
+    }
 
     /** Returns false without changing storage when there is no usable hint. */
     @Synchronized

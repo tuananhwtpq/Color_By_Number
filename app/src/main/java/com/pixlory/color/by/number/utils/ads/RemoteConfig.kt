@@ -173,6 +173,8 @@ object RemoteConfig {
         timeOut: Long = 8000,
         initListener: InitListener
     ) {
+        isInit = false
+        isTimedOut = false
         val mFirebaseRemoteConfig: FirebaseRemoteConfig = FirebaseRemoteConfig.getInstance()
         val configSettings: FirebaseRemoteConfigSettings = FirebaseRemoteConfigSettings.Builder()
             .setMinimumFetchIntervalInSeconds(0)
