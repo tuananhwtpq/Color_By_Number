@@ -32,12 +32,21 @@
             android:textColor="@color/grey_800"
             tools:text="1" />
 
-        <ImageView
+        <!--        <ImageView-->
+        <!--            android:id="@+id/ivCheck"-->
+        <!--            android:layout_width="38dp"-->
+        <!--            android:layout_height="38dp"-->
+        <!--            android:layout_gravity="center"-->
+        <!--            android:src="@drawable/ic_check_done"-->
+        <!--            android:visibility="gone"-->
+        <!--            tools:visibility="visible" />-->
+
+        <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/ivCheck"
             android:layout_width="38dp"
             android:layout_height="38dp"
             android:layout_gravity="center"
-            android:src="@drawable/ic_check_done"
+            app:lottie_rawRes="@raw/checked_mark"
             android:visibility="gone"
             tools:visibility="visible" />
 

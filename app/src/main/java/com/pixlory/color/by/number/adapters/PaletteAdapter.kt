@@ -1,13 +1,15 @@
 package com.pixlory.color.by.number.adapters
 
 import android.graphics.Color
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.RecyclerView
+import com.airbnb.lottie.LottieAnimationView
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.data.PaletteItem
 import com.pixlory.color.by.number.utils.Constants
@@ -21,10 +23,19 @@ class PaletteAdapter(
     private val onColorSelected: (originalIndex: Int, item: PaletteItem) -> Unit
 ) : RecyclerView.Adapter<PaletteAdapter.ViewHolder>() {
 
+    private companion object {
+        const val COMPLETION_ANIMATION_DURATION_MS = 1_000L
+    }
+
     var selectedIndex = -1
         private set
 
     val completedIndexes = mutableSetOf<Int>()
+    /** Completed colours that stay visible until their completion animation has finished. */
+    private val pendingCompletionAnimations = mutableSetOf<Int>()
+    private val hiddenCompletedIndexes = mutableSetOf<Int>()
+    private val runningCompletionAnimations = mutableSetOf<Int>()
+    private var hasReceivedPaletteState = false
     private var paletteProgress: List<Float> = List(items.size) { 0f }
     private var displayItems: List<DisplayPaletteItem> = buildDisplayItems()
 
@@ -39,7 +50,7 @@ class PaletteAdapter(
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val colorCircle: CardView = view.findViewById(R.id.colorCircle)
         val tvNumber: TextView = view.findViewById(R.id.tvNumber)
-        val ivCheck: ImageView = view.findViewById(R.id.ivCheck)
+        val ivCheck: LottieAnimationView = view.findViewById(R.id.ivCheck)
         val ringView: PaletteRingView = view.findViewById(R.id.ringView)
 
         init {
@@ -68,13 +79,11 @@ class PaletteAdapter(
         holder.colorCircle.setCardBackgroundColor(colorInt)
         holder.tvNumber.text = item.number.toString()
 
-        // Tính màu chữ (trắng hoặc đen) dựa vào độ sáng của màu nền
         val r = Color.red(colorInt)
         val g = Color.green(colorInt)
         val b = Color.blue(colorInt)
         val brightness = 0.299 * r + 0.587 * g + 0.114 * b
         holder.tvNumber.setTextColor(if (brightness > 186) Color.BLACK else Color.WHITE)
-//        holder.tvNumber.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.grey_800))
 
         val isCompleted = completedIndexes.contains(originalIndex)
         val isSelected = originalIndex == selectedIndex
@@ -83,11 +92,18 @@ class PaletteAdapter(
         val hasOuterRing = !isCompleted && isSelected
         holder.setColorCircleDiameter(if (hasOuterRing) 38 else 50)
 
+        if (!isCompleted) holder.ivCheck.cancelAnimation()
+
         when {
             isCompleted -> {
                 holder.ringView.setRingState(PaletteRingView.MODE_NONE)
                 holder.tvNumber.visibility = View.GONE
                 holder.ivCheck.visibility = View.VISIBLE
+                if (pendingCompletionAnimations.contains(originalIndex) &&
+                    runningCompletionAnimations.add(originalIndex)
+                ) {
+                    playCompletionAnimation(holder.ivCheck, originalIndex)
+                }
             }
 
             isSelectedInProgress -> {
@@ -131,13 +147,20 @@ class PaletteAdapter(
     }
 
     fun markCompleted(originalIndex: Int) {
+        if (!completedIndexes.contains(originalIndex)) {
+            pendingCompletionAnimations.add(originalIndex)
+        }
         completedIndexes.add(originalIndex)
         refreshDisplayItems()
     }
 
     fun setCompletedIndexes(indexes: Set<Int>) {
+        val newlyCompleted = indexes - completedIndexes
         completedIndexes.clear()
         completedIndexes.addAll(indexes)
+        pendingCompletionAnimations.retainAll(indexes)
+        hiddenCompletedIndexes.retainAll(indexes)
+        pendingCompletionAnimations.addAll(newlyCompleted)
         refreshDisplayItems()
     }
 
@@ -146,10 +169,24 @@ class PaletteAdapter(
         completedIndexes: Set<Int>,
         paletteProgress: List<Float>
     ) {
+        val newlyCompleted = completedIndexes - this.completedIndexes
+        val noLongerCompleted = this.completedIndexes - completedIndexes
         this.selectedIndex = selectedIndex
         this.completedIndexes.clear()
         this.completedIndexes.addAll(completedIndexes)
         this.paletteProgress = paletteProgress
+
+        pendingCompletionAnimations.retainAll(completedIndexes)
+        runningCompletionAnimations.retainAll(completedIndexes)
+        hiddenCompletedIndexes.removeAll(noLongerCompleted)
+        if (hasReceivedPaletteState) {
+            pendingCompletionAnimations.addAll(newlyCompleted)
+        } else {
+            // Colours restored from saved progress should not replay their animation.
+            hiddenCompletedIndexes.addAll(completedIndexes)
+            hasReceivedPaletteState = true
+        }
+
         this.displayItems = buildDisplayItems()
         notifyDataSetChanged()
     }
@@ -160,7 +197,7 @@ class PaletteAdapter(
 
     private fun buildDisplayItems(): List<DisplayPaletteItem> {
         return items.mapIndexedNotNull { index, item ->
-            if (removeCompletedColors && completedIndexes.contains(index)) {
+            if (removeCompletedColors && hiddenCompletedIndexes.contains(index)) {
                 null
             } else {
                 DisplayPaletteItem(index, item)
@@ -171,6 +208,37 @@ class PaletteAdapter(
     private fun refreshDisplayItems() {
         displayItems = buildDisplayItems()
         notifyDataSetChanged()
+    }
+
+    private fun playCompletionAnimation(animationView: LottieAnimationView, originalIndex: Int) {
+        val listener = object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) = finishCompletionAnimation(originalIndex)
+
+            override fun onAnimationCancel(animation: Animator) = finishCompletionAnimation(originalIndex)
+        }
+
+        animationView.apply {
+            removeAllAnimatorListeners()
+            addAnimatorListener(listener)
+            progress = 0f
+            // Normalise the source animation to one second, regardless of its JSON duration.
+            speed = duration
+                .takeIf { it > 0L }
+                ?.toFloat()
+                ?.div(COMPLETION_ANIMATION_DURATION_MS)
+                ?: 1f
+            playAnimation()
+        }
+    }
+
+    private fun finishCompletionAnimation(originalIndex: Int) {
+        if (!pendingCompletionAnimations.remove(originalIndex)) return
+
+        runningCompletionAnimations.remove(originalIndex)
+        if (removeCompletedColors) {
+            hiddenCompletedIndexes.add(originalIndex)
+            refreshDisplayItems()
+        }
     }
 
     private fun notifyOriginalIndexChanged(originalIndex: Int) {
