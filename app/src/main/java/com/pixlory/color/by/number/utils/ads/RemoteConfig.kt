@@ -161,7 +161,7 @@ object RemoteConfig {
         }
     var remoteLanguageIntroFirstOpen: Long
         get() {
-            return SharedPrefManager.getLong(REMOTE_LANGUAGE_INTRO_FIRST_OPEN, 1L)
+            return SharedPrefManager.getLong(REMOTE_LANGUAGE_INTRO_FIRST_OPEN, 0L)
         }
         set(value) {
             SharedPrefManager.putLong(REMOTE_LANGUAGE_INTRO_FIRST_OPEN, value)
@@ -253,7 +253,7 @@ object RemoteConfig {
         remoteTimeShowInter = 15000L
         remoteTimeLoadNative = 15000L
         remoteLimitHint = 3L
-        remoteLanguageIntroFirstOpen = 1L
+        remoteLanguageIntroFirstOpen = 0L
     }
 
 
