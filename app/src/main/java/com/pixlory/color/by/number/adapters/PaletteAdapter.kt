@@ -1,8 +1,8 @@
 package com.pixlory.color.by.number.adapters
 
-import android.graphics.Color
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -31,10 +31,7 @@ class PaletteAdapter(
         private set
 
     val completedIndexes = mutableSetOf<Int>()
-    /** Completed colours that stay visible until their completion animation has finished. */
-    private val pendingCompletionAnimations = mutableSetOf<Int>()
-    private val hiddenCompletedIndexes = mutableSetOf<Int>()
-    private val runningCompletionAnimations = mutableSetOf<Int>()
+    private val completionTracker = PaletteCompletionStateTracker()
     private var hasReceivedPaletteState = false
     private var paletteProgress: List<Float> = List(items.size) { 0f }
     private var displayItems: List<DisplayPaletteItem> = buildDisplayItems()
@@ -47,11 +44,19 @@ class PaletteAdapter(
         val item: PaletteItem
     )
 
+    private data class BoundCompletionAnimation(
+        val originalIndex: Int,
+        val token: Long,
+        val listener: AnimatorListenerAdapter
+    )
+
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val colorCircle: CardView = view.findViewById(R.id.colorCircle)
         val tvNumber: TextView = view.findViewById(R.id.tvNumber)
         val ivCheck: LottieAnimationView = view.findViewById(R.id.ivCheck)
         val ringView: PaletteRingView = view.findViewById(R.id.ringView)
+        private var boundOriginalIndex = RecyclerView.NO_POSITION
+        private var boundCompletionAnimation: BoundCompletionAnimation? = null
 
         init {
             view.setOnClickListener {
@@ -64,6 +69,69 @@ class PaletteAdapter(
                 }
             }
         }
+
+        fun bindTo(originalIndex: Int) {
+            if (boundOriginalIndex == originalIndex) return
+
+            cancelBoundCompletionAnimation()
+            boundOriginalIndex = originalIndex
+        }
+
+        fun startCompletionAnimation(token: Long) {
+            if (boundCompletionAnimation?.let {
+                    it.originalIndex == boundOriginalIndex && it.token == token
+                } == true) {
+                return
+            }
+
+            cancelBoundCompletionAnimation()
+            val originalIndex = boundOriginalIndex
+            if (originalIndex == RecyclerView.NO_POSITION) return
+
+            lateinit var animation: BoundCompletionAnimation
+            val listener = object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animator: Animator) = completeBoundAnimation(animation)
+
+                override fun onAnimationCancel(animator: Animator) = completeBoundAnimation(animation)
+            }
+            animation = BoundCompletionAnimation(originalIndex, token, listener)
+            boundCompletionAnimation = animation
+
+            runCatching {
+                ivCheck.apply {
+                    addAnimatorListener(listener)
+                    progress = 0f
+                    speed = duration
+                        .takeIf { it > 0L }
+                        ?.toFloat()
+                        ?.div(COMPLETION_ANIMATION_DURATION_MS)
+                        ?: 1f
+                    playAnimation()
+                }
+            }.onFailure {
+                completeBoundAnimation(animation)
+            }
+        }
+
+        fun cancelBoundCompletionAnimation() {
+            val animation = boundCompletionAnimation ?: return
+            boundCompletionAnimation = null
+            ivCheck.removeAnimatorListener(animation.listener)
+            ivCheck.cancelAnimation()
+            scheduleCompletion(animation.originalIndex, animation.token)
+        }
+
+        private fun completeBoundAnimation(animation: BoundCompletionAnimation) {
+            if (boundCompletionAnimation != animation) return
+
+            boundCompletionAnimation = null
+            ivCheck.removeAnimatorListener(animation.listener)
+            scheduleCompletion(animation.originalIndex, animation.token)
+        }
+    }
+
+    init {
+        setHasStableIds(true)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -75,6 +143,7 @@ class PaletteAdapter(
         val displayItem = displayItems[position]
         val item = displayItem.item
         val originalIndex = displayItem.originalIndex
+        holder.bindTo(originalIndex)
         val colorInt = item.getTargetColorInt()
         holder.colorCircle.setCardBackgroundColor(colorInt)
         holder.tvNumber.text = item.number.toString()
@@ -92,18 +161,12 @@ class PaletteAdapter(
         val hasOuterRing = !isCompleted && isSelected
         holder.setColorCircleDiameter(if (hasOuterRing) 38 else 50)
 
-        if (!isCompleted) holder.ivCheck.cancelAnimation()
-
         when {
             isCompleted -> {
                 holder.ringView.setRingState(PaletteRingView.MODE_NONE)
                 holder.tvNumber.visibility = View.GONE
                 holder.ivCheck.visibility = View.VISIBLE
-                if (pendingCompletionAnimations.contains(originalIndex) &&
-                    runningCompletionAnimations.add(originalIndex)
-                ) {
-                    playCompletionAnimation(holder.ivCheck, originalIndex)
-                }
+                completionTracker.claimAnimation(originalIndex)?.let(holder::startCompletionAnimation)
             }
 
             isSelectedInProgress -> {
@@ -139,6 +202,13 @@ class PaletteAdapter(
 
     override fun getItemCount() = displayItems.size
 
+    override fun getItemId(position: Int): Long = displayItems[position].originalIndex.toLong()
+
+    override fun onViewRecycled(holder: ViewHolder) {
+        holder.cancelBoundCompletionAnimation()
+        super.onViewRecycled(holder)
+    }
+
     fun setSelection(originalIndex: Int) {
         val prev = selectedIndex
         selectedIndex = originalIndex
@@ -148,7 +218,7 @@ class PaletteAdapter(
 
     fun markCompleted(originalIndex: Int) {
         if (!completedIndexes.contains(originalIndex)) {
-            pendingCompletionAnimations.add(originalIndex)
+            completionTracker.queue(originalIndex)
         }
         completedIndexes.add(originalIndex)
         refreshDisplayItems()
@@ -156,11 +226,12 @@ class PaletteAdapter(
 
     fun setCompletedIndexes(indexes: Set<Int>) {
         val newlyCompleted = indexes - completedIndexes
+        val noLongerCompleted = completedIndexes - indexes
         completedIndexes.clear()
         completedIndexes.addAll(indexes)
-        pendingCompletionAnimations.retainAll(indexes)
-        hiddenCompletedIndexes.retainAll(indexes)
-        pendingCompletionAnimations.addAll(newlyCompleted)
+        completionTracker.retainOnly(indexes)
+        noLongerCompleted.forEach(completionTracker::clear)
+        newlyCompleted.forEach(completionTracker::queue)
         refreshDisplayItems()
     }
 
@@ -176,14 +247,13 @@ class PaletteAdapter(
         this.completedIndexes.addAll(completedIndexes)
         this.paletteProgress = paletteProgress
 
-        pendingCompletionAnimations.retainAll(completedIndexes)
-        runningCompletionAnimations.retainAll(completedIndexes)
-        hiddenCompletedIndexes.removeAll(noLongerCompleted)
+        completionTracker.retainOnly(completedIndexes)
+        noLongerCompleted.forEach(completionTracker::clear)
         if (hasReceivedPaletteState) {
-            pendingCompletionAnimations.addAll(newlyCompleted)
+            newlyCompleted.forEach(completionTracker::queue)
         } else {
             // Colours restored from saved progress should not replay their animation.
-            hiddenCompletedIndexes.addAll(completedIndexes)
+            completedIndexes.forEach(completionTracker::restoreAsRemoved)
             hasReceivedPaletteState = true
         }
 
@@ -197,7 +267,9 @@ class PaletteAdapter(
 
     private fun buildDisplayItems(): List<DisplayPaletteItem> {
         return items.mapIndexedNotNull { index, item ->
-            if (removeCompletedColors && hiddenCompletedIndexes.contains(index)) {
+            if (removeCompletedColors && completedIndexes.contains(index) &&
+                !completionTracker.isVisible(index)
+            ) {
                 null
             } else {
                 DisplayPaletteItem(index, item)
@@ -210,35 +282,24 @@ class PaletteAdapter(
         notifyDataSetChanged()
     }
 
-    private fun playCompletionAnimation(animationView: LottieAnimationView, originalIndex: Int) {
-        val listener = object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) = finishCompletionAnimation(originalIndex)
-
-            override fun onAnimationCancel(animation: Animator) = finishCompletionAnimation(originalIndex)
-        }
-
-        animationView.apply {
-            removeAllAnimatorListeners()
-            addAnimatorListener(listener)
-            progress = 0f
-            // Normalise the source animation to one second, regardless of its JSON duration.
-            speed = duration
-                .takeIf { it > 0L }
-                ?.toFloat()
-                ?.div(COMPLETION_ANIMATION_DURATION_MS)
-                ?: 1f
-            playAnimation()
+    private fun scheduleCompletion(originalIndex: Int, token: Long) {
+        // Animator callbacks can happen while RecyclerView is laying out. Post the removal so
+        // the callback for one item cannot interrupt the ViewHolder of another animation.
+        if (!displayItems.any { it.originalIndex == originalIndex }) return
+        // The main-loop queue also serialises simultaneous A/B completion callbacks.
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            finishCompletionAnimation(originalIndex, token)
         }
     }
 
-    private fun finishCompletionAnimation(originalIndex: Int) {
-        if (!pendingCompletionAnimations.remove(originalIndex)) return
+    private fun finishCompletionAnimation(originalIndex: Int, token: Long) {
+        if (!completionTracker.complete(originalIndex, token) || !removeCompletedColors) return
 
-        runningCompletionAnimations.remove(originalIndex)
-        if (removeCompletedColors) {
-            hiddenCompletedIndexes.add(originalIndex)
-            refreshDisplayItems()
-        }
+        val displayIndex = displayItems.indexOfFirst { it.originalIndex == originalIndex }
+        if (displayIndex == -1) return
+
+        displayItems = buildDisplayItems()
+        notifyItemRemoved(displayIndex)
     }
 
     private fun notifyOriginalIndexChanged(originalIndex: Int) {
