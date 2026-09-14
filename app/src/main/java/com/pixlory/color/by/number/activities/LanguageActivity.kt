@@ -30,7 +30,6 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
 
     companion object {
         const val EXTRA_FROM_SPLASH = "EXTRA_FROM_SPLASH"
-        const val EXTRA_SHOW_INTRO_AFTER_LANGUAGE = "EXTRA_SHOW_INTRO_AFTER_LANGUAGE"
     }
 
     private val viewModel: LanguageViewModel by viewModels {
@@ -42,12 +41,10 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
     private var adapter: LanguageAdapter? = null
     private var isFromHome = true
     private var isOpeningMain = false
-    private var shouldShowIntroAfterLanguage = false
 
     override fun initData() {
         isFromHome = !intent.getBooleanExtra(EXTRA_FROM_SPLASH, false) &&
                 intent.getBooleanExtra(Constants.LANGUAGE_EXTRA, true)
-        shouldShowIntroAfterLanguage = intent.getBooleanExtra(EXTRA_SHOW_INTRO_AFTER_LANGUAGE, false)
         viewModel.initialize(isFromHome)
         if (!isFromHome) {
             lifecycleScope.launch {
@@ -129,15 +126,6 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
     }
 
     private fun launchMain(showPreparingOverlay: Boolean) {
-        if (shouldShowIntroAfterLanguage) {
-            (application as MyApplication).appContainer.settingsRepository.setIsFirstTimeOpenApp(false)
-            startActivity(Intent(this, IntroActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
-            })
-            overridePendingTransition(0, 0)
-            finish()
-            return
-        }
         val intent = if (showPreparingOverlay) {
             Intent().apply {
                 component = ComponentName(

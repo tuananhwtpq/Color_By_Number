@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 class SplashViewModel : ViewModel() {
     companion object {
-        private const val ADS_FLOW_TIMEOUT_MS = 13_000L
+        private const val ADS_FLOW_TIMEOUT_MS = 5_000L
     }
 
     private val _uiState = MutableStateFlow(SplashUiState())
@@ -41,7 +41,9 @@ class SplashViewModel : ViewModel() {
         }
 
         if (hasNetwork) {
-            viewModelScope.launch { _events.emit(SplashUiEvent.FetchRemoteConfig) }
+            viewModelScope.launch {
+                _events.emit(SplashUiEvent.RequestConsent)
+            }
             viewModelScope.launch {
                 delay(ADS_FLOW_TIMEOUT_MS)
                 onAdsFlowCompleted()
@@ -57,10 +59,6 @@ class SplashViewModel : ViewModel() {
         } else {
             onAdsFlowCompleted()
         }
-    }
-
-    fun onRemoteConfigResolved() {
-        viewModelScope.launch { _events.emit(SplashUiEvent.RequestConsent) }
     }
 
     fun onAdsInitialized() {

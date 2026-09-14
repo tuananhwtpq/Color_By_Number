@@ -43,7 +43,7 @@
         android:elevation="8dp"
         android:gravity="center"
         android:orientation="horizontal"
-        app:layout_constraintBottom_toTopOf="@id/whiteLine"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
@@ -212,11 +212,11 @@
         android:elevation="20dp"
         android:focusable="true"
         android:visibility="gone"
+        tools:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="gone">
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:id="@+id/layoutPreparingContent"
@@ -248,37 +248,5 @@
                 android:textColor="@color/white" />
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <View
-        android:id="@+id/whiteLine"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/white"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/frNativeSmall" />
-
-    <FrameLayout
-        android:id="@+id/frNativeSmall"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:elevation="12dp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
-    <FrameLayout
-        android:id="@+id/frNativeExpand"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:elevation="13dp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent" />
-
-    <View
-        android:id="@+id/vShowInterAds"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="true"
-        android:elevation="30dp"
-        android:visibility="gone" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

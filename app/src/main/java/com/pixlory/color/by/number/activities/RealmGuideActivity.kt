@@ -18,7 +18,7 @@ class RealmGuideActivity : BaseActivity<ActivityRealmGuideBinding>(ActivityRealm
 
     private val onBackPressedCallback = object : OnBackPressedCallback(true){
         override fun handleOnBackPressed() {
-            showInterBackToHome(null) { finish() }
+            finish()
         }
     }
 

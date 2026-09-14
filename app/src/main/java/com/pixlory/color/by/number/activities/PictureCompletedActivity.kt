@@ -27,8 +27,6 @@ import com.pixlory.color.by.number.utils.setOnUnDoubleClick
 import com.pixlory.color.by.number.utils.setOnSoundClickListener
 import com.pixlory.color.by.number.utils.showToast
 import com.pixlory.color.by.number.utils.toFileNameKey
-import com.pixlory.color.by.number.utils.ads.AdsManager
-import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -69,7 +67,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            showInterBackToHome(binding.vShowInterAds) { openCompletedPictureCategory() }
+            finish()
         }
     }
 
@@ -138,11 +136,6 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         super.onResume()
         isOpeningTimelapse = false
         AppThemeManager.applyCompleteBackground(binding.main)
-        renderCollapsibleNative(
-            RemoteConfig.remoteNativeOther == 1L,
-            AdsManager.NATIVE_OTHER,
-            CollapsibleNativeHost(binding.frNativeSmall, binding.frNativeExpand, binding.whiteLine)
-        )
     }
 
     private fun openTimelapsePreview() {

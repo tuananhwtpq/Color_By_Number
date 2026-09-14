@@ -1,9 +1,16 @@
 package com.pixlory.color.by.number.activities
 
+import android.animation.ValueAnimator
 import android.os.SystemClock
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.TextAppearanceSpan
 import android.util.Log
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import androidx.activity.OnBackPressedCallback
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.R
@@ -21,6 +28,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     ActivityTimelapsePreviewBinding::inflate
@@ -31,9 +39,14 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     companion object {
         const val EXTRA_CATEGORY = "CATEGORY"
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
+        const val EXTRA_COLLECTED_COUNT = "COLLECTED_COUNT"
+        const val EXTRA_OPEN_PICTURE_COMPLETED_ON_SKIP = "OPEN_PICTURE_COMPLETED_ON_SKIP"
 
         private const val PREVIEW_DURATION_MS = 15_000L
         private const val PREVIEW_FRAME_DELAY_MS = 33L
+        private const val PERCENTAGE_ANIMATION_DURATION_MS = 900L
+        private const val MIN_PERCENTAGE = 89
+        private const val MAX_PERCENTAGE = 99
         private const val TAG = "TimelapsePreview"
     }
 
@@ -43,10 +56,13 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
 
     private var category: String? = null
     private var levelId: String? = null
+    private var collectedPaintDrops: Int = 0
+    private var shouldOpenPictureCompletedOnClose = false
     private var renderJob: Job? = null
     private var previewJob: Job? = null
     private var renderer: TimelapseFrameRenderer? = null
     private var isClosing = false
+    private val percentageAnimators = mutableListOf<ValueAnimator>()
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -57,6 +73,11 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     override fun initData() {
         category = intent.getStringExtra(EXTRA_CATEGORY)
         levelId = intent.getStringExtra(EXTRA_LEVEL_ID)
+        collectedPaintDrops = intent.getIntExtra(EXTRA_COLLECTED_COUNT, 0)
+        shouldOpenPictureCompletedOnClose = intent.getBooleanExtra(
+            EXTRA_OPEN_PICTURE_COMPLETED_ON_SKIP,
+            false
+        )
         if (category == null || levelId == null) {
             finish()
         }
@@ -64,6 +85,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
 
     override fun initView() {
         onBackPressedDispatcher.addCallback(onBackPressCallback)
+        animatePlayerPercentages()
         loadTimelapse()
     }
 
@@ -71,11 +93,16 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
         binding.btnSkip.setOnUnDoubleClick {
             closePreview()
         }
+
+        binding.ivSkip.setOnUnDoubleClick {
+            closePreview()
+        }
     }
 
     override fun onDestroy() {
         renderJob?.cancel()
         previewJob?.cancel()
+        percentageAnimators.forEach(ValueAnimator::cancel)
         binding.previewView.setFrameBitmap(null)
         super.onDestroy()
     }
@@ -160,6 +187,59 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
         closePreview()
     }
 
+    private fun animatePlayerPercentages() {
+        val surpassedTarget = Random.nextInt(MIN_PERCENTAGE, MAX_PERCENTAGE)
+        val oneMoreTarget = Random.nextInt(surpassedTarget + 1, MAX_PERCENTAGE + 1)
+
+        animatePercentage(surpassedTarget) { percentage ->
+            binding.tvSurpassed.text = getHighlightedPercentageText(
+                R.string.timelapse_surpassed_format,
+                percentage
+            )
+        }
+        animatePercentage(oneMoreTarget) { percentage ->
+            binding.tvOneMore.text = getHighlightedPercentageText(
+                R.string.timelapse_one_more_format,
+                percentage
+            )
+        }
+    }
+
+    private fun animatePercentage(target: Int, onPercentageUpdated: (Int) -> Unit) {
+        onPercentageUpdated(0)
+        ValueAnimator.ofInt(0, target).apply {
+            duration = PERCENTAGE_ANIMATION_DURATION_MS
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { animator ->
+                onPercentageUpdated(animator.animatedValue as Int)
+            }
+            percentageAnimators += this
+            start()
+        }
+    }
+
+    private fun getHighlightedPercentageText(stringRes: Int, percentage: Int): SpannableString {
+        val percentageText = "$percentage%"
+        val text = getString(stringRes, percentageText)
+        val percentageStart = text.indexOf(percentageText)
+        return SpannableString(text).apply {
+            if (percentageStart == -1) return@apply
+            val percentageEnd = percentageStart + percentageText.length
+            setSpan(
+                TextAppearanceSpan(this@TimelapsePreviewActivity, R.style.Caption),
+                percentageStart,
+                percentageEnd,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            setSpan(
+                ForegroundColorSpan(ContextCompat.getColor(this@TimelapsePreviewActivity, R.color.orange500)),
+                percentageStart,
+                percentageEnd,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+    }
+
     /**
      * Bitmap rendering is CPU-bound and cancellation is cooperative.  Wait until every render
      * coroutine has returned before recycling the renderer's buffers.
@@ -167,6 +247,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     private fun closePreview() {
         if (isClosing) return
         isClosing = true
+        percentageAnimators.forEach(ValueAnimator::cancel)
         binding.btnSkip.isEnabled = false
         binding.progressBar.visibility = View.VISIBLE
         binding.previewView.setFrameBitmap(null)
@@ -179,7 +260,30 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
             jobsToStop.joinAll()
             renderer?.recycle()
             renderer = null
-            finish()
+            if (shouldOpenPictureCompletedOnClose) {
+                openPictureCompleted()
+            } else {
+                finish()
+            }
         }
+    }
+
+    private fun openPictureCompleted() {
+        val category = category ?: run {
+            finish()
+            return
+        }
+        val levelId = levelId ?: run {
+            finish()
+            return
+        }
+        startActivity(
+            android.content.Intent(this, PictureCompletedActivity::class.java).apply {
+                putExtra(PictureCompletedActivity.EXTRA_CATEGORY, category)
+                putExtra(PictureCompletedActivity.EXTRA_LEVEL_ID, levelId)
+                putExtra(PictureCompletedActivity.EXTRA_COLLECTED_COUNT, collectedPaintDrops)
+            }
+        )
+        finish()
     }
 }

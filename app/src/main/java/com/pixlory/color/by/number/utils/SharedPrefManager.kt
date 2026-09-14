@@ -19,13 +19,11 @@ object SharedPrefManager {
     private const val IS_BACKGROUND_MUSIC_ENABLED = "is_background_music_enabled"
     private const val IS_SOUND_EFFECTS_ENABLED = "is_sound_effects_enabled"
     private const val HINT_BALANCE = "hint_balance"
-    private const val FIRST_INTER_COUNT = "first_inter_count"
-    private const val FIRST_AOA_COUNT = "first_aoa_count"
     private const val CLAIMED_HINT_ACHIEVEMENT_REWARDS = "claimed_hint_achievement_rewards"
     private lateinit var preferences: SharedPreferences
 
-    const val DEFAULT_HINT_BALANCE = 3
-    const val REWARDED_AD_HINT_AMOUNT = 1
+    const val DEFAULT_HINT_BALANCE = 2
+    const val REWARDED_AD_HINT_AMOUNT = 2
     const val ACHIEVEMENT_HINT_REWARD_AMOUNT = 1
 
     var isShowGuide: Boolean
@@ -87,24 +85,9 @@ object SharedPrefManager {
             preferences.edit { putBoolean(IS_SOUND_EFFECTS_ENABLED, value) }
         }
 
-    var firstInterCount: Int
-        get() = preferences.getInt(FIRST_INTER_COUNT, 1)
-        set(value) = preferences.edit { putInt(FIRST_INTER_COUNT, value) }
-
-    var isFirstAoaCount: Int
-        get() = preferences.getInt(FIRST_AOA_COUNT, 1)
-        set(value) = preferences.edit { putInt(FIRST_AOA_COUNT, value) }
-
     /** The user starts with two hints on first install; the value persists afterwards. */
     val hintBalance: Int
         get() = preferences.getInt(HINT_BALANCE, DEFAULT_HINT_BALANCE).coerceAtLeast(0)
-
-    /** Seeds the balance exactly once. Existing players keep their stored balance. */
-    fun initializeHintBalanceIfNeeded(amount: Int) {
-        if (!preferences.contains(HINT_BALANCE)) {
-            preferences.edit { putInt(HINT_BALANCE, amount.coerceAtLeast(0)) }
-        }
-    }
 
     /** Returns false without changing storage when there is no usable hint. */
     @Synchronized

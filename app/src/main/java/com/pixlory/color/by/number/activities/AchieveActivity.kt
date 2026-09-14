@@ -16,8 +16,6 @@ import com.pixlory.color.by.number.dialog.AchieveDetailDialog
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
-import com.pixlory.color.by.number.utils.ads.AdsManager
-import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -28,7 +26,7 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            showInterBackToHome(binding.vShowInterAds) { finish() }
+            finish()
         }
     }
 
@@ -73,11 +71,6 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
         loadAchievements()
-        renderCollapsibleNative(
-            RemoteConfig.remoteNativeOther == 1L,
-            AdsManager.NATIVE_OTHER,
-            CollapsibleNativeHost(binding.frNativeSmall, binding.frNativeExpand, binding.whiteLine)
-        )
     }
 
     private fun loadAchievements() {

@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?><!--
+<?xml version="1.0" encoding="utf-8"?>
+<!--
   Cả màn hình cuộn chung trong một NestedScrollView. rvLevels bên dưới KHÔNG tự cuộn
   (height=wrap_content + nestedScrollingEnabled=false) để tránh hai vùng cuộn lồng nhau:
   RecyclerView trải hết chiều cao và NestedScrollView là thứ duy nhất cuộn.
@@ -11,8 +12,8 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_full_main_theme_01"
     android:fillViewport="true"
-    android:layoutDirection="ltr"
-    tools:context=".activities.CollectionDetailActivity">
+    tools:context=".activities.CollectionDetailActivity"
+    android:layoutDirection="ltr">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layoutContent"
@@ -147,35 +148,6 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/ivMiniImage02" />
 
-        <View
-            android:id="@+id/whiteLine"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/white"
-            android:visibility="gone"
-            app:layout_constraintBottom_toTopOf="@id/frNativeSmall" />
-
-        <FrameLayout
-            android:id="@+id/frNativeSmall"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
-        <FrameLayout
-            android:id="@+id/frNativeExpand"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
-        <View
-            android:id="@+id/vShowInterAds"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clickable="true"
-            android:elevation="30dp"
-            android:visibility="gone" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.core.widget.NestedScrollView>

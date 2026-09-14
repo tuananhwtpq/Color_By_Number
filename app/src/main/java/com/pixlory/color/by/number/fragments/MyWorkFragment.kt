@@ -10,7 +10,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.activities.AchieveActivity
-import com.pixlory.color.by.number.activities.MainActivity
 import com.pixlory.color.by.number.activities.PaintActivity
 import com.pixlory.color.by.number.adapters.LevelAdapter
 import com.pixlory.color.by.number.app.SimpleViewModelFactory
@@ -196,9 +195,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
         preparationThumbnailFor(level)?.let { thumbnail ->
             intent.putExtra(PaintActivity.EXTRA_PREPARATION_THUMBNAIL, thumbnail)
         }
-        (activity as? MainActivity)?.showInterHomeForNavigation {
-            startActivity(intent)
-        } ?: startActivity(intent)
+        startActivity(intent)
     }
 
     private fun preparationThumbnailFor(level: LevelConfig): String? {

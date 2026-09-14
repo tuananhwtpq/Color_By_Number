@@ -17,7 +17,7 @@ class AppInfoActivity : BaseActivity<ActivityAppInfoBinding>(ActivityAppInfoBind
 
     private val onBackPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            showInterBackToHome(null) { finish() }
+            finish()
         }
     }
 

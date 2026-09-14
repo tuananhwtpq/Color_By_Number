@@ -2,8 +2,6 @@ package com.pixlory.color.by.number.activities
 
 import android.content.Intent
 import android.os.SystemClock
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.ImageView
@@ -28,8 +26,6 @@ import com.pixlory.color.by.number.utils.enableMarquee
 import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.setBottomNavLabelSelected
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
-import com.pixlory.color.by.number.utils.ads.AdsManager
-import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -65,42 +61,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private var preparingTimeoutJob: Job? = null
     private var preparingRevealJob: Job? = null
     private var mainContentInitialized = false
-    private val nativeHomeHandler = Handler(Looper.getMainLooper())
-    private var isLoadingCollapsibleHome = false
-    private val nativeHomeReloadRunnable = object : Runnable {
-        override fun run() {
-            if (
-                RemoteConfig.remoteNativeCollapsibleHome != 0L &&
-                !isLoadingCollapsibleHome &&
-                AdsManager.isReloadingCollapsibleHome()
-            ) {
-                isLoadingCollapsibleHome = true
-                renderConfiguredCollapsibleNative(
-                    mode = RemoteConfig.remoteNativeCollapsibleHome,
-                    model = AdsManager.NATIVE_COLLAPSIBLE_HOME,
-                    host = CollapsibleNativeHost(
-                        binding.frNativeSmall,
-                        binding.frNativeExpand,
-                        binding.whiteLine
-                    )
-                ) {
-                    AdsManager.updateCollapsibleHome()
-                    isLoadingCollapsibleHome = false
-                }
-            } else if (RemoteConfig.remoteNativeCollapsibleHome == 0L) {
-                renderConfiguredCollapsibleNative(
-                    mode = 0L,
-                    model = AdsManager.NATIVE_COLLAPSIBLE_HOME,
-                    host = CollapsibleNativeHost(
-                        binding.frNativeSmall,
-                        binding.frNativeExpand,
-                        binding.whiteLine
-                    )
-                )
-            }
-            nativeHomeHandler.postDelayed(this, 5_000L)
-        }
-    }
     private var pendingLibraryCategory: String? = null
     private val revealCoordinator = MainRevealCoordinator(PREPARING_MIN_DURATION_MS)
     private val appContainer by lazy {
@@ -187,10 +147,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
             ?.let(::schedulePreparingReveal)
     }
 
-    fun showInterHomeForNavigation(onContinue: () -> Unit) {
-        showInterHome(binding.vShowInterAds, onContinue)
-    }
-
     private fun shouldShowPreparingOverlay(): Boolean =
         intent.getBooleanExtra(EXTRA_SHOW_LIBRARY_PREPARING, false) ||
             (!intent.getBooleanExtra(EXTRA_SKIP_PREPARING_OVERLAY, false) &&
@@ -231,23 +187,23 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
 
         binding.btnLib.setOnUnDoubleClick {
             binding.ivLib.animateBottomNavPress()
-            showInterHome(binding.vShowInterAds) { viewModel.onTabSelected(0) }
+            viewModel.onTabSelected(0)
         }
         binding.btnDaily.setOnUnDoubleClick {
             binding.ivDaily.animateBottomNavPress()
-            showInterHome(binding.vShowInterAds) { viewModel.onTabSelected(1) }
+            viewModel.onTabSelected(1)
         }
         binding.ivColorRealm.setOnUnDoubleClick {
             binding.ivColorRealm.animateBottomNavPress()
-            showInterHome(binding.vShowInterAds) { viewModel.onTabSelected(2) }
+            viewModel.onTabSelected(2)
         }
         binding.btnAlbum.setOnUnDoubleClick {
             binding.ivAlbum.animateBottomNavPress()
-            showInterHome(binding.vShowInterAds) { viewModel.onTabSelected(3) }
+            viewModel.onTabSelected(3)
         }
         binding.btnMyWork.setOnUnDoubleClick {
             binding.ivMyWork.animateBottomNavPress()
-            showInterHome(binding.vShowInterAds) { viewModel.onTabSelected(4) }
+            viewModel.onTabSelected(4)
         }
     }
 
@@ -269,14 +225,6 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     override fun onResume() {
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
-        AdsManager.lastCollapsibleHomeShow = 0L
-        nativeHomeHandler.removeCallbacks(nativeHomeReloadRunnable)
-        nativeHomeHandler.post(nativeHomeReloadRunnable)
-    }
-
-    override fun onPause() {
-        nativeHomeHandler.removeCallbacks(nativeHomeReloadRunnable)
-        super.onPause()
     }
 
     private fun preloadRequestedRealm() {

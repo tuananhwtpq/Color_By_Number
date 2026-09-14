@@ -111,9 +111,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     override fun initActionView() {
 
         binding.btnAchieve.setOnUnDoubleClick {
-            (activity as? MainActivity)?.showInterHomeForNavigation {
-                startActivity(Intent(requireActivity(), AchieveActivity::class.java))
-            } ?: startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+            startActivity(Intent(requireActivity(), AchieveActivity::class.java))
         }
     }
 
@@ -263,9 +261,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         preparationThumbnailFor(level)?.let { thumbnail ->
             intent.putExtra(PaintActivity.EXTRA_PREPARATION_THUMBNAIL, thumbnail)
         }
-        (activity as? MainActivity)?.showInterHomeForNavigation {
-            startActivity(intent)
-        } ?: startActivity(intent)
+        startActivity(intent)
     }
 
     private fun preparationThumbnailFor(level: LevelConfig): String? {
