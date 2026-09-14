@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
+import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -12,6 +13,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.bases.BaseActivity
+import com.pixlory.color.by.number.data.TimelapseFrameRenderer
 import com.pixlory.color.by.number.data.TimelapseVideoUnavailableException
 import com.pixlory.color.by.number.databinding.ActivityPictureCompletedBinding
 import com.pixlory.color.by.number.dialog.SaveDialog
@@ -30,9 +32,14 @@ import com.pixlory.color.by.number.utils.toFileNameKey
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     ActivityPictureCompletedBinding::inflate
@@ -47,6 +54,8 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         private const val TAG = "PictureCompleted"
         private const val PRE_GENERATE_DELAY_MS = 500L
         private const val MIN_SAVE_VIDEO_DIALOG_MS = 2_000L
+        private const val INLINE_TIMELAPSE_DURATION_MS = 15_000L
+        private const val INLINE_TIMELAPSE_FRAME_DELAY_MS = 33L
     }
 
     private val appContainer by lazy {
@@ -63,7 +72,11 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     private var savingVideoJob: Job? = null
     private var savingDialog: SavingDialog? = null
     private var preGenerateVideoJob: Job? = null
-    private var isOpeningTimelapse = false
+    private var inlineTimelapseRenderJob: Job? = null
+    private var inlineTimelapsePreviewJob: Job? = null
+    private var inlineTimelapseRenderer: TimelapseFrameRenderer? = null
+    private var inlineTimelapseSession = 0
+    private var isInlineTimelapseActive = false
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -117,7 +130,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         }
 
         binding.btnVideo.setOnUnDoubleClick {
-            openTimelapsePreview()
+            toggleInlineTimelapse()
         }
     }
 
@@ -134,12 +147,30 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
 
     override fun onResume() {
         super.onResume()
-        isOpeningTimelapse = false
         AppThemeManager.applyCompleteBackground(binding.main)
     }
 
-    private fun openTimelapsePreview() {
-        if (isOpeningTimelapse) return
+    override fun onPause() {
+        if (isInlineTimelapseActive) {
+            stopInlineTimelapse()
+        }
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        stopInlineTimelapse()
+        super.onDestroy()
+    }
+
+    private fun toggleInlineTimelapse() {
+        if (isInlineTimelapseActive) {
+            stopInlineTimelapse()
+        } else {
+            startInlineTimelapse()
+        }
+    }
+
+    private fun startInlineTimelapse() {
         val category = category
         val levelId = levelId
         if (category == null || levelId == null) {
@@ -147,19 +178,147 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
             return
         }
 
-        isOpeningTimelapse = true
-        try {
-            startActivity(
-                Intent(this, TimelapsePreviewActivity::class.java).apply {
-                    putExtra(TimelapsePreviewActivity.EXTRA_CATEGORY, category)
-                    putExtra(TimelapsePreviewActivity.EXTRA_LEVEL_ID, levelId)
+        val session = ++inlineTimelapseSession
+        isInlineTimelapseActive = true
+        updateInlineTimelapseUi(isPlaying = true)
+
+        inlineTimelapseRenderJob = lifecycleScope.launch {
+            try {
+                val loadedRenderer = withContext(Dispatchers.Default) {
+                    val history = appContainer.paintingProgressRepository
+                        .loadPaintHistory(category, levelId)
+                    if (history.isEmpty()) {
+                        throw TimelapseVideoUnavailableException(
+                            "Paint history is empty for $category/$levelId"
+                        )
+                    }
+                    val bundle = appContainer.assetLevelRepository.loadLevelBundle(category, levelId)
+                    TimelapseFrameRenderer(bundle, history)
                 }
-            )
-        } catch (error: Exception) {
-            isOpeningTimelapse = false
-            Log.e(TAG, "Cannot open timelapse preview", error)
-            showToast(getString(R.string.timelapse_unavailable))
+
+                if (!isInlineTimelapseSessionActive(session)) {
+                    loadedRenderer.recycle()
+                    return@launch
+                }
+
+                inlineTimelapseRenderer = loadedRenderer
+                val initialFrame = withContext(Dispatchers.Default) {
+                    loadedRenderer.renderStep(0)
+                }
+                if (!isInlineTimelapseSessionActive(session)) return@launch
+
+                binding.timelapsePreviewView.setFrameBitmap(initialFrame)
+                binding.timelapsePreviewView.visibility = View.VISIBLE
+                binding.ivImage.visibility = View.GONE
+                startInlineTimelapsePreview(loadedRenderer, session)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: TimelapseVideoUnavailableException) {
+                showInlineTimelapseFailure(session, error)
+            } catch (error: OutOfMemoryError) {
+                Log.e(TAG, "Not enough memory to render inline timelapse", error)
+                showInlineTimelapseFailure(session)
+            } catch (error: Exception) {
+                Log.e(TAG, "Cannot render inline timelapse", error)
+                showInlineTimelapseFailure(session)
+            } finally {
+                if (session == inlineTimelapseSession) {
+                    inlineTimelapseRenderJob = null
+                }
+            }
         }
+    }
+
+    private fun startInlineTimelapsePreview(
+        renderer: TimelapseFrameRenderer,
+        session: Int
+    ) {
+        inlineTimelapsePreviewJob = lifecycleScope.launch {
+            try {
+                val startedAt = SystemClock.elapsedRealtime()
+                var lastStep = -1
+
+                while (isActive && isInlineTimelapseSessionActive(session)) {
+                    val elapsed = SystemClock.elapsedRealtime() - startedAt
+                    val progress = (elapsed.toFloat() / INLINE_TIMELAPSE_DURATION_MS)
+                        .coerceIn(0f, 1f)
+                    val targetStep = (renderer.stepCount * progress).roundToInt()
+                        .coerceIn(0, renderer.stepCount)
+
+                    if (targetStep != lastStep) {
+                        val frame = withContext(Dispatchers.Default) {
+                            renderer.renderStep(targetStep)
+                        }
+                        if (!isInlineTimelapseSessionActive(session)) return@launch
+                        binding.timelapsePreviewView.setFrameBitmap(frame)
+                        lastStep = targetStep
+                    }
+
+                    if (progress >= 1f) {
+                        stopInlineTimelapse()
+                        return@launch
+                    }
+                    delay(INLINE_TIMELAPSE_FRAME_DELAY_MS)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: OutOfMemoryError) {
+                Log.e(TAG, "Not enough memory while playing inline timelapse", error)
+                showInlineTimelapseFailure(session)
+            } catch (error: Exception) {
+                Log.e(TAG, "Cannot play inline timelapse", error)
+                showInlineTimelapseFailure(session)
+            } finally {
+                if (session == inlineTimelapseSession) {
+                    inlineTimelapsePreviewJob = null
+                }
+            }
+        }
+    }
+
+    private fun isInlineTimelapseSessionActive(session: Int): Boolean {
+        return isInlineTimelapseActive && session == inlineTimelapseSession
+    }
+
+    private fun showInlineTimelapseFailure(
+        session: Int,
+        error: TimelapseVideoUnavailableException? = null
+    ) {
+        if (session != inlineTimelapseSession) return
+        error?.let { Log.w(TAG, "Inline timelapse is unavailable: ${it.message}") }
+        showToast(getString(R.string.timelapse_unavailable))
+        stopInlineTimelapse()
+    }
+
+    private fun stopInlineTimelapse() {
+        val jobsToStop = listOfNotNull(inlineTimelapseRenderJob, inlineTimelapsePreviewJob)
+        val rendererToRecycle = inlineTimelapseRenderer
+
+        inlineTimelapseSession++
+        isInlineTimelapseActive = false
+        inlineTimelapseRenderJob = null
+        inlineTimelapsePreviewJob = null
+        inlineTimelapseRenderer = null
+        jobsToStop.forEach(Job::cancel)
+
+        binding.timelapsePreviewView.setFrameBitmap(null)
+        binding.timelapsePreviewView.visibility = View.GONE
+        binding.ivImage.visibility = View.VISIBLE
+        updateInlineTimelapseUi(isPlaying = false)
+
+        if (rendererToRecycle != null) {
+            lifecycleScope.launch {
+                jobsToStop.joinAll()
+                rendererToRecycle.recycle()
+            }
+        }
+    }
+
+    private fun updateInlineTimelapseUi(isPlaying: Boolean) {
+        binding.btnVideo.setImageResource(
+            if (isPlaying) R.drawable.ic_skip_new else R.drawable.ic_video
+        )
+        binding.tvVideo.setText(if (isPlaying) R.string.skip else R.string.video)
     }
 
     private fun sharePicture() {

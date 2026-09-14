@@ -31,10 +31,10 @@ class SavingDialog : BaseDialog<FragmentSavingDialogBinding>(FragmentSavingDialo
     }
 
     override fun initActionView() {
-        binding.btnClose.setOnUnDoubleClick {
-            onClose?.invoke()
-            dismiss()
-        }
+//        binding.btnClose.setOnUnDoubleClick {
+//            onClose?.invoke()
+//            dismiss()
+//        }
     }
 
 }

@@ -27,6 +27,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -44,7 +45,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
 
         private const val PREVIEW_DURATION_MS = 15_000L
         private const val PREVIEW_FRAME_DELAY_MS = 33L
-        private const val PERCENTAGE_ANIMATION_DURATION_MS = 900L
+        private const val PERCENTAGE_ANIMATION_DURATION_MS = 2_200L
         private const val MIN_PERCENTAGE = 89
         private const val MAX_PERCENTAGE = 99
         private const val TAG = "TimelapsePreview"
@@ -188,8 +189,11 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     }
 
     private fun animatePlayerPercentages() {
-        val surpassedTarget = Random.nextInt(MIN_PERCENTAGE, MAX_PERCENTAGE)
-        val oneMoreTarget = Random.nextInt(surpassedTarget + 1, MAX_PERCENTAGE + 1)
+        val surpassedTarget = randomPercentage(MIN_PERCENTAGE * 100 + 1, MAX_PERCENTAGE * 100 - 1)
+        val oneMoreTarget = randomPercentage(
+            (surpassedTarget * 100).roundToInt() + 1,
+            MAX_PERCENTAGE * 100
+        )
 
         animatePercentage(surpassedTarget) { percentage ->
             binding.tvSurpassed.text = getHighlightedPercentageText(
@@ -205,21 +209,27 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
         }
     }
 
-    private fun animatePercentage(target: Int, onPercentageUpdated: (Int) -> Unit) {
-        onPercentageUpdated(0)
-        ValueAnimator.ofInt(0, target).apply {
+    private fun randomPercentage(minInclusive: Int, maxExclusive: Int): Float {
+        val basisPoints = Random.nextInt(minInclusive, maxExclusive)
+            .let { if (it % 100 == 0) it + 1 else it }
+        return basisPoints / 100f
+    }
+
+    private fun animatePercentage(target: Float, onPercentageUpdated: (Float) -> Unit) {
+        onPercentageUpdated(0f)
+        ValueAnimator.ofFloat(0f, target).apply {
             duration = PERCENTAGE_ANIMATION_DURATION_MS
-            interpolator = DecelerateInterpolator()
+            interpolator = DecelerateInterpolator(1.5f)
             addUpdateListener { animator ->
-                onPercentageUpdated(animator.animatedValue as Int)
+                onPercentageUpdated(animator.animatedValue as Float)
             }
             percentageAnimators += this
             start()
         }
     }
 
-    private fun getHighlightedPercentageText(stringRes: Int, percentage: Int): SpannableString {
-        val percentageText = "$percentage%"
+    private fun getHighlightedPercentageText(stringRes: Int, percentage: Float): SpannableString {
+        val percentageText = String.format(Locale.getDefault(), "%.2f%%", percentage)
         val text = getString(stringRes, percentageText)
         val percentageStart = text.indexOf(percentageText)
         return SpannableString(text).apply {

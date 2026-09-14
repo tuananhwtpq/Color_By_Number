@@ -48,13 +48,25 @@
             app:cardPreventCornerOverlap="false"
             app:cardUseCompatPadding="false">
 
-            <ImageView
-                android:id="@+id/ivImage"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@color/white"
-                tools:background="@color/black" />
+                android:layout_height="match_parent">
+
+                <ImageView
+                    android:id="@+id/ivImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@color/white"
+                    tools:background="@color/black" />
+
+                <com.pixlory.color.by.number.views.TimelapsePreviewView
+                    android:id="@+id/timelapsePreviewView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
+
+            </FrameLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
