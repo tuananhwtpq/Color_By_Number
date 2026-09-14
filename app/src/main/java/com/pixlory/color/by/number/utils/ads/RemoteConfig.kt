@@ -133,7 +133,7 @@ object RemoteConfig {
         }
     var remoteTimeShowInterDraw: Long
         get() {
-            return SharedPrefManager.getLong(REMOTE_TIME_SHOW_INTER_DRAW, 30000L)
+            return SharedPrefManager.getLong(REMOTE_TIME_SHOW_INTER_DRAW, 300000L)
         }
         set(value) {
             SharedPrefManager.putLong(REMOTE_TIME_SHOW_INTER_DRAW, value)
@@ -249,7 +249,7 @@ object RemoteConfig {
         remoteNativeFullScreenAfterInter = 1L
         remoteNativeSetting = 1L
         remoteOnResume = 2L
-        remoteTimeShowInterDraw = 30000L
+        remoteTimeShowInterDraw = 300000L
         remoteTimeShowInter = 15000L
         remoteTimeLoadNative = 15000L
         remoteLimitHint = 3L
