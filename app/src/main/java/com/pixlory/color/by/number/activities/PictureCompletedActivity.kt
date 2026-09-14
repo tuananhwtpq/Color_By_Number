@@ -102,9 +102,9 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
     }
 
     override fun initActionView() {
-        binding.btnContinue.setOnSoundClickListener {
-            openCompletedPictureCategory()
-        }
+//        binding.btnContinue.setOnSoundClickListener {
+//            openCompletedPictureCategory()
+//        }
 
         binding.btnBackToHome.setOnSoundClickListener {
             onBackPressedDispatcher.onBackPressed()

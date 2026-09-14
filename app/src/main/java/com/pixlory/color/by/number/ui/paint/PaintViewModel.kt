@@ -293,7 +293,8 @@ class PaintViewModel(
         completedIndexes: Set<Int>,
     ): Int {
         if (selectedIndex !in uniqueColors.indices) return -1
-        return ((selectedIndex + 1)..uniqueColors.lastIndex)
+        return (1..uniqueColors.size)
+            .map { (selectedIndex + it) % uniqueColors.size }
             .firstOrNull { it !in completedIndexes }
             ?: -1
     }
