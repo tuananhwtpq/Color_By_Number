@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_reward_claim"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:minHeight="40dp"
+    android:padding="20dp"
+    tools:context=".dialog.RewardClaimDialog">
+
+    <ImageView
+        android:id="@+id/btnClose"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@drawable/ic_close_new"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvAchieveName"
+        style="@style/Heading2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/reward_claimed"
+        android:textColor="@color/grey_700"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/btnClose" />
+
+    <TextView
+        android:id="@+id/tvUnder"
+        style="@style/BodyL"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/you_ve_successfully_claimed_your_reward"
+        android:textColor="@color/grey_600"
+        app:layout_constraintTop_toBottomOf="@id/tvAchieveName" />
+
+    <TextView
+        android:id="@+id/tvAchieveDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAchieveName"
+        tools:text="Complete your very first artwork."
+        tools:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tvCompleted"
+        style="@style/sub2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="@string/completed"
+        android:textColor="@color/grey_700"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAchieveDetail"
+        tools:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tvDateTime"
+        style="@style/BodyM"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/grey_600"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvCompleted"
+        tools:text="17 July 2026"
+        tools:visibility="gone" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/llHint"
+        android:layout_width="126dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/bg_no_tran_com"
+        android:orientation="vertical"
+        android:padding="10dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvUnder">
+
+        <ImageView
+            android:id="@+id/btnHint"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="14dp"
+            android:src="@drawable/ic_hint_new"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvHintCount"
+            style="@style/BodyM"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-8dp"
+            android:background="@drawable/bg_gradien_oval"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:text="@string/number_one"
+            android:textColor="@color/white"
+            android:visibility="visible"
+            app:layout_constraintBottom_toBottomOf="@id/btnHint"
+            app:layout_constraintEnd_toEndOf="@id/btnHint"
+            tools:visibility="visible" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

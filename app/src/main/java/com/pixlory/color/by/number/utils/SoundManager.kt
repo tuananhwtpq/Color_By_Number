@@ -123,6 +123,7 @@ enum class SoundEffect(val resourceId: Int) {
     CLICK(R.raw.click_button),
     PALETTE(R.raw.click_number),
     HINT(R.raw.hint),
+    COLOR_COMPLETED(R.raw.done_color),
     COMPLETION(R.raw.complete_picture)
 }
 

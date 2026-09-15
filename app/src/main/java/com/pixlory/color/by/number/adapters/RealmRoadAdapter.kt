@@ -10,6 +10,7 @@ import com.bumptech.glide.Glide
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.data.Realm
 import com.pixlory.color.by.number.databinding.ItemRealmBinding
+import com.pixlory.color.by.number.utils.runText
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
 
 data class RealmRoadItem(
@@ -61,6 +62,8 @@ class RealmRoadAdapter(
             } else {
                 ivRealmThumbnail.setImageResource(item.realm.thumbnailRes)
             }
+
+            tvRealmName.runText()
 
             val isLocked = !item.isUnlocked
             val lockedVisibility = if (isLocked) View.VISIBLE else View.GONE

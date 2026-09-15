@@ -33,6 +33,7 @@ class PaletteAdapter(
     val completedIndexes = mutableSetOf<Int>()
     private val completionTracker = PaletteCompletionStateTracker()
     private var hasReceivedPaletteState = false
+    private var attachedRecyclerView: RecyclerView? = null
     private var paletteProgress: List<Float> = List(items.size) { 0f }
     private var displayItems: List<DisplayPaletteItem> = buildDisplayItems()
 
@@ -139,6 +140,18 @@ class PaletteAdapter(
         return ViewHolder(view)
     }
 
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        attachedRecyclerView = recyclerView
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        if (attachedRecyclerView === recyclerView) {
+            attachedRecyclerView = null
+        }
+        super.onDetachedFromRecyclerView(recyclerView)
+    }
+
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val displayItem = displayItems[position]
         val item = displayItem.item
@@ -219,6 +232,7 @@ class PaletteAdapter(
     fun markCompleted(originalIndex: Int) {
         if (!completedIndexes.contains(originalIndex)) {
             completionTracker.queue(originalIndex)
+            playColorCompletedSound()
         }
         completedIndexes.add(originalIndex)
         refreshDisplayItems()
@@ -251,6 +265,9 @@ class PaletteAdapter(
         noLongerCompleted.forEach(completionTracker::clear)
         if (hasReceivedPaletteState) {
             newlyCompleted.forEach(completionTracker::queue)
+            if (newlyCompleted.isNotEmpty()) {
+                playColorCompletedSound()
+            }
         } else {
             // Colours restored from saved progress should not replay their animation.
             completedIndexes.forEach(completionTracker::restoreAsRemoved)
@@ -307,5 +324,11 @@ class PaletteAdapter(
         if (displayIndex != -1) {
             notifyItemChanged(displayIndex)
         }
+    }
+
+    private fun playColorCompletedSound() {
+        attachedRecyclerView?.context
+            ?.soundManagerOrNull()
+            ?.play(SoundEffect.COLOR_COMPLETED)
     }
 }

@@ -58,17 +58,30 @@ class AchieveCompletedDialog : BaseDialog<FragmentAchieveCompletedDialogBinding>
     override fun initActionView() {
         binding.btnClose.setOnUnDoubleClick { dismiss() }
         binding.btnHint.setOnUnDoubleClick { claimReward() }
-        binding.btnClaim.setOnUnDoubleClick { claimReward() }
+        binding.btnClaim.setOnUnDoubleClick {
+            if (claimReward()) {
+                showRewardClaimDialog()
+            }
+        }
     }
 
-    private fun claimReward() {
-        val achievement = achievement ?: return
-        if (achievement.isRewardClaimed) return
+    private fun claimReward(): Boolean {
+        val achievement = achievement ?: return false
+        if (achievement.isRewardClaimed) return false
 
         val updatedHintBalance = onRewardClaimed?.invoke(achievement) ?: SharedPrefManager.hintBalance
         this.achievement = achievement.copy(isRewardClaimed = true)
         binding.tvHintCountNew.text = updatedHintBalance.toString()
         renderRewardState(isRewardClaimed = true)
+        return true
+    }
+
+    private fun showRewardClaimDialog() {
+        val fragmentManager = parentFragmentManager
+        if (fragmentManager.isStateSaved) return
+
+        dismissNow()
+        RewardClaimDialog().show(fragmentManager, RewardClaimDialog.TAG)
     }
 
     private fun renderRewardState(isRewardClaimed: Boolean) {

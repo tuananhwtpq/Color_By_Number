@@ -109,7 +109,7 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
         AdmobLib.initialize(
             this,
             isDebug = true,
-            isShowAds = true,
+            isShowAds = false,
             onInitializedAds = { initialized ->
                 if (!canContinueFlow()) return@initialize
 
