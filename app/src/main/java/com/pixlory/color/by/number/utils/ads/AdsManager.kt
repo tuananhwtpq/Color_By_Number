@@ -90,8 +90,8 @@ object AdsManager {
         if (RemoteConfig.remoteInterDraw == 0L) return false
         countInterDraw++
         Log.d(
-            "TAGisShowInterOther",
-            "Count Inter Other: ${countInterDraw} - Remote Inter Other: ${RemoteConfig.remoteInterDraw} - ${isShowInter()} - Remote Time Show Inter: ${RemoteConfig.remoteTimeShowInter}"
+            "TAGisShowInterDraw",
+            "Count Inter Draw: ${countInterDraw} - Remote Inter Draw: ${RemoteConfig.remoteInterDraw} - ${isShowInter()} - Remote Time Show Inter: ${RemoteConfig.remoteTimeShowInter}"
         )
         return isShowInter() && (countInterDraw % RemoteConfig.remoteInterDraw == 0L)
     }

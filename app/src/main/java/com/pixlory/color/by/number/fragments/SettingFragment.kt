@@ -2,6 +2,7 @@ package com.pixlory.color.by.number.fragments
 
 import android.content.Intent
 import android.view.View
+import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.activities.AppInfoActivity
 import com.pixlory.color.by.number.activities.LanguageActivity
 import com.pixlory.color.by.number.activities.MainActivity
@@ -12,8 +13,14 @@ import com.pixlory.color.by.number.dialog.HighlightAreaDialog
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.Common
 import com.pixlory.color.by.number.utils.SharedPrefManager
+import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.ads.RemoteConfig
+import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
 import com.pixlory.color.by.number.utils.soundManagerOrNull
+import com.pixlory.color.by.number.utils.visible
+import com.snake.squad.adslib.AdmobLib
+import com.snake.squad.adslib.utils.GoogleENative
 
 class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBinding::inflate) {
 
@@ -29,6 +36,7 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
         renderPaintSettings()
+        loadAndShowNativeSetting()
     }
 
     override fun initActionView() {
@@ -150,4 +158,31 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
             }
         }.show(parentFragmentManager, HighlightAreaDialog.TAG)
     }
+
+    private fun loadAndShowNativeSetting() {
+        if (RemoteConfig.remoteNativeSetting != 0L) {
+            binding.frNative.visible()
+            if (AdsManager.NATIVE_SETTING.nativeAd.value != null) {
+                AdmobLib.showNative(
+                    activity = requireActivity(),
+                    admobNativeModel = AdsManager.NATIVE_SETTING,
+                    viewGroup = binding.frNative,
+                    size = GoogleENative.UNIFIED_MEDIUM,
+                    layout = R.layout.native_ads_custom_small_like_banner
+                )
+            } else {
+                AdmobLib.loadAndShowNative(
+                    activity = requireActivity(),
+                    admobNativeModel = AdsManager.NATIVE_SETTING,
+                    viewGroup = binding.frNative,
+                    size = GoogleENative.UNIFIED_MEDIUM,
+                    layout = R.layout.native_ads_custom_small_like_banner,
+                    isShowOnTestDevice = true,
+                )
+            }
+        } else {
+            binding.frNative.gone()
+        }
+    }
+
 }

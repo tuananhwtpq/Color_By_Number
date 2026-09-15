@@ -27,7 +27,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -64,6 +63,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     private var previewJob: Job? = null
     private var renderer: TimelapseFrameRenderer? = null
     private var isClosing = false
+    private var isSkipRequested = false
     private val percentageAnimators = mutableListOf<ValueAnimator>()
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
@@ -93,12 +93,20 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
 
     override fun initActionView() {
         binding.btnSkip.setOnUnDoubleClick {
-            closePreview()
+            requestSkip()
         }
 
         binding.ivSkip.setOnUnDoubleClick {
-            closePreview()
+            requestSkip()
         }
+    }
+
+    private fun requestSkip() {
+        if (isSkipRequested || isClosing) return
+        isSkipRequested = true
+        binding.btnSkip.isEnabled = false
+        binding.ivSkip.isEnabled = false
+        loadAndShowInterDone(interAdBlockView(), ::closePreview)
     }
 
     override fun onDestroy() {
@@ -230,7 +238,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
     }
 
     private fun getHighlightedPercentageText(stringRes: Int, percentage: Float): SpannableString {
-        val percentageText = String.format(Locale.getDefault(), "%.2f%%", percentage)
+        val percentageText = TimelapsePercentageFormatter.format(percentage)
         val text = getString(stringRes, percentageText)
         val percentageStart = text.indexOf(percentageText)
         return SpannableString(text).apply {
@@ -260,6 +268,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
         isClosing = true
         percentageAnimators.forEach(ValueAnimator::cancel)
         binding.btnSkip.isEnabled = false
+        binding.ivSkip.isEnabled = false
         binding.progressBar.visibility = View.VISIBLE
         binding.previewView.setFrameBitmap(null)
 

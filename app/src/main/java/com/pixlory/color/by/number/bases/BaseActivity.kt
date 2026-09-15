@@ -185,6 +185,52 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
         }
     }
 
+    fun loadAndShowInterDone(viewBlock: View, navAction: () -> Unit) {
+        if (AdsManager.isShowInterDone()) {
+            val finishAdMute = muteMusicForFullscreenAd()
+            AdmobLib.showInterWithNativeAfter(
+                mActivity = this,
+                interModel = AdsManager.INTER_DONE,
+                nativeModel = AdsManager.NATIVE_FULL_SCREEN_AFTER_INTER,
+                vShowInterAds = viewBlock,
+                isShowNativeAfter = AdsManager.isShowNativeFullScreen(),
+                nativeLayout = R.layout.native_ads_full_screen,
+                onInterCloseOrFailed = { isDone ->
+                    if (isDone) AdsManager.updateTime()
+                },
+                navAction = {
+                    finishAdMute()
+                    navAction()
+                }
+            )
+        } else {
+            navAction()
+        }
+    }
+
+    fun loadAndShowInterDraw(viewBlock: View, navAction: () -> Unit) {
+        if (AdsManager.isShowInterDraw()) {
+            val finishAdMute = muteMusicForFullscreenAd()
+            AdmobLib.showInterWithNativeAfter(
+                mActivity = this,
+                interModel = AdsManager.INTER_DRAW,
+                nativeModel = AdsManager.NATIVE_FULL_SCREEN_AFTER_INTER,
+                vShowInterAds = viewBlock,
+                isShowNativeAfter = AdsManager.isShowNativeFullScreen(),
+                nativeLayout = R.layout.native_ads_full_screen,
+                onInterCloseOrFailed = { isDone ->
+                    if (isDone) AdsManager.updateTime()
+                },
+                navAction = {
+                    finishAdMute()
+                    navAction()
+                }
+            )
+        } else {
+            navAction()
+        }
+    }
+
     fun loadAndShowNativeCollapsibleOther(
         frNativeSmall: ViewGroup,
         frNativeExpand: ViewGroup,

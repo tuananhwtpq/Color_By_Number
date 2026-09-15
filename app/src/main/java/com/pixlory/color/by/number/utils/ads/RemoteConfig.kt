@@ -137,6 +137,7 @@ object RemoteConfig {
         }
     var remoteTimeShowInterDraw: Long
         get() {
+            return 15000L
             return SharedPrefManager.getLong(REMOTE_TIME_SHOW_INTER_DRAW, 300000L)
         }
         set(value) {

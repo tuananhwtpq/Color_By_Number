@@ -11,11 +11,17 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
+import android.os.SystemClock
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
+import android.widget.FrameLayout
 import androidx.activity.viewModels
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
@@ -23,6 +29,7 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
+import com.google.android.material.snackbar.Snackbar
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.data.repository.AchievementEvent
@@ -52,6 +59,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -73,6 +81,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         private const val PREPARATION_MIN_DURATION_MS = 350L
         private const val PREPARATION_FADE_OUT_MS = 160L
         private const val THUMBNAIL_SAVE_DEBOUNCE_MS = 450L
+        private const val DRAW_INTER_WARNING_MS = 5_000L
+        private const val DRAW_INTER_NORMAL_TICK_MS = 1_000L
+        private const val DRAW_INTER_WARNING_TICK_MS = 200L
         // private const val HINT_REWARDED_AD_TIMEOUT_MS = 30_000L
 
         const val EXTRA_CATEGORY = "CATEGORY"
@@ -121,6 +132,13 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var fullPreviewRenderKey: String? = null
     private var lastRenderedSelectedPaletteIndex: Int = -1
     private var thumbnailSaveJob: Job? = null
+    private var drawInterRemainingMs: Long? = null
+    private var drawInterLastTickMs = 0L
+    private var drawInterCountdownJob: Job? = null
+    private var drawInterSnackbar: Snackbar? = null
+    private var drawInterWarningSeconds: Int? = null
+    private var isDrawInterstitialShowing = false
+    private var isRewardedHintAdShowing = false
     // private var hintRewardedAdTimeoutJob: Job? = null
     private val guideRectBuffer = Rect()
     // private val hintRewardedAdModel by lazy {
@@ -826,6 +844,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
         if (isNavigatingToCompleted) return
         isNavigatingToCompleted = true
+        pauseDrawInterCountdown()
         updateZoomNormalButtonVisibility()
 
         lifecycleScope.launch {
@@ -923,13 +942,143 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun showRewardedHintAd() {
-        loadAndShowRewardAds(navAction = {
-            SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
-            renderHintBalance()
-        })
+        pauseDrawInterCountdown()
+        val shouldResetDrawInter = RemoteConfig.remoteRewardUnlock == 1L &&
+            drawInterRemainingMs?.let { it <= DRAW_INTER_WARNING_MS } == true
+        isRewardedHintAdShowing = true
+        loadAndShowRewardAds(
+            navAction = {
+                SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
+                renderHintBalance()
+                isRewardedHintAdShowing = false
+                if (shouldResetDrawInter) resetDrawInterCountdown() else startDrawInterCountdown()
+            },
+            onFail = {
+                isRewardedHintAdShowing = false
+                startDrawInterCountdown()
+            }
+        )
+    }
+
+    private fun isDrawInterEnabled(): Boolean =
+        RemoteConfig.remoteInterDraw > 0L &&
+            RemoteConfig.remoteTimeShowInterDraw > 0L &&
+            AdmobLib.getShowAds() &&
+            !isNavigatingToCompleted &&
+            !isFinishing &&
+            !isDestroyed
+
+    private fun canAdvanceDrawInterCountdown(): Boolean =
+        lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+            !isGuideVisible &&
+            !isPreparationVisible &&
+            !isLoadingVisible &&
+            !isFullColorPreviewVisible &&
+            !isFillAllPreviewActive &&
+            binding.paintCanvas.visibility == View.VISIBLE &&
+            supportFragmentManager.fragments.none { it is DialogFragment && it.isVisible }
+
+    private fun startDrawInterCountdown() {
+        if (!isDrawInterEnabled() || isDrawInterstitialShowing || isRewardedHintAdShowing) {
+            hideDrawInterWarning()
+            return
+        }
+        if (drawInterCountdownJob?.isActive == true) return
+
+        if (drawInterRemainingMs == null) {
+            drawInterRemainingMs = RemoteConfig.remoteTimeShowInterDraw
+        }
+        drawInterLastTickMs = SystemClock.elapsedRealtime()
+        drawInterCountdownJob = lifecycleScope.launch {
+            while (isActive && isDrawInterEnabled()) {
+                val now = SystemClock.elapsedRealtime()
+                if (canAdvanceDrawInterCountdown()) {
+                    val elapsed = (now - drawInterLastTickMs).coerceAtLeast(0L)
+                    val remaining = (drawInterRemainingMs ?: 0L) - elapsed
+                    drawInterRemainingMs = remaining.coerceAtLeast(0L)
+                    drawInterLastTickMs = now
+                    if (drawInterRemainingMs == 0L) {
+                        showDrawInterstitial()
+                        return@launch
+                    }
+                    updateDrawInterWarning(drawInterRemainingMs ?: 0L)
+                } else {
+                    drawInterLastTickMs = now
+                    hideDrawInterWarning()
+                }
+                delay(
+                    if ((drawInterRemainingMs ?: 0L) > DRAW_INTER_WARNING_MS + DRAW_INTER_NORMAL_TICK_MS) {
+                        DRAW_INTER_NORMAL_TICK_MS
+                    } else {
+                        DRAW_INTER_WARNING_TICK_MS
+                    }
+                )
+            }
+            hideDrawInterWarning()
+        }
+    }
+
+    private fun pauseDrawInterCountdown() {
+        if (drawInterCountdownJob?.isActive == true && canAdvanceDrawInterCountdown()) {
+            val elapsed = (SystemClock.elapsedRealtime() - drawInterLastTickMs).coerceAtLeast(0L)
+            drawInterRemainingMs = ((drawInterRemainingMs ?: 0L) - elapsed).coerceAtLeast(0L)
+        }
+        drawInterCountdownJob?.cancel()
+        drawInterCountdownJob = null
+        drawInterLastTickMs = 0L
+        hideDrawInterWarning()
+    }
+
+    private fun resetDrawInterCountdown() {
+        pauseDrawInterCountdown()
+        drawInterRemainingMs = RemoteConfig.remoteTimeShowInterDraw
+        startDrawInterCountdown()
+    }
+
+    private fun showDrawInterstitial() {
+        if (isDrawInterstitialShowing || !isDrawInterEnabled()) return
+        isDrawInterstitialShowing = true
+        pauseDrawInterCountdown()
+        loadAndShowInterDraw(interAdBlockView()) {
+            isDrawInterstitialShowing = false
+            resetDrawInterCountdown()
+        }
+    }
+
+    private fun updateDrawInterWarning(remainingMs: Long) {
+        if (remainingMs > DRAW_INTER_WARNING_MS) {
+            hideDrawInterWarning()
+            return
+        }
+        val seconds = ((remainingMs + 999L) / 1_000L).toInt()
+        if (drawInterWarningSeconds == seconds) return
+        drawInterWarningSeconds = seconds
+        val message = getString(R.string.inter_draw_countdown, seconds)
+        val snackbar = drawInterSnackbar
+        if (snackbar != null) {
+            snackbar.setText(message)
+            return
+        }
+
+        drawInterSnackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_INDEFINITE).apply {
+            animationMode = Snackbar.ANIMATION_MODE_FADE
+            view.layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP
+            )
+            show()
+        }
+    }
+
+    private fun hideDrawInterWarning() {
+        drawInterSnackbar?.dismiss()
+        drawInterSnackbar = null
+        drawInterWarningSeconds = null
     }
 
     override fun onPause() {
+        pauseDrawInterCountdown()
         super.onPause()
         if (isFillAllPreviewActive) return
         if (isNavigatingToCompleted) return
@@ -942,9 +1091,11 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         super.onResume()
         syncPaintSettings()
         renderHintBalance()
+        startDrawInterCountdown()
     }
 
     override fun onDestroy() {
+        pauseDrawInterCountdown()
         thumbnailSaveJob?.cancel()
         thumbnailSaveJob = null
         // hintRewardedAdTimeoutJob?.cancel()
