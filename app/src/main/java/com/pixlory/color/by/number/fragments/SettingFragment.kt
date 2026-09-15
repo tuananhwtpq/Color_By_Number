@@ -4,6 +4,7 @@ import android.content.Intent
 import android.view.View
 import com.pixlory.color.by.number.activities.AppInfoActivity
 import com.pixlory.color.by.number.activities.LanguageActivity
+import com.pixlory.color.by.number.activities.MainActivity
 import com.pixlory.color.by.number.activities.ThemeActivity
 import com.pixlory.color.by.number.bases.BaseFragment
 import com.pixlory.color.by.number.databinding.ActivitySettingBinding
@@ -32,11 +33,20 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
 
     override fun initActionView() {
         binding.btnLanguage.setOnUnDoubleClick {
-            startActivity(Intent(requireContext(), LanguageActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(
+                    Intent(requireContext(), LanguageActivity::class.java)
+                        .putExtra(LanguageActivity.EXTRA_DIRECT_FROM_HOME, true)
+                )
+            }
         }
 
         binding.btnTheme.setOnUnDoubleClick {
-            startActivity(Intent(requireContext(), ThemeActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(Intent(requireContext(), ThemeActivity::class.java))
+            }
         }
 
         binding.btnFeedback.setOnUnDoubleClick {
@@ -53,7 +63,10 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
 
         binding.btnAppInfo.setOnUnDoubleClick {
             // nav to app info
-            startActivity(Intent(requireActivity(), AppInfoActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(Intent(requireActivity(), AppInfoActivity::class.java))
+            }
         }
 
         binding.btnHighLight.setOnUnDoubleClick {

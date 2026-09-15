@@ -1,5 +1,6 @@
 package com.pixlory.color.by.number.activities
 
+import androidx.activity.OnBackPressedCallback
 import com.pixlory.color.by.number.bases.BaseActivity
 import com.pixlory.color.by.number.databinding.ActivityThemeBinding
 import com.pixlory.color.by.number.utils.AppThemeManager
@@ -19,6 +20,14 @@ class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::i
     }
 
     override fun initView() {
+        onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                loadAndShowInterBackToHome(
+                    navAction = { finish() },
+                    viewBlock = interAdBlockView()
+                )
+            }
+        })
         themeOptions = listOf(
             binding.viewThemeMidnight to AppThemeManager.THEME_MIDNIGHT,
             binding.viewThemeSunset to AppThemeManager.THEME_SUNSET,
@@ -28,7 +37,7 @@ class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::i
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnUnDoubleClick { finish() }
+        binding.btnBack.setOnUnDoubleClick { onBackPressedDispatcher.onBackPressed() }
         themeOptions.forEach { (view, themeId) ->
             view.setOnUnDoubleClick {
                 selectedThemeId = themeId

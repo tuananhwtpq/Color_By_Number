@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.activities.AchieveActivity
 import com.pixlory.color.by.number.activities.CollectionDetailActivity
+import com.pixlory.color.by.number.activities.MainActivity
 import com.pixlory.color.by.number.adapters.CollectionAdapter
 import com.pixlory.color.by.number.app.SimpleViewModelFactory
 import com.pixlory.color.by.number.bases.BaseFragment
@@ -52,7 +53,10 @@ class AlbumFragment : BaseFragment<FragmentAlbumBinding>(FragmentAlbumBinding::i
     override fun initActionView() {
 
         binding.btnAchieve.setOnUnDoubleClick {
-            startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+            }
         }
     }
 
@@ -62,7 +66,10 @@ class AlbumFragment : BaseFragment<FragmentAlbumBinding>(FragmentAlbumBinding::i
     }
 
     private fun onCollectionClicked(collection: AlbumCollection) {
-        startActivity(CollectionDetailActivity.newIntent(requireContext(), collection.id))
+        val home = requireActivity() as MainActivity
+        home.loadInterHome(home.interAdBlockView()) {
+            startActivity(CollectionDetailActivity.newIntent(requireContext(), collection.id))
+        }
     }
 
 }

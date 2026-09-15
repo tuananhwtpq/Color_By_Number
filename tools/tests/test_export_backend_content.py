@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from tools.export_backend_content import build_package
+from tools.export_backend_content import DEFAULT_SRC, PROJECT_ROOT, build_package
 
 
 def write_png(path, color):
@@ -38,6 +38,11 @@ class ExportBackendContentTest(unittest.TestCase):
         (self.src / "data").mkdir(parents=True, exist_ok=True)
         (self.src / "data" / "AchievementCatalog.kt").write_text("", encoding="utf-8")
         (self.src / "data" / "Realm.kt").write_text("", encoding="utf-8")
+
+    def test_default_source_points_to_current_catalogs(self):
+        source_dir = Path(PROJECT_ROOT) / DEFAULT_SRC / "data"
+        self.assertTrue((source_dir / "Realm.kt").is_file())
+        self.assertTrue((source_dir / "AchievementCatalog.kt").is_file())
 
     def make_level(self, category="Travel", level="06", with_detail=True):
         level_dir = self.assets / category / level
@@ -300,6 +305,57 @@ class ExportBackendContentTest(unittest.TestCase):
             ],
         )
         self.assertTrue((self.out / "files" / "realms" / "sakura_haven" / "animation.json").exists())
+
+    def test_exports_realms_with_resource_names(self):
+        self.make_level()
+        (self.res / "values" / "strings.xml").write_text(
+            '<resources><string name="realm_sakura_haven">Sakura Haven</string>'
+            '<string name="realm_crystal_creek">Crystal Creek</string></resources>',
+            encoding="utf-8",
+        )
+        (self.res / "raw").mkdir(parents=True, exist_ok=True)
+        for name in ("sakura_heaven", "crystal_creek"):
+            (self.res / "raw" / (name + ".json")).write_text('{"assets":[]}', encoding="utf-8")
+        (self.src / "data" / "Realm.kt").write_text(
+            """
+            object RealmCatalog {
+                val realms: List<Realm> = listOf(
+                    Realm(
+                        id = "crystal_creek",
+                        nameRes = R.string.realm_crystal_creek,
+                        animationRes = R.raw.crystal_creek,
+                        unlockCost = 10,
+                        sortOrder = 2,
+                    ),
+                    Realm(
+                        id = "sakura_haven",
+                        nameRes = R.string.realm_sakura_haven,
+                        animationRes = R.raw.sakura_heaven,
+                        unlockCost = 0,
+                        sortOrder = 1,
+                    ),
+                )
+            }
+            """,
+            encoding="utf-8",
+        )
+
+        manifest, _ = build_package(
+            assets_path=str(self.assets),
+            res_path=str(self.res),
+            src_path=str(self.src),
+            output_dir=str(self.out),
+            use_webp=False,
+            webp_quality=85,
+            thumbnail_size=512,
+            min_app_version=None,
+            min_supported_app_version=None,
+        )
+
+        realms = json.loads((self.out / "content" / "realms.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["counts"]["realms"], 2)
+        self.assertEqual([realm["id"] for realm in realms], ["sakura_haven", "crystal_creek"])
+        self.assertEqual([realm["name"]["en"] for realm in realms], ["Sakura Haven", "Crystal Creek"])
 
     def test_webp_export_rewrites_config_asset_names(self):
         self.make_level()

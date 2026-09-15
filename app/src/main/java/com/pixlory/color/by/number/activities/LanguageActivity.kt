@@ -8,6 +8,7 @@ import android.os.Build
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -30,6 +31,7 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
 
     companion object {
         const val EXTRA_FROM_SPLASH = "EXTRA_FROM_SPLASH"
+        const val EXTRA_DIRECT_FROM_HOME = "EXTRA_DIRECT_FROM_HOME"
     }
 
     private val viewModel: LanguageViewModel by viewModels {
@@ -54,6 +56,16 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
     }
 
     override fun initView() {
+        if (intent.getBooleanExtra(EXTRA_DIRECT_FROM_HOME, false)) {
+            onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    loadAndShowInterBackToHome(
+                        navAction = { finish() },
+                        viewBlock = interAdBlockView()
+                    )
+                }
+            })
+        }
         binding.rcvLanguage.layoutManager = LinearLayoutManager(this@LanguageActivity)
 
         collectWithLifecycle {
@@ -91,7 +103,7 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
         } else {
             binding.ivBack.visible()
             binding.ivBack.setOnClickListener {
-                finish()
+                onBackPressedDispatcher.onBackPressed()
             }
         }
 

@@ -7,6 +7,9 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
+import android.widget.FrameLayout
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -19,7 +22,10 @@ import androidx.viewbinding.ViewBinding
 import com.pixlory.color.by.number.dialog.LoadingDialog
 import com.pixlory.color.by.number.dialog.NoInternetDialog
 import com.pixlory.color.by.number.MyApplication
+import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.utils.Common
+import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.isNetworkAvailable
 import com.pixlory.color.by.number.utils.SoundScene
 import com.snake.squad.adslib.AdmobLib
@@ -35,6 +41,7 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
     private var connectivityManager: ConnectivityManager? = null
     private var isNetworkCallbackRegistered = false
     private var isNetworkMonitoringActive = false
+    private var adBlockView: View? = null
 
     private val loadingDialog by lazy { LoadingDialog(this) }
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
@@ -119,6 +126,80 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
         if (shouldMonitorNetwork) {
             unregisterNetworkCallback()
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        adBlockView?.gone()
+    }
+
+    fun loadInterHome(viewBlock: View?, navAction: () -> Unit) {
+        if (AdsManager.isShowInterHome()) {
+            val finishAdMute = muteMusicForFullscreenAd()
+            AdmobLib.showInterWithNativeAfter(
+                mActivity = this,
+                interModel = AdsManager.INTER_HOME,
+                nativeModel = AdsManager.NATIVE_FULL_SCREEN_AFTER_INTER,
+                vShowInterAds = viewBlock,
+                isShowNativeAfter = AdsManager.isShowNativeFullScreen(),
+                nativeLayout = R.layout.native_ads_full_screen,
+                onInterCloseOrFailed = { isDone ->
+                    if (isDone) AdsManager.updateTime()
+                    Log.d("BaseActivity", "Inter home: only show close or failed")
+                },
+                navAction = {
+                    finishAdMute()
+                    navAction()
+                }
+            )
+        } else {
+            navAction()
+        }
+    }
+
+    fun loadAndShowInterBackToHome(navAction: () -> Unit, viewBlock: View) {
+        if (AdsManager.isShowInterBackHome()) {
+            val finishAdMute = muteMusicForFullscreenAd()
+            AdmobLib.showInterWithNativeAfter(
+                mActivity = this,
+                interModel = AdsManager.INTER_BACK_TO_HOME,
+                nativeModel = AdsManager.NATIVE_FULL_SCREEN_AFTER_INTER,
+                vShowInterAds = viewBlock,
+                isShowOnTestDevice = true,
+                isShowNativeAfter = AdsManager.isShowNativeFullScreen(),
+                nativeLayout = R.layout.native_ads_full_screen,
+                onInterCloseOrFailed = { isDone ->
+                    if (isDone) AdsManager.updateTime()
+                    Log.d("BaseActivity", "Inter back home: only show close or failed")
+                },
+                navAction = {
+                    finishAdMute()
+                    navAction()
+                }
+            )
+        } else {
+            navAction()
+        }
+    }
+
+    protected fun muteMusicForFullscreenAd(): () -> Unit =
+        (application as? MyApplication)?.soundManager?.beginFullscreenAdMute() ?: {}
+
+    fun interAdBlockView(): View {
+        adBlockView?.let { return it }
+        val blockView = View(this).apply {
+            isClickable = true
+            visibility = View.GONE
+        }
+        (window.decorView as FrameLayout).addView(
+            blockView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+        adBlockView = blockView
+        return blockView
     }
 
     private fun registerNetworkCallback() {

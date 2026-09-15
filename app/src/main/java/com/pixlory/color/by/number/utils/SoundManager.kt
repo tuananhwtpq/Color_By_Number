@@ -17,6 +17,7 @@ class SoundManager(context: Context) {
     private var currentScene = SoundScene.SILENT
     private var currentMusicResId: Int? = null
     private var musicPlayer: MediaPlayer? = null
+    private var fullscreenAdMuteCount = 0
 
     private val soundPool = SoundPool.Builder()
         .setMaxStreams(4)
@@ -68,6 +69,19 @@ class SoundManager(context: Context) {
         soundPool.play(sampleId, EFFECT_VOLUME, EFFECT_VOLUME, 1, 0, 1f)
     }
 
+    fun beginFullscreenAdMute(): () -> Unit {
+        var isEnded = false
+        fullscreenAdMuteCount++
+        syncMusic()
+        return {
+            if (!isEnded) {
+                isEnded = true
+                fullscreenAdMuteCount = (fullscreenAdMuteCount - 1).coerceAtLeast(0)
+                syncMusic()
+            }
+        }
+    }
+
     fun release() {
         musicPlayer?.release()
         musicPlayer = null
@@ -76,7 +90,7 @@ class SoundManager(context: Context) {
     }
 
     private fun syncMusic() {
-        val targetResId = if (!SharedPrefManager.isBackgroundMusicEnabled) {
+        val targetResId = if (!SharedPrefManager.isBackgroundMusicEnabled || fullscreenAdMuteCount > 0) {
             null
         } else {
             when (currentScene) {

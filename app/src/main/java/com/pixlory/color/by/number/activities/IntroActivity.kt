@@ -15,6 +15,7 @@ import com.pixlory.color.by.number.ui.intro.IntroViewModel
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.SoundScene
+import com.pixlory.color.by.number.utils.ads.AdsManager
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -70,6 +71,8 @@ class IntroActivity : BaseActivity<ActivityIntroBinding>(ActivityIntroBinding::i
     }
 
     override fun initData() {
+        AdsManager.preloadInterHome(this)
+        AdsManager.preloadInterBack(this)
         viewModel.onIntroOpened()
     }
 

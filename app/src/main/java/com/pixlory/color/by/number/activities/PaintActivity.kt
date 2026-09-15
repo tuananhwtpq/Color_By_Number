@@ -14,6 +14,7 @@ import android.graphics.drawable.Drawable
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -71,6 +72,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         const val EXTRA_CATEGORY = "CATEGORY"
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
         const val EXTRA_PREPARATION_THUMBNAIL = "EXTRA_PREPARATION_THUMBNAIL"
+        const val EXTRA_FROM_HOME = "EXTRA_FROM_HOME"
     }
 
     private val appContainer by lazy {
@@ -135,13 +137,25 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     override fun initView() {
+        onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (intent.getBooleanExtra(EXTRA_FROM_HOME, false)) {
+                    loadAndShowInterBackToHome(
+                        navAction = { finish() },
+                        viewBlock = interAdBlockView()
+                    )
+                } else {
+                    finish()
+                }
+            }
+        })
         initViews()
         setupGuideIfNeeded()
         collectUi()
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnSoundClickListener { finish() }
+        binding.btnBack.setOnSoundClickListener { onBackPressedDispatcher.onBackPressed() }
         binding.btnHint.setOnSoundClickListener { onHintButtonClicked() }
         binding.btnPreviewFull.setOnSoundClickListener { toggleFullColorPreview() }
         binding.btnFillAll.setOnSoundClickListener { toggleFillAllOnCanvas() }
@@ -760,6 +774,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
                     putExtra(TimelapsePreviewActivity.EXTRA_LEVEL_ID, event.levelId)
                     putExtra(TimelapsePreviewActivity.EXTRA_COLLECTED_COUNT, collectedPaintDrops)
                     putExtra(TimelapsePreviewActivity.EXTRA_OPEN_PICTURE_COMPLETED_ON_SKIP, true)
+                    putExtra(TimelapsePreviewActivity.EXTRA_FROM_HOME, intent.getBooleanExtra(EXTRA_FROM_HOME, false))
                 }
             )
             finish()

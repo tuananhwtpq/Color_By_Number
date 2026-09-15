@@ -7,6 +7,7 @@ import com.airbnb.lottie.LottieDrawable
 import com.bumptech.glide.Glide
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.activities.RealmFullScreenActivity
+import com.pixlory.color.by.number.activities.MainActivity
 import com.pixlory.color.by.number.activities.RealmGuideActivity
 import com.pixlory.color.by.number.activities.RealmRoadActivity
 import com.pixlory.color.by.number.bases.BaseFragment
@@ -51,21 +52,30 @@ class RealmFragment : BaseFragment<FragmentRealmBinding>(FragmentRealmBinding::i
     override fun initActionView() {
         binding.btnFullScreen.setOnUnDoubleClick {
             if (!isRealmVisualReady) return@setOnUnDoubleClick
-            startActivity(
-                RealmFullScreenActivity.newIntent(
-                    requireContext(),
-                    realm.id,
-                    binding.lavRealmBackground.progress
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(
+                    RealmFullScreenActivity.newIntent(
+                        requireContext(),
+                        realm.id,
+                        binding.lavRealmBackground.progress
+                    ).putExtra(RealmFullScreenActivity.EXTRA_FROM_HOME, true)
                 )
-            )
+            }
         }
 
         binding.btnNewRealm.setOnUnDoubleClick {
-            startActivity(Intent(requireContext(), RealmRoadActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(Intent(requireContext(), RealmRoadActivity::class.java))
+            }
         }
 
         binding.btnGuide.setOnUnDoubleClick {
-            startActivity(Intent(requireActivity(), RealmGuideActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(Intent(requireActivity(), RealmGuideActivity::class.java))
+            }
         }
     }
 

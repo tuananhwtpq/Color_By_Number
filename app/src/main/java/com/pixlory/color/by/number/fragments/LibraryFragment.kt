@@ -111,7 +111,10 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     override fun initActionView() {
 
         binding.btnAchieve.setOnUnDoubleClick {
-            startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+            }
         }
     }
 
@@ -219,6 +222,11 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     }
 
     private fun onLevelClicked(level: LevelConfig) {
+        val home = requireActivity() as MainActivity
+        home.loadInterHome(home.interAdBlockView()) { handleLevelClicked(level) }
+    }
+
+    private fun handleLevelClicked(level: LevelConfig) {
         val completedMaskColors =
             appContainer.paintingProgressRepository.loadProgress(level.category, level.id)
         val progress = level.progressFraction(completedMaskColors)
@@ -258,6 +266,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         val intent = Intent(requireActivity(), PaintActivity::class.java)
         intent.putExtra(PaintActivity.EXTRA_CATEGORY, level.category)
         intent.putExtra(PaintActivity.EXTRA_LEVEL_ID, level.id)
+        intent.putExtra(PaintActivity.EXTRA_FROM_HOME, true)
         preparationThumbnailFor(level)?.let { thumbnail ->
             intent.putExtra(PaintActivity.EXTRA_PREPARATION_THUMBNAIL, thumbnail)
         }

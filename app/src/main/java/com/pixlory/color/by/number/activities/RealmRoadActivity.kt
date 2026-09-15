@@ -1,6 +1,7 @@
 package com.pixlory.color.by.number.activities
 
 import android.content.Intent
+import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.pixlory.color.by.number.MyApplication
@@ -27,6 +28,15 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
 
     override val shouldMonitorNetwork = true
 
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            loadAndShowInterBackToHome(
+                navAction = { finish() },
+                viewBlock = interAdBlockView()
+            )
+        }
+    }
+
     private val appContainer by lazy {
         (application as MyApplication).appContainer
     }
@@ -50,6 +60,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
 
     override fun initView() {
         AppThemeManager.applyFullBackground(binding.main)
+        onBackPressedDispatcher.addCallback(onBackPressedCallback)
         binding.rvRealmRoad.layoutManager = LinearLayoutManager(this)
         binding.rvRealmRoad.adapter = adapter
         renderRealmRoad()
@@ -58,7 +69,7 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
 
     override fun initActionView() {
         binding.btnBack.setOnUnDoubleClick {
-            finish()
+            onBackPressedDispatcher.onBackPressed()
         }
 
         binding.btnPaintDropCount.setOnUnDoubleClick {
@@ -146,6 +157,13 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
     }
 
     private fun openLibrary() {
+        loadAndShowInterBackToHome(
+            navAction = ::navigateToLibrary,
+            viewBlock = interAdBlockView()
+        )
+    }
+
+    private fun navigateToLibrary() {
         startActivity(
             Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)

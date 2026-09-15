@@ -47,7 +47,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 
 DEFAULT_ASSETS = os.path.join("app", "src", "main", "assets")
 DEFAULT_RES = os.path.join("app", "src", "main", "res")
-DEFAULT_SRC = os.path.join("app", "src", "main", "java", "com", "example", "baseproject")
+DEFAULT_SRC = os.path.join("app", "src", "main", "java", "com", "pixlory", "color", "by", "number")
 
 COLLECTION_ROOT = "Collection"
 SKIP_DIRS = {"images", "webkit"}
@@ -484,7 +484,7 @@ def extract_lottie_preview(animation_path):
     return None, None
 
 
-def parse_realm_catalog(src_path):
+def parse_realm_catalog(src_path, strings=None):
     catalog_path = os.path.join(src_path, "data", "Realm.kt")
     if not os.path.exists(catalog_path):
         warn("Không tìm thấy Realm.kt, bỏ qua phần realm")
@@ -494,19 +494,24 @@ def parse_realm_catalog(src_path):
         source = input_file.read()
 
     realms = []
+    strings = strings or {}
     block_pattern = re.compile(r'Realm\(\s*(.*?)\s*\)\s*,', re.S)
     legacy_pattern = re.compile(r'"([^"]+)"\s*,\s*"([^"]+)"\s*,\s*R\.raw\.(\w+)')
     for block in block_pattern.findall(source):
         id_match = re.search(r'\bid\s*=\s*"([^"]+)"', block)
         name_match = re.search(r'\bname\s*=\s*"([^"]+)"', block)
+        name_res_match = re.search(r'\bnameRes\s*=\s*R\.string\.(\w+)', block)
         raw_match = re.search(r'\banimationRes\s*=\s*R\.raw\.(\w+)', block)
         unlock_match = re.search(r'\bunlockCost\s*=\s*(\d+)', block)
         sort_match = re.search(r'\bsortOrder\s*=\s*(\d+)', block)
 
-        if id_match and name_match and raw_match:
+        name = name_match.group(1) if name_match else (
+            strings.get(name_res_match.group(1)) if name_res_match else None
+        )
+        if id_match and name and raw_match:
             realms.append({
                 "id": id_match.group(1),
-                "name": name_match.group(1),
+                "name": name,
                 "rawName": raw_match.group(1),
                 "unlockCost": int(unlock_match.group(1)) if unlock_match else 0,
                 "sortOrder": int(sort_match.group(1)) if sort_match else len(realms) + 1,
@@ -527,7 +532,9 @@ def parse_realm_catalog(src_path):
 
 def export_realms(src_path, res_path, writer):
     realms = []
-    for index, realm in enumerate(parse_realm_catalog(src_path), start=1):
+    for index, realm in enumerate(
+        parse_realm_catalog(src_path, parse_android_strings(res_path)), start=1
+    ):
         animation_path = os.path.join(res_path, "raw", realm["rawName"] + ".json")
         if not os.path.exists(animation_path):
             warn("Thiếu file animation cho realm %s" % realm["id"])

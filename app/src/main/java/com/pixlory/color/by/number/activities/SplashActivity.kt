@@ -130,6 +130,7 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
         AdsManager.preloadInterHome(this)
         AdsManager.preloadInterBack(this)
         AdsManager.preloadInterDone(this)
+        AdsManager.preloadInterDraw(this)
     }
 
     private fun setupOnResume() {

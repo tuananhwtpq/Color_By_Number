@@ -3,6 +3,7 @@ package com.pixlory.color.by.number.activities
 import android.content.Context
 import android.content.Intent
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
@@ -30,6 +31,15 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
 ) {
 
     override val shouldMonitorNetwork = true
+
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            loadAndShowInterBackToHome(
+                navAction = { finish() },
+                viewBlock = interAdBlockView()
+            )
+        }
+    }
 
     companion object {
         const val EXTRA_COLLECTION_ID = "COLLECTION_ID"
@@ -75,6 +85,7 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
 
     override fun initView() {
         AppThemeManager.applyFullBackground(binding.main)
+        onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
         binding.rvLevels.layoutManager = GridLayoutManager(this, 2)
         // rvLevels nằm trong NestedScrollView nên phải tắt cuộn riêng, để cả màn cuộn cùng nhau.
@@ -86,7 +97,7 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnSoundClickListener { finish() }
+        binding.btnBack.setOnSoundClickListener { onBackPressedDispatcher.onBackPressed() }
     }
 
     override fun onResume() {

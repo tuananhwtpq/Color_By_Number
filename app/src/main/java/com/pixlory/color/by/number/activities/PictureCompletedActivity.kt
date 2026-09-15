@@ -51,6 +51,7 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         const val EXTRA_CATEGORY = "CATEGORY"
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
         const val EXTRA_COLLECTED_COUNT = "COLLECTED_COUNT"
+        const val EXTRA_FROM_HOME = "EXTRA_FROM_HOME"
         private const val TAG = "PictureCompleted"
         private const val PRE_GENERATE_DELAY_MS = 500L
         private const val MIN_SAVE_VIDEO_DIALOG_MS = 2_000L
@@ -80,7 +81,14 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            finish()
+            if (intent.getBooleanExtra(EXTRA_FROM_HOME, false)) {
+                loadAndShowInterBackToHome(
+                    navAction = { finish() },
+                    viewBlock = interAdBlockView()
+                )
+            } else {
+                finish()
+            }
         }
     }
 
@@ -118,7 +126,10 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
 //        }
 
         binding.btnBackToHome.setOnSoundClickListener {
-            onBackPressedDispatcher.onBackPressed()
+            loadAndShowInterBackToHome(
+                navAction = { openCompletedPictureCategory() },
+                viewBlock = interAdBlockView()
+            )
         }
 
         binding.btnSave.setOnUnDoubleClick {

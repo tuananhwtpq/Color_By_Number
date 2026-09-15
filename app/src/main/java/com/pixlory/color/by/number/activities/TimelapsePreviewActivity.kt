@@ -42,6 +42,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
         const val EXTRA_LEVEL_ID = "LEVEL_ID"
         const val EXTRA_COLLECTED_COUNT = "COLLECTED_COUNT"
         const val EXTRA_OPEN_PICTURE_COMPLETED_ON_SKIP = "OPEN_PICTURE_COMPLETED_ON_SKIP"
+        const val EXTRA_FROM_HOME = "EXTRA_FROM_HOME"
 
         private const val PREVIEW_DURATION_MS = 15_000L
         private const val PREVIEW_FRAME_DELAY_MS = 33L
@@ -292,6 +293,7 @@ class TimelapsePreviewActivity : BaseActivity<ActivityTimelapsePreviewBinding>(
                 putExtra(PictureCompletedActivity.EXTRA_CATEGORY, category)
                 putExtra(PictureCompletedActivity.EXTRA_LEVEL_ID, levelId)
                 putExtra(PictureCompletedActivity.EXTRA_COLLECTED_COUNT, collectedPaintDrops)
+                putExtra(PictureCompletedActivity.EXTRA_FROM_HOME, intent.getBooleanExtra(EXTRA_FROM_HOME, false))
             }
         )
         finish()

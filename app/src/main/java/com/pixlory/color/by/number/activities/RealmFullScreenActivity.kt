@@ -3,6 +3,7 @@ package com.pixlory.color.by.number.activities
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieDrawable
@@ -31,6 +32,7 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     override val shouldMonitorNetwork = true
 
     companion object {
+        const val EXTRA_FROM_HOME = "EXTRA_FROM_HOME"
         private const val EXTRA_REALM_ID = "REALM_ID"
         private const val EXTRA_PROGRESS = "PROGRESS"
         private const val TAG = "RealmFullScreen"
@@ -64,6 +66,18 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     }
 
     override fun initView() {
+        onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (intent.getBooleanExtra(EXTRA_FROM_HOME, false)) {
+                    loadAndShowInterBackToHome(
+                        navAction = { finish() },
+                        viewBlock = interAdBlockView()
+                    )
+                } else {
+                    finish()
+                }
+            }
+        })
         renderRealm()
         loadRealm()
     }
@@ -125,7 +139,7 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
     }
 
     override fun initActionView() {
-        binding.btnBack.setOnUnDoubleClick { finish() }
+        binding.btnBack.setOnUnDoubleClick { onBackPressedDispatcher.onBackPressed() }
         binding.btnDownload.setOnUnDoubleClick { saveCurrentFrame() }
         binding.btnSelect.setOnUnDoubleClick {
             SharedPrefManager.selectedRealmId = RealmCatalog.normalizeId(realm.id)

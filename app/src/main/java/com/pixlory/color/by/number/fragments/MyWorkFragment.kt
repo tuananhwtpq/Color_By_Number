@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.activities.AchieveActivity
+import com.pixlory.color.by.number.activities.MainActivity
 import com.pixlory.color.by.number.activities.PaintActivity
 import com.pixlory.color.by.number.adapters.LevelAdapter
 import com.pixlory.color.by.number.app.SimpleViewModelFactory
@@ -89,7 +90,10 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
         binding.tvTabInProgress.setOnSoundClickListener { updateTabSelection(TAB_IN_PROGRESS) }
         binding.tvTabCompleted.setOnSoundClickListener { updateTabSelection(TAB_COMPLETED) }
         binding.btnArchive.setOnSoundClickListener {
-            startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+            val home = requireActivity() as MainActivity
+            home.loadInterHome(home.interAdBlockView()) {
+                startActivity(Intent(requireActivity(), AchieveActivity::class.java))
+            }
         }
         binding.btnGoToLibrary.setOnSoundClickListener {
             mainViewModel.onTabSelected(LIBRARY_TAB_POSITION)
@@ -140,7 +144,11 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     }
 
     private fun onMyWorkItemClicked(level: LevelConfig) {
-        showMyworkCurrentPictureDialog(level, isCompleted = selectedTab == TAB_COMPLETED)
+        val home = requireActivity() as MainActivity
+        val isCompleted = selectedTab == TAB_COMPLETED
+        home.loadInterHome(home.interAdBlockView()) {
+            showMyworkCurrentPictureDialog(level, isCompleted = isCompleted)
+        }
     }
 
     private fun showMyworkCurrentPictureDialog(level: LevelConfig, isCompleted: Boolean) {
@@ -192,6 +200,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
         val intent = Intent(requireActivity(), PaintActivity::class.java)
         intent.putExtra(PaintActivity.EXTRA_CATEGORY, level.category)
         intent.putExtra(PaintActivity.EXTRA_LEVEL_ID, level.id)
+        intent.putExtra(PaintActivity.EXTRA_FROM_HOME, true)
         preparationThumbnailFor(level)?.let { thumbnail ->
             intent.putExtra(PaintActivity.EXTRA_PREPARATION_THUMBNAIL, thumbnail)
         }

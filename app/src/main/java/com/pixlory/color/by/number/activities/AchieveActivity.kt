@@ -26,7 +26,10 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
 
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            finish()
+            loadAndShowInterBackToHome(
+                navAction = { finish() },
+                viewBlock = interAdBlockView()
+            )
         }
     }
 
