@@ -3,6 +3,7 @@ package com.pixlory.color.by.number.adapters
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.doOnLayout
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -54,6 +55,7 @@ class RealmRoadAdapter(
         }
 
         fun bind(item: RealmRoadItem) = with(binding) {
+            tvRealmName.isSelected = false
             tvRealmName.text = item.realm.displayName(root.context)
             if (!item.realm.previewImageUrl.isNullOrBlank()) {
                 Glide.with(ivRealmThumbnail)
@@ -88,6 +90,14 @@ class RealmRoadAdapter(
                 R.string.realm_more_to_unlock_format,
                 item.remainingPaintDrops,
             )
+
+            tvRealmName.doOnLayout {
+                val title = tvRealmName
+                val availableWidth = title.width - title.compoundPaddingLeft - title.compoundPaddingRight
+                val textWidth = title.layout?.getLineWidth(0) ?: 0f
+                title.isSelected = false
+                title.isSelected = availableWidth > 0 && textWidth > availableWidth
+            }
         }
 
         private fun handleThumbnailClick() {

@@ -5,30 +5,42 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_paint_drop_info"
+    android:layoutDirection="ltr"
     android:minHeight="40dp"
     android:padding="18dp"
-    tools:context=".dialog.PaintDropInfoDialog"
-    android:layoutDirection="ltr">
+    tools:context=".dialog.PaintDropInfoDialog">
 
-    <TextView
-        android:id="@+id/tvTitle"
-        style="@style/Heading2"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:id="@+id/llTop"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/paint_drops_collected"
-        android:textColor="@color/grey_700"
-        app:layout_constraintBottom_toBottomOf="@id/btnClose"
-        app:layout_constraintEnd_toStartOf="@id/btnClose"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/btnClose" />
-
-    <ImageView
-        android:id="@+id/btnClose"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:src="@drawable/ic_close_new"
+        android:gravity="center"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            style="@style/Heading2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/paint_drops_collected"
+            android:textColor="@color/grey_700"
+            app:layout_constraintEnd_toStartOf="@id/btnClose"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/btnClose"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_close_new"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    </LinearLayout>
 
     <ImageView
         android:id="@+id/ivPaintDrop"
@@ -37,7 +49,7 @@
         android:layout_marginTop="20dp"
         android:src="@drawable/ic_paint_drop"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle" />
+        app:layout_constraintTop_toBottomOf="@id/llTop" />
 
     <TextView
         android:id="@+id/tvPaintDropCount"
@@ -144,19 +156,20 @@
         style="@style/BodyL"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="12dp"
         android:text="@string/color_realm_quote"
         android:textColor="@color/orange450"
         app:layout_constraintEnd_toStartOf="@id/ivDecorPaintDrop"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvAreasUnlockedLabel" />
+        app:layout_constraintTop_toBottomOf="@id/ivQuote" />
 
     <ImageView
+        android:id="@+id/ivQuote"
         android:layout_width="20dp"
         android:layout_height="20dp"
         android:src="@drawable/ic_quote"
         app:layout_constraintStart_toStartOf="@id/tvQuote"
-        app:layout_constraintTop_toTopOf="@id/ivDecorPaintDrop" />
+        app:layout_constraintTop_toBottomOf="@id/tvAreasUnlockedLabel" />
 
 
     <ImageView

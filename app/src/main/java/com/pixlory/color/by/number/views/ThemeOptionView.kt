@@ -1,5 +1,6 @@
 package com.pixlory.color.by.number.views
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -50,6 +51,8 @@ class ThemeOptionView @JvmOverloads constructor(
     private var optionTitle = ""
     private var optionType = TYPE_MIDNIGHT
     private var thumbnailDrawable: Drawable? = null
+    private var titleAnimator: ValueAnimator? = null
+    private var titleScrollOffset = 0f
 
     init {
         isClickable = true
@@ -73,6 +76,27 @@ class ThemeOptionView @JvmOverloads constructor(
     override fun drawableStateChanged() {
         super.drawableStateChanged()
         invalidate()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        updateTitleMarquee()
+    }
+
+    override fun onDetachedFromWindow() {
+        stopTitleMarquee()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        stopTitleMarquee()
+        updateTitleMarquee()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        updateTitleMarquee()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -368,7 +392,52 @@ class ThemeOptionView @JvmOverloads constructor(
 
     private fun drawTitle(canvas: Canvas) {
         val y = footerBounds.centerY() - (textPaint.descent() + textPaint.ascent()) / 2f
-        canvas.drawText(optionTitle, footerBounds.centerX(), y, textPaint)
+        val titleWidth = textPaint.measureText(optionTitle)
+        val inset = 12f.dp()
+        val availableWidth = footerBounds.width() - inset * 2f
+        if (titleWidth <= availableWidth) {
+            canvas.drawText(optionTitle, footerBounds.centerX(), y, textPaint)
+            return
+        }
+
+        val left = footerBounds.left + inset
+        val gap = 32f.dp()
+        canvas.save()
+        canvas.clipRect(left, footerBounds.top, footerBounds.right - inset, footerBounds.bottom)
+        val firstCenter = left + titleWidth / 2f - titleScrollOffset
+        canvas.drawText(optionTitle, firstCenter, y, textPaint)
+        canvas.drawText(optionTitle, firstCenter + titleWidth + gap, y, textPaint)
+        canvas.restore()
+    }
+
+    private fun updateTitleMarquee() {
+        val availableWidth = width - strokePaint.strokeWidth - 24f.dp()
+        val titleWidth = textPaint.measureText(optionTitle)
+        if (!isAttachedToWindow || !isShown || availableWidth <= 0f || titleWidth <= availableWidth) {
+            stopTitleMarquee()
+            return
+        }
+        if (titleAnimator != null) return
+
+        val travel = titleWidth + 32f.dp()
+        titleAnimator = ValueAnimator.ofFloat(0f, travel).apply {
+            duration = (travel / 32f.dp() * 1000f).toLong()
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.RESTART
+            startDelay = 700L
+            addUpdateListener { animator ->
+                titleScrollOffset = animator.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    private fun stopTitleMarquee() {
+        titleAnimator?.cancel()
+        titleAnimator = null
+        titleScrollOffset = 0f
+        invalidate()
     }
 
     private fun Float.dp(): Float = this * resources.displayMetrics.density

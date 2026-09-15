@@ -5,31 +5,42 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_grey_50_20"
+    android:layoutDirection="ltr"
     android:padding="20dp"
-    tools:context=".dialog.HighlightAreaDialog"
-    android:layoutDirection="ltr">
+    tools:context=".dialog.HighlightAreaDialog">
 
-    <ImageView
-        android:id="@+id/btnClose"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/ic_close_new"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/tvTitle"
-        style="@style/Heading2"
+    <LinearLayout
+        android:id="@+id/llTop"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="50dp"
         android:gravity="center"
-        android:text="@string/highlight_areas"
-        android:textColor="@color/grey_800"
-        app:layout_constraintBottom_toBottomOf="@id/btnClose"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/btnClose" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            style="@style/Heading2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/highlight_areas"
+            android:textColor="@color/grey_800"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/btnClose"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_close_new"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </LinearLayout>
+
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layoutOptions"
@@ -38,7 +49,7 @@
         android:layout_marginTop="32dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle">
+        app:layout_constraintTop_toBottomOf="@id/llTop">
 
         <com.pixlory.color.by.number.views.HighlightOptionView
             android:id="@+id/btnGrayChecker"
