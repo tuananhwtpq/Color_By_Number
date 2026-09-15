@@ -31,10 +31,16 @@ object RemoteLevelMapper {
     fun enrichConfig(
         config: LevelConfig,
         detail: RemoteLevelDetailDto,
-        assetLoader: RemoteAssetLoader
+        assetLoader: RemoteAssetLoader,
+        enableFillCoverage: Boolean = false
     ): LevelConfig {
-        val remoteFillCoverage = assetUrl(detail.assets, "FILL_COVERAGE", assetLoader)
-            ?: config.assets?.fillCoverage?.let(assetLoader::resolveUrl)
+        // config.assets.fill_coverage chỉ là tên file trong bundle export. Khi tải remote,
+        // chỉ role backend mới bảo đảm một URL hợp lệ để tải.
+        val remoteFillCoverage = if (enableFillCoverage) {
+            assetUrl(detail.assets, "FILL_COVERAGE", assetLoader)
+        } else {
+            null
+        }
 
         return config.copy(
             id = detail.id,

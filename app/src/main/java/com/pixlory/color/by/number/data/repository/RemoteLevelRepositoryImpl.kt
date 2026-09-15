@@ -34,10 +34,11 @@ class RemoteLevelRepositoryImpl(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val categoryRequestLimit: Int = DEFAULT_CATEGORY_REQUEST_LIMIT,
+    private val enableFillCoverage: Boolean = false,
     private val gson: Gson = Gson()
 ) : AssetLevelRepository {
 
-    private val metadataLoader = RemoteLevelMetadataLoader(api, assetLoader)
+    private val metadataLoader = RemoteLevelMetadataLoader(api, assetLoader, enableFillCoverage)
     private val levelsMutex = Mutex()
     private var cachedAllLevels: List<LevelConfig>? = null
     private var lastRemoteLoadedAtMillis: Long = 0L
@@ -122,7 +123,8 @@ class RemoteLevelRepositoryImpl(
             val config = RemoteLevelMapper.enrichConfig(
                 config = assetLoader.downloadLevelConfig(configPath),
                 detail = detail,
-                assetLoader = assetLoader
+                assetLoader = assetLoader,
+                enableFillCoverage = enableFillCoverage
             )
             cacheResolvedLevel(config)
 
@@ -132,8 +134,7 @@ class RemoteLevelRepositoryImpl(
             val displayLineUrl = displayLineAsset?.path ?: lineUrl
             val displayLineIsSvg = RemoteDisplayLineAssetPolicy.isSvg(displayLineAsset)
             val detailUrl = assetPath(detail, "DETAIL")
-            val fillCoverageUrl = assetPath(detail, "FILL_COVERAGE")
-                ?: config.assets?.fillCoverage
+            val fillCoverageUrl = config.assets?.fillCoverage
 
             val bitmaps = coroutineScope {
                 val lineDeferred = async { assetLoader.downloadBitmap(lineUrl, "LINE") }

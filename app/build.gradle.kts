@@ -30,6 +30,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "PIXCOLOR_BASE_URL", "\"https://pixlory.dktechgroup.com/\"")
         buildConfigField("Boolean", "USE_REMOTE_CONTENT", "true")
+        // Bật sau khi backend trả role FILL_COVERAGE với URL ảnh hợp lệ cho mỗi level.
+        buildConfigField("Boolean", "USE_REMOTE_FILL_COVERAGE", "false")
         buildConfigField("Boolean", "USE_WARM_PAPER_CANVAS", "false")
         buildConfigField("Boolean", "USE_EDGE_UNDERPAINT", "true")
         // Re-enable this when the rewarded hint flow is enabled again.

@@ -66,7 +66,8 @@ class DefaultAppContainer(context: Context) : AppContainer {
                 api = pixcolorApi,
                 assetLoader = remoteAssetLoader,
                 fallback = localAssetLevelRepository,
-                metadataCacheFile = remoteLevelMetadataCacheFile
+                metadataCacheFile = remoteLevelMetadataCacheFile,
+                enableFillCoverage = BuildConfig.USE_REMOTE_FILL_COVERAGE
             )
         } else {
             localAssetLevelRepository

@@ -4,7 +4,8 @@ import com.pixlory.color.by.number.data.LevelConfig
 
 class RemoteLevelMetadataLoader(
     private val api: PixcolorApi,
-    private val assetLoader: RemoteAssetLoader
+    private val assetLoader: RemoteAssetLoader,
+    private val enableFillCoverage: Boolean = false
 ) {
 
     suspend fun loadGroupLevelConfigs(
@@ -68,7 +69,8 @@ class RemoteLevelMetadataLoader(
                 isPremium = downloadedConfig.isPremium ?: summaryConfig.isPremium
             ),
             detail = detail,
-            assetLoader = assetLoader
+            assetLoader = assetLoader,
+            enableFillCoverage = enableFillCoverage
         )
     }
 
