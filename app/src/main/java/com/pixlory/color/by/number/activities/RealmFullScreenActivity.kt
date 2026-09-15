@@ -20,6 +20,7 @@ import com.pixlory.color.by.number.utils.LottieFrameRenderer
 import com.pixlory.color.by.number.utils.RealmAnimationCache
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.utils.showToast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -70,7 +71,10 @@ class RealmFullScreenActivity : BaseActivity<ActivityRealmFullScreenBinding>(
             override fun handleOnBackPressed() {
                 if (intent.getBooleanExtra(EXTRA_FROM_HOME, false)) {
                     loadAndShowInterBackToHome(
-                        navAction = { finish() },
+                        navAction = {
+                            setRequireShowRate(true)
+                            finish()
+                        },
                         viewBlock = interAdBlockView()
                     )
                 } else {

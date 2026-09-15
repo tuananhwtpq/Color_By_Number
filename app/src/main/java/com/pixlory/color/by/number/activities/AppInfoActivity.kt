@@ -10,6 +10,7 @@ import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.bases.BaseActivity
 import com.pixlory.color.by.number.databinding.ActivityAppInfoBinding
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.setRequireShowRate
 
 class AppInfoActivity : BaseActivity<ActivityAppInfoBinding>(ActivityAppInfoBinding::inflate) {
 
@@ -18,7 +19,10 @@ class AppInfoActivity : BaseActivity<ActivityAppInfoBinding>(ActivityAppInfoBind
     private val onBackPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             loadAndShowInterBackToHome(
-                navAction = { finish() },
+                navAction = {
+                    setRequireShowRate(true)
+                    finish()
+                },
                 viewBlock = interAdBlockView()
             )
         }

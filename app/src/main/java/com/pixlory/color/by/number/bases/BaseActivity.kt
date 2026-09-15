@@ -114,6 +114,7 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
 
     override fun onResume() {
         super.onResume()
+        if (this.javaClass.simpleName == "PaintActivity") Log.d("InterOverlayProbe", "Paint onResume blockVisibility=${adBlockView?.visibility}")
         (application as? MyApplication)?.soundManager?.onSceneResumed(soundScene)
         if (shouldMonitorNetwork) {
             isNetworkMonitoringActive = true
@@ -133,7 +134,9 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
 
     override fun onStop() {
         super.onStop()
+        if (this.javaClass.simpleName == "PaintActivity") Log.d("InterOverlayProbe", "Paint onStop before blockVisibility=${adBlockView?.visibility}")
         adBlockView?.gone()
+        if (this.javaClass.simpleName == "PaintActivity") Log.d("InterOverlayProbe", "Paint onStop after blockVisibility=${adBlockView?.visibility}")
     }
 
     fun loadInterHome(viewBlock: View?, navAction: () -> Unit) {
@@ -209,6 +212,7 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
     }
 
     fun loadAndShowInterDraw(viewBlock: View, navAction: () -> Unit) {
+        Log.d("InterOverlayProbe", "Draw requested blockVisibility=${viewBlock.visibility}")
         if (AdsManager.isShowInterDraw()) {
             val finishAdMute = muteMusicForFullscreenAd()
             AdmobLib.showInterWithNativeAfter(
@@ -219,9 +223,11 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
                 isShowNativeAfter = AdsManager.isShowNativeFullScreen(),
                 nativeLayout = R.layout.native_ads_full_screen,
                 onInterCloseOrFailed = { isDone ->
+                    Log.d("InterOverlayProbe", "Draw closeOrFailed isDone=$isDone blockVisibility=${viewBlock.visibility}")
                     if (isDone) AdsManager.updateTime()
                 },
                 navAction = {
+                    Log.d("InterOverlayProbe", "Draw navAction blockVisibility=${viewBlock.visibility}")
                     finishAdMute()
                     navAction()
                 }

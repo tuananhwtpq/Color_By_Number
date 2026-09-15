@@ -6,6 +6,7 @@ import com.pixlory.color.by.number.databinding.ActivityThemeBinding
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.views.ThemeOptionView
 
 class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::inflate) {
@@ -28,7 +29,10 @@ class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::i
         onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 loadAndShowInterBackToHome(
-                    navAction = { finish() },
+                    navAction = {
+                        setRequireShowRate(true)
+                        finish()
+                    },
                     viewBlock = interAdBlockView()
                 )
             }

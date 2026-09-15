@@ -18,6 +18,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <TextView
+        android:id="@+id/textShowInterDraw"
+        style="@style/BodyL"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="86dp"
+        android:layout_marginTop="30dp"
+        android:background="@drawable/bg_orange_border"
+        android:gravity="center"
+        android:padding="6dp"
+        android:text="@string/ads_will_start_in_5s"
+        android:textColor="@color/white"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <ImageView
         android:id="@+id/btnHint"
         android:layout_width="56dp"
@@ -184,24 +202,24 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="@color/white"
-        android:visibility="gone"
         android:elevation="10dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/frNativeSmall" />
 
     <FrameLayout
         android:id="@+id/frNativeSmall"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone"
         android:elevation="10dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <FrameLayout
         android:id="@+id/frNativeExpand"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="gone"
         android:elevation="10dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <FrameLayout
@@ -407,5 +425,12 @@
             app:lottie_loop="false"
             app:lottie_rawRes="@raw/color_blast" />
     </FrameLayout>
+
+    <View
+        android:id="@+id/vShowInterAds"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:visibility="gone" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

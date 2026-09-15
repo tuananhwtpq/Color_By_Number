@@ -22,6 +22,7 @@ import com.pixlory.color.by.number.ui.language.LanguageViewModel
 import com.pixlory.color.by.number.utils.Constants
 import com.pixlory.color.by.number.utils.SoundScene
 import com.pixlory.color.by.number.utils.gone
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.utils.visible
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -60,7 +61,10 @@ class LanguageActivity : BaseActivity<ActivityLanguageBinding>(ActivityLanguageB
             onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     loadAndShowInterBackToHome(
-                        navAction = { finish() },
+                        navAction = {
+                            setRequireShowRate(true)
+                            finish()
+                        },
                         viewBlock = interAdBlockView()
                     )
                 }

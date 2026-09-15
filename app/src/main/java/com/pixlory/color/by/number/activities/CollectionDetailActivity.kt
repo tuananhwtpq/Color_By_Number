@@ -21,6 +21,7 @@ import com.pixlory.color.by.number.dialog.CurrentPictureDialog
 import com.pixlory.color.by.number.dialog.ResetPictureDialog
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.setOnSoundClickListener
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.utils.CompletedPictureActions
 import com.pixlory.color.by.number.ui.collection.CollectionDetailUiState
 import com.pixlory.color.by.number.ui.collection.CollectionDetailViewModel
@@ -35,7 +36,10 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
     private val onBackPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             loadAndShowInterBackToHome(
-                navAction = { finish() },
+                navAction = {
+                    setRequireShowRate(true)
+                    finish()
+                },
                 viewBlock = interAdBlockView()
             )
         }

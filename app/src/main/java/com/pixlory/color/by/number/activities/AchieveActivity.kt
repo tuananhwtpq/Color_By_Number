@@ -16,6 +16,7 @@ import com.pixlory.color.by.number.dialog.AchieveDetailDialog
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -27,7 +28,10 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
     private val onBackPressCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             loadAndShowInterBackToHome(
-                navAction = { finish() },
+                navAction = {
+                    setRequireShowRate(true)
+                    finish()
+                },
                 viewBlock = interAdBlockView()
             )
         }

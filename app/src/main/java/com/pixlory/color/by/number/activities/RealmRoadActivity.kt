@@ -20,6 +20,7 @@ import com.pixlory.color.by.number.dialog.PaintDropInfoDialog
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -31,7 +32,10 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
     private val onBackPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             loadAndShowInterBackToHome(
-                navAction = { finish() },
+                navAction = {
+                    setRequireShowRate(true)
+                    finish()
+                },
                 viewBlock = interAdBlockView()
             )
         }
@@ -158,7 +162,10 @@ class RealmRoadActivity : BaseActivity<ActivityRealmRoadBinding>(ActivityRealmRo
 
     private fun openLibrary() {
         loadAndShowInterBackToHome(
-            navAction = ::navigateToLibrary,
+            navAction = {
+                setRequireShowRate(true)
+                navigateToLibrary()
+            },
             viewBlock = interAdBlockView()
         )
     }

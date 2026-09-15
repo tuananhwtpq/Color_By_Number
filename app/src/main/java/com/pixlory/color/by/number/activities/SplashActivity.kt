@@ -16,6 +16,7 @@ import com.pixlory.color.by.number.utils.ads.AdsManager
 import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.invisible
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.utils.visible
 import com.snake.squad.adslib.AdmobLib
 import com.snake.squad.adslib.aoa.AppOnResumeAdsManager
@@ -48,6 +49,7 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
         }
 
         AdsManager.reset()
+        setRequireShowRate(false)
     }
 
     override fun initView() {

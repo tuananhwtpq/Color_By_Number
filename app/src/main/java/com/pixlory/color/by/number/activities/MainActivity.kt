@@ -28,11 +28,14 @@ import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import com.pixlory.color.by.number.utils.animateBottomNavPress
 import com.pixlory.color.by.number.utils.animateBottomNavSelection
 import com.pixlory.color.by.number.utils.enableMarquee
+import com.pixlory.color.by.number.utils.getRequireShowRate
 import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.setBottomNavLabelSelected
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.utils.visible
 import com.snake.squad.adslib.AdmobLib
+import com.snake.squad.adslib.rates.RatingDialog
 import com.snake.squad.adslib.utils.GoogleENative
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -252,6 +255,17 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
             nativeHomeHandler.post(nativeHomeReload)
         } else {
             loadAndShowNativeCollapsibleHome {}
+        }
+
+        if (!AdsManager.isShowedRate && getRequireShowRate()) {
+            RatingDialog.showRateAppDialogAuto(
+                this@MainActivity,
+                supportFragmentManager,
+                time = 0,
+                getString(R.string.rating_email)
+            )
+            setRequireShowRate(false)
+            AdsManager.isShowedRate = true
         }
     }
 

@@ -27,6 +27,7 @@ import com.pixlory.color.by.number.utils.VideoSharer
 import com.pixlory.color.by.number.utils.VideoSaver
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
 import com.pixlory.color.by.number.utils.setOnSoundClickListener
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.utils.showToast
 import com.pixlory.color.by.number.utils.toFileNameKey
 import java.io.File
@@ -83,7 +84,10 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         override fun handleOnBackPressed() {
             if (intent.getBooleanExtra(EXTRA_FROM_HOME, false)) {
                 loadAndShowInterBackToHome(
-                    navAction = { finish() },
+                    navAction = {
+                        setRequireShowRate(true)
+                        finish()
+                    },
                     viewBlock = interAdBlockView()
                 )
             } else {
@@ -133,7 +137,10 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
 
         binding.btnBackToHome.setOnSoundClickListener {
             loadAndShowInterBackToHome(
-                navAction = { openCompletedPictureCategory() },
+                navAction = {
+                    setRequireShowRate(true)
+                    openCompletedPictureCategory()
+                },
                 viewBlock = interAdBlockView()
             )
         }

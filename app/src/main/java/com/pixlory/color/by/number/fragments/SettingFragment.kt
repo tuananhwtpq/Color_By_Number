@@ -167,7 +167,7 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
                     activity = requireActivity(),
                     admobNativeModel = AdsManager.NATIVE_SETTING,
                     viewGroup = binding.frNative,
-                    size = GoogleENative.UNIFIED_MEDIUM,
+                    size = GoogleENative.UNIFIED_SMALL_LIKE_BANNER,
                     layout = R.layout.native_ads_custom_small_like_banner
                 )
             } else {
@@ -175,7 +175,7 @@ class SettingFragment : BaseFragment<ActivitySettingBinding>(ActivitySettingBind
                     activity = requireActivity(),
                     admobNativeModel = AdsManager.NATIVE_SETTING,
                     viewGroup = binding.frNative,
-                    size = GoogleENative.UNIFIED_MEDIUM,
+                    size = GoogleENative.UNIFIED_SMALL_LIKE_BANNER,
                     layout = R.layout.native_ads_custom_small_like_banner,
                     isShowOnTestDevice = true,
                 )

@@ -12,11 +12,8 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
 import android.os.SystemClock
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
-import android.widget.FrameLayout
 import androidx.activity.viewModels
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -29,7 +26,6 @@ import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
-import com.google.android.material.snackbar.Snackbar
 import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.data.repository.AchievementEvent
@@ -51,6 +47,7 @@ import com.pixlory.color.by.number.utils.ads.AdsManager
 import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.setOnSoundClickListener
+import com.pixlory.color.by.number.utils.setRequireShowRate
 import com.pixlory.color.by.number.utils.soundManagerOrNull
 import com.pixlory.color.by.number.utils.visible
 import com.snake.squad.adslib.AdmobLib
@@ -135,7 +132,6 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private var drawInterRemainingMs: Long? = null
     private var drawInterLastTickMs = 0L
     private var drawInterCountdownJob: Job? = null
-    private var drawInterSnackbar: Snackbar? = null
     private var drawInterWarningSeconds: Int? = null
     private var isDrawInterstitialShowing = false
     private var isRewardedHintAdShowing = false
@@ -165,7 +161,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             override fun handleOnBackPressed() {
                 if (intent.getBooleanExtra(EXTRA_FROM_HOME, false)) {
                     loadAndShowInterBackToHome(
-                        navAction = { finish() },
+                        navAction = {
+                            setRequireShowRate(true)
+                            finish()
+                        },
                         viewBlock = interAdBlockView()
                     )
                 } else {
@@ -556,7 +555,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         val visibility = if (isVisible && !isPreparationVisible) View.VISIBLE else View.GONE
         binding.btnBack.visibility = visibility
         binding.btnHint.visibility = visibility
-        binding.tvHintCount.visibility = visibility
+        updateHintCountVisibility()
     }
 
     private fun syncPaintSettings() {
@@ -817,7 +816,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         when (event) {
             PaintUiEvent.FinishScreen -> finish()
             is PaintUiEvent.FocusOnMaskColor -> {
-                if (!SharedPrefManager.consumeHint()) {
+                if (RemoteConfig.remoteRewardUnlock != 0L && !SharedPrefManager.consumeHint()) {
                     renderHintBalance()
                     return
                 }
@@ -929,7 +928,7 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun onHintButtonClicked() {
-        if (SharedPrefManager.hintBalance > 0) {
+        if (RemoteConfig.remoteRewardUnlock == 0L || SharedPrefManager.hintBalance > 0) {
             viewModel.onHintRequested()
         } else {
             showWatchAdsDialog()
@@ -939,6 +938,16 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     private fun renderHintBalance() {
         val hintBalance = SharedPrefManager.hintBalance
         binding.tvHintCount.text = if (hintBalance > 0) hintBalance.toString() else "+"
+        updateHintCountVisibility()
+    }
+
+    private fun updateHintCountVisibility() {
+        binding.tvHintCount.visibility =
+            if (RemoteConfig.remoteRewardUnlock == 0L || binding.btnHint.visibility != View.VISIBLE) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
     }
 
     private fun showRewardedHintAd() {
@@ -1039,10 +1048,21 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         if (isDrawInterstitialShowing || !isDrawInterEnabled()) return
         isDrawInterstitialShowing = true
         pauseDrawInterCountdown()
-        loadAndShowInterDraw(interAdBlockView()) {
+//        loadAndShowInterDraw(interAdBlockView()) {
+//            isDrawInterstitialShowing = false
+//            resetDrawInterCountdown()
+//        }
+
+        loadAndShowInterDraw(binding.vShowInterAds) {
+            binding.vShowInterAds.gone()
             isDrawInterstitialShowing = false
             resetDrawInterCountdown()
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        binding.vShowInterAds.gone()
     }
 
     private fun updateDrawInterWarning(remainingMs: Long) {
@@ -1051,29 +1071,15 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
             return
         }
         val seconds = ((remainingMs + 999L) / 1_000L).toInt()
-        if (drawInterWarningSeconds == seconds) return
-        drawInterWarningSeconds = seconds
-        val message = getString(R.string.inter_draw_countdown, seconds)
-        val snackbar = drawInterSnackbar
-        if (snackbar != null) {
-            snackbar.setText(message)
-            return
+        if (drawInterWarningSeconds != seconds) {
+            drawInterWarningSeconds = seconds
+            binding.textShowInterDraw.text = getString(R.string.inter_draw_countdown, seconds)
         }
-
-        drawInterSnackbar = Snackbar.make(binding.root, message, Snackbar.LENGTH_INDEFINITE).apply {
-            animationMode = Snackbar.ANIMATION_MODE_FADE
-            view.layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP
-            )
-            show()
-        }
+        binding.textShowInterDraw.visible()
     }
 
     private fun hideDrawInterWarning() {
-        drawInterSnackbar?.dismiss()
-        drawInterSnackbar = null
+        binding.textShowInterDraw.gone()
         drawInterWarningSeconds = null
     }
 
@@ -1089,6 +1095,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
 
     override fun onResume() {
         super.onResume()
+        if (!isDrawInterstitialShowing) {
+            binding.vShowInterAds.gone()
+        }
         syncPaintSettings()
         renderHintBalance()
         startDrawInterCountdown()
