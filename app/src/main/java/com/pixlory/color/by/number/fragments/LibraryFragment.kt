@@ -222,8 +222,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
     }
 
     private fun onLevelClicked(level: LevelConfig) {
-        val home = requireActivity() as MainActivity
-        home.loadInterHome(home.interAdBlockView()) { handleLevelClicked(level) }
+        handleLevelClicked(level)
     }
 
     private fun handleLevelClicked(level: LevelConfig) {
@@ -236,7 +235,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         } else if (progress >= 1f) {
             completedPictureActions.showCurrentPictureDialog(level)
         } else {
-            openPaintActivity(level)
+            openPaintWithInterHome(level)
         }
     }
 
@@ -244,7 +243,7 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
         CurrentPictureDialog().apply {
             previewFile =
                 appContainer.thumbnailRepository.getThumbnailFile(level.category, level.id)
-            onColor = { openPaintActivity(level) }
+            onColor = { openPaintWithInterHome(level) }
             onReset = {
                 showResetPictureDialog(level)
                 dismiss()
@@ -271,6 +270,11 @@ class LibraryFragment : BaseFragment<FragmentLibraryBinding>(FragmentLibraryBind
             intent.putExtra(PaintActivity.EXTRA_PREPARATION_THUMBNAIL, thumbnail)
         }
         startActivity(intent)
+    }
+
+    private fun openPaintWithInterHome(level: LevelConfig) {
+        val home = requireActivity() as MainActivity
+        home.loadInterHome(home.interAdBlockView()) { openPaintActivity(level) }
     }
 
     private fun preparationThumbnailFor(level: LevelConfig): String? {

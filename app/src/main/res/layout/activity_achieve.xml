@@ -6,8 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_full_main_theme_01"
-    tools:context=".activities.AchieveActivity"
-    android:layoutDirection="ltr">
+    android:layoutDirection="ltr"
+    tools:context=".activities.AchieveActivity">
 
     <ImageView
         android:id="@+id/btnBack"
@@ -102,6 +102,7 @@
         android:layout_marginHorizontal="12dp"
         android:layout_marginTop="12dp"
         android:clipToPadding="false"
+        android:paddingBottom="4dp"
         app:layout_constraintBottom_toTopOf="@id/whiteLine"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

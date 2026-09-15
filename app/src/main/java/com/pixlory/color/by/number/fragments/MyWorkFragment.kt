@@ -144,11 +144,8 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
     }
 
     private fun onMyWorkItemClicked(level: LevelConfig) {
-        val home = requireActivity() as MainActivity
         val isCompleted = selectedTab == TAB_COMPLETED
-        home.loadInterHome(home.interAdBlockView()) {
-            showMyworkCurrentPictureDialog(level, isCompleted = isCompleted)
-        }
+        showMyworkCurrentPictureDialog(level, isCompleted = isCompleted)
     }
 
     private fun showMyworkCurrentPictureDialog(level: LevelConfig, isCompleted: Boolean) {
@@ -156,7 +153,7 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
             this.isCompleted = isCompleted
             previewFile =
                 appContainer.thumbnailRepository.getThumbnailFile(level.category, level.id)
-            onColor = { openPaintActivity(level) }
+            onColor = { openPaintWithInterHome(level) }
             onReset = {
                 showResetPictureDialog(level)
                 dismiss()
@@ -205,6 +202,11 @@ class MyWorkFragment : BaseFragment<FragmentMyWorkBinding>(FragmentMyWorkBinding
             intent.putExtra(PaintActivity.EXTRA_PREPARATION_THUMBNAIL, thumbnail)
         }
         startActivity(intent)
+    }
+
+    private fun openPaintWithInterHome(level: LevelConfig) {
+        val home = requireActivity() as MainActivity
+        home.loadInterHome(home.interAdBlockView()) { openPaintActivity(level) }
     }
 
     private fun preparationThumbnailFor(level: LevelConfig): String? {

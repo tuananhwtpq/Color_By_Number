@@ -25,7 +25,7 @@ object SharedPrefManager {
     private lateinit var preferences: SharedPreferences
 
     const val DEFAULT_HINT_BALANCE = 2
-    const val REWARDED_AD_HINT_AMOUNT = 2
+    const val REWARDED_AD_HINT_AMOUNT = 1
     const val ACHIEVEMENT_HINT_REWARD_AMOUNT = 1
 
     var isShowGuide: Boolean

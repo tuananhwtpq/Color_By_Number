@@ -42,6 +42,7 @@ object RemoteConfig {
 
     var remoteSplashAds: Long
         get() {
+            return 0L
             return SharedPrefManager.getLong(REMOTE_SPLASH_ADS, 3L)
         }
         set(value) {
@@ -49,6 +50,7 @@ object RemoteConfig {
         }
     var remoteNativeCollapsibleSplash: Long
         get() {
+            return 0L
             return SharedPrefManager.getLong(REMOTE_NATIVE_COLLAPSIBLE_SPLASH, 2L)
         }
         set(value) {
@@ -56,6 +58,7 @@ object RemoteConfig {
         }
     var remoteInterHome: Long
         get() {
+            return 1L
             return SharedPrefManager.getLong(REMOTE_INTER_HOME, 2L)
         }
         set(value) {
@@ -70,6 +73,7 @@ object RemoteConfig {
         }
     var remoteNativeCollapsibleHome: Long
         get() {
+            return 0L
             return SharedPrefManager.getLong(REMOTE_NATIVE_COLLAPSIBLE_HOME, 2L)
         }
         set(value) {
@@ -140,6 +144,7 @@ object RemoteConfig {
         }
     var remoteTimeShowInter: Long
         get() {
+            return 5000L
             return SharedPrefManager.getLong(REMOTE_TIME_SHOW_INTER, 15000L)
         }
         set(value) {
@@ -147,6 +152,7 @@ object RemoteConfig {
         }
     var remoteTimeLoadNative: Long
         get() {
+            return 5000L
             return SharedPrefManager.getLong(REMOTE_TIME_LOAD_NATIVE, 15000L)
         }
         set(value) {
