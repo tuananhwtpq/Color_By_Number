@@ -8,6 +8,7 @@ import android.net.NetworkRequest
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -25,7 +26,9 @@ import com.pixlory.color.by.number.MyApplication
 import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.utils.Common
 import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import com.pixlory.color.by.number.utils.gone
+import com.pixlory.color.by.number.utils.visible
 import com.pixlory.color.by.number.utils.isNetworkAvailable
 import com.pixlory.color.by.number.utils.SoundScene
 import com.snake.squad.adslib.AdmobLib
@@ -180,6 +183,54 @@ abstract class BaseActivity<viewBinding : ViewBinding>(val inflater: (LayoutInfl
         } else {
             navAction()
         }
+    }
+
+    fun loadAndShowNativeCollapsibleOther(
+        frNativeSmall: ViewGroup,
+        frNativeExpand: ViewGroup,
+        whiteLine: View
+    ) {
+        if (RemoteConfig.remoteNativeOther != 1L || !AdmobLib.getShowAds()) {
+            frNativeSmall.gone()
+            frNativeExpand.gone()
+            whiteLine.gone()
+            return
+        }
+
+        frNativeSmall.visible()
+        frNativeExpand.visible()
+        AdmobLib.loadAndShowNativeCollapsibleSingle(
+            activity = this,
+            admobNativeModel = AdsManager.NATIVE_OTHER,
+            viewGroupExpanded = frNativeExpand,
+            viewGroupCollapsed = frNativeSmall,
+            layoutExpanded = R.layout.native_ads_custom_medium_bottom,
+            layoutCollapsed = R.layout.native_ads_custom_small_like_banner,
+            onAdsLoaded = { whiteLine.visible() },
+            onAdsLoadFail = { whiteLine.gone() }
+        )
+    }
+
+    fun loadAndShowRewardAds(navAction: () -> Unit, onFail: () -> Unit = {}) {
+        if (RemoteConfig.remoteRewardUnlock != 1L) {
+            navAction()
+            return
+        }
+        if (!AdmobLib.getShowAds()) {
+            onFail()
+            return
+        }
+
+        val finishAdMute = muteMusicForFullscreenAd()
+        AdmobLib.loadAndShowRewarded(
+            activity = this,
+            admobRewardedModel = AdsManager.REWARD_UNLOCK,
+            isShowOnTestDevice = true,
+            onAdsCloseOrFailed = { isEarned ->
+                finishAdMute()
+                if (isEarned) navAction() else onFail()
+            }
+        )
     }
 
     protected fun muteMusicForFullscreenAd(): () -> Unit =

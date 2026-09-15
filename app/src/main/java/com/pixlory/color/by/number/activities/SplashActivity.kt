@@ -229,7 +229,7 @@ class SplashActivity : BaseActivity<ActivitySplashBinding>(ActivitySplashBinding
             mActivity = this,
             interModel = AdsManager.INTER_SPLASH,
             nativeModel = AdsManager.NATIVE_FULL_SCREEN_AFTER_INTER,
-            isShowNativeAfter = AdsManager.isShowNativeFullScreen(),
+            isShowNativeAfter = AdsManager.isShowNativeFullScreenAfterSplash(),
             nativeLayout = R.layout.native_ads_full_screen,
             navAction = ::completeSplash
         )

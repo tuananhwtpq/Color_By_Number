@@ -56,6 +56,11 @@ class AchieveActivity : BaseActivity<ActivityAchieveBinding>(ActivityAchieveBind
 
     override fun initView() {
         AppThemeManager.applyFullBackground(binding.main)
+        loadAndShowNativeCollapsibleOther(
+            binding.frNativeSmall,
+            binding.frNativeExpand,
+            binding.whiteLine
+        )
 
         binding.rcvAchievements.layoutManager = GridLayoutManager(this, 2)
         binding.rcvAchievements.adapter = achievementAdapter

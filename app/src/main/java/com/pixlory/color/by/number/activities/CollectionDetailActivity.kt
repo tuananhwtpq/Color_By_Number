@@ -85,6 +85,11 @@ class CollectionDetailActivity : BaseActivity<ActivityCollectionDetailBinding>(
 
     override fun initView() {
         AppThemeManager.applyFullBackground(binding.main)
+        loadAndShowNativeCollapsibleOther(
+            binding.frNativeSmall,
+            binding.frNativeExpand,
+            binding.whiteLine
+        )
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
         binding.rvLevels.layoutManager = GridLayoutManager(this, 2)

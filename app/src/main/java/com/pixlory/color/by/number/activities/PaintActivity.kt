@@ -40,8 +40,14 @@ import com.pixlory.color.by.number.utils.Constants
 import com.pixlory.color.by.number.utils.SharedPrefManager
 import com.pixlory.color.by.number.utils.SoundEffect
 import com.pixlory.color.by.number.utils.SoundScene
+import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.ads.RemoteConfig
+import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.setOnSoundClickListener
 import com.pixlory.color.by.number.utils.soundManagerOrNull
+import com.pixlory.color.by.number.utils.visible
+import com.snake.squad.adslib.AdmobLib
+import com.snake.squad.adslib.utils.GoogleENative
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -151,6 +157,9 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         })
         initViews()
         setupGuideIfNeeded()
+        if (!SharedPrefManager.isShowGuide) {
+            loadAndShowNativeCollapsibleDraw {}
+        }
         collectUi()
     }
 
@@ -555,6 +564,67 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
         binding.llGuide.visibility = View.GONE
         binding.guideOverlay.clearSpotlight()
         setMainContentVisible(true)
+        loadAndShowNativeCollapsibleDraw {}
+    }
+
+    private fun loadAndShowNativeCollapsibleDraw(onShowOrFailed: () -> Unit) {
+        if (!AdmobLib.getShowAds()) {
+            binding.frNativeSmall.gone()
+            binding.frNativeExpand.gone()
+            binding.whiteLine.gone()
+            onShowOrFailed()
+            return
+        }
+
+        when (RemoteConfig.remoteNativeCollapsibleDraw) {
+            1L -> {
+                binding.frNativeSmall.visible()
+                binding.frNativeExpand.gone()
+                AdmobLib.loadAndShowNative(
+                    activity = this,
+                    admobNativeModel = AdsManager.NATIVE_COLLAPSIBLE_DRAW,
+                    viewGroup = binding.frNativeSmall,
+                    size = GoogleENative.UNIFIED_SMALL_LIKE_BANNER,
+                    layout = R.layout.native_ads_custom_small_like_banner,
+                    onAdsLoaded = {
+                        binding.whiteLine.visible()
+                        onShowOrFailed()
+                    },
+                    onAdsLoadFail = {
+                        binding.whiteLine.gone()
+                        onShowOrFailed()
+                    }
+                )
+            }
+
+            2L -> {
+                binding.frNativeSmall.visible()
+                binding.frNativeExpand.visible()
+                AdmobLib.loadAndShowNativeCollapsibleSingle(
+                    activity = this,
+                    admobNativeModel = AdsManager.NATIVE_COLLAPSIBLE_DRAW,
+                    viewGroupExpanded = binding.frNativeExpand,
+                    viewGroupCollapsed = binding.frNativeSmall,
+                    layoutExpanded = R.layout.native_ads_custom_medium_bottom,
+                    layoutCollapsed = R.layout.native_ads_custom_small_like_banner,
+                    onAdsLoaded = {
+                        binding.whiteLine.visible()
+                        onShowOrFailed()
+                    },
+                    onAdsLoadFail = {
+                        binding.whiteLine.gone()
+                        onShowOrFailed()
+                    }
+                )
+            }
+
+            else -> {
+                binding.frNativeSmall.gone()
+                binding.frNativeExpand.gone()
+                binding.whiteLine.gone()
+                onShowOrFailed()
+            }
+        }
     }
 
     /**
@@ -853,8 +923,10 @@ class PaintActivity : BaseActivity<ActivityPaintBinding>(ActivityPaintBinding::i
     }
 
     private fun showRewardedHintAd() {
-        SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
-        renderHintBalance()
+        loadAndShowRewardAds(navAction = {
+            SharedPrefManager.addHints(SharedPrefManager.REWARDED_AD_HINT_AMOUNT)
+            renderHintBalance()
+        })
     }
 
     override fun onPause() {

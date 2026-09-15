@@ -108,6 +108,12 @@ class PictureCompletedActivity : BaseActivity<ActivityPictureCompletedBinding>(
         val levelId = levelId
         if (category == null || levelId == null) return
 
+        loadAndShowNativeCollapsibleOther(
+            binding.frNativeSmall,
+            binding.frNativeExpand,
+            binding.whiteLine
+        )
+
         val completedFile = appContainer.thumbnailRepository.getThumbnailFile(category, levelId)
         Glide.with(this)
             .load(completedFile)

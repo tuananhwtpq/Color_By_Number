@@ -20,6 +20,11 @@ class ThemeActivity : BaseActivity<ActivityThemeBinding>(ActivityThemeBinding::i
     }
 
     override fun initView() {
+        loadAndShowNativeCollapsibleOther(
+            binding.frNativeSmall,
+            binding.frNativeExpand,
+            binding.whiteLine
+        )
         onBackPressedDispatcher.addCallback(object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 loadAndShowInterBackToHome(

@@ -58,6 +58,10 @@ object AdsManager {
         return RemoteConfig.remoteNativeFullScreenAfterInter != 0L && !AdmobLib.getCheckTestDevice()
     }
 
+    fun isShowNativeFullScreenAfterSplash(): Boolean {
+        return RemoteConfig.remoteNativeFullScreenAfterInter == 1L && !AdmobLib.getCheckTestDevice()
+    }
+
     private fun isShowInter(): Boolean {
         return (System.currentTimeMillis() - lastInterShown) > RemoteConfig.remoteTimeShowInter
     }

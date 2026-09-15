@@ -1,6 +1,8 @@
 package com.pixlory.color.by.number.activities
 
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.view.animation.DecelerateInterpolator
@@ -11,6 +13,7 @@ import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.pixlory.color.by.number.MyApplication
+import com.pixlory.color.by.number.R
 import com.pixlory.color.by.number.adapters.MainVPAdapter
 import com.pixlory.color.by.number.app.SimpleViewModelFactory
 import com.pixlory.color.by.number.bases.BaseActivity
@@ -20,12 +23,17 @@ import com.pixlory.color.by.number.ui.main.MainViewModel
 import com.pixlory.color.by.number.ui.main.MainRevealCoordinator
 import com.pixlory.color.by.number.utils.AppThemeManager
 import com.pixlory.color.by.number.utils.SharedPrefManager
+import com.pixlory.color.by.number.utils.ads.AdsManager
+import com.pixlory.color.by.number.utils.ads.RemoteConfig
 import com.pixlory.color.by.number.utils.animateBottomNavPress
 import com.pixlory.color.by.number.utils.animateBottomNavSelection
 import com.pixlory.color.by.number.utils.enableMarquee
 import com.pixlory.color.by.number.utils.gone
 import com.pixlory.color.by.number.utils.setBottomNavLabelSelected
 import com.pixlory.color.by.number.utils.setOnUnDoubleClick
+import com.pixlory.color.by.number.utils.visible
+import com.snake.squad.adslib.AdmobLib
+import com.snake.squad.adslib.utils.GoogleENative
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -65,6 +73,20 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     private val revealCoordinator = MainRevealCoordinator(PREPARING_MIN_DURATION_MS)
     private val appContainer by lazy {
         (application as MyApplication).appContainer
+    }
+    private val nativeHomeHandler = Handler(Looper.getMainLooper())
+    private var isLoadingCollapsibleHome = false
+    private val nativeHomeReload = object : Runnable {
+        override fun run() {
+            if (!isLoadingCollapsibleHome && AdsManager.isReloadingCollapsibleHome()) {
+                isLoadingCollapsibleHome = true
+                loadAndShowNativeCollapsibleHome {
+                    AdsManager.updateCollapsibleHome()
+                    isLoadingCollapsibleHome = false
+                }
+            }
+            nativeHomeHandler.postDelayed(this, 5_000L)
+        }
     }
 
     override fun initData() {
@@ -225,6 +247,77 @@ class MainActivity : BaseActivity<ActivityMainBinding>(ActivityMainBinding::infl
     override fun onResume() {
         super.onResume()
         AppThemeManager.applyFullBackground(binding.main)
+        nativeHomeHandler.removeCallbacks(nativeHomeReload)
+        if (RemoteConfig.remoteNativeCollapsibleHome in 1L..2L && AdmobLib.getShowAds()) {
+            nativeHomeHandler.post(nativeHomeReload)
+        } else {
+            loadAndShowNativeCollapsibleHome {}
+        }
+    }
+
+    override fun onPause() {
+        nativeHomeHandler.removeCallbacks(nativeHomeReload)
+        super.onPause()
+    }
+
+    private fun loadAndShowNativeCollapsibleHome(onShowOrFailed: () -> Unit) {
+        if (!AdmobLib.getShowAds()) {
+            binding.frNativeSmall.gone()
+            binding.frNativeExpand.gone()
+            binding.whiteLine.gone()
+            onShowOrFailed()
+            return
+        }
+
+        when (RemoteConfig.remoteNativeCollapsibleHome) {
+            1L -> {
+                binding.frNativeSmall.visible()
+                binding.frNativeExpand.gone()
+                AdmobLib.loadAndShowNative(
+                    activity = this,
+                    admobNativeModel = AdsManager.NATIVE_COLLAPSIBLE_HOME,
+                    viewGroup = binding.frNativeSmall,
+                    size = GoogleENative.UNIFIED_SMALL_LIKE_BANNER,
+                    layout = R.layout.native_ads_custom_small_like_banner,
+                    onAdsLoaded = {
+                        binding.whiteLine.visible()
+                        onShowOrFailed()
+                    },
+                    onAdsLoadFail = {
+                        binding.whiteLine.gone()
+                        onShowOrFailed()
+                    }
+                )
+            }
+
+            2L -> {
+                binding.frNativeSmall.visible()
+                binding.frNativeExpand.visible()
+                AdmobLib.loadAndShowNativeCollapsibleSingle(
+                    activity = this,
+                    admobNativeModel = AdsManager.NATIVE_COLLAPSIBLE_HOME,
+                    viewGroupExpanded = binding.frNativeExpand,
+                    viewGroupCollapsed = binding.frNativeSmall,
+                    layoutExpanded = R.layout.native_ads_custom_medium_bottom,
+                    layoutCollapsed = R.layout.native_ads_custom_small_like_banner,
+                    onAdsLoaded = {
+                        binding.whiteLine.visible()
+                        onShowOrFailed()
+                    },
+                    onAdsLoadFail = {
+                        binding.whiteLine.gone()
+                        onShowOrFailed()
+                    }
+                )
+            }
+
+            else -> {
+                binding.frNativeSmall.gone()
+                binding.frNativeExpand.gone()
+                binding.whiteLine.gone()
+                onShowOrFailed()
+            }
+        }
     }
 
     private fun preloadRequestedRealm() {
